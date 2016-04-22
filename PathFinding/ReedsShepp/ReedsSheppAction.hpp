@@ -57,6 +57,9 @@ class ReedsSheppAction {
 
 };
 
+// define a pointer handler
+typedef ReedsSheppAction* ReedsSheppActionPtr;
+
 }
 
 #endif

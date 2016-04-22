@@ -9,14 +9,6 @@ using namespace astar;
 ReedsSheppModel::ReedsSheppModel() {}
 
 
-// PRIVATE METHODS
-// invalid angle test
-bool ReedsSheppModel::isInvalidAngle(double angle) {
-
-    return angle < 0 || angle > M_PI;
-
-}
-
 // PUBLIC METHODS
 
 // solve the current start to goal pathfinding
@@ -56,7 +48,7 @@ ReedsSheppActionSetPtr ReedsSheppModel::solve(const Pose2D &start, const Pose2D 
         word = static_cast<PathWords>(w);
 
         // maybe the new best path length, who knows?
-        potentialLength = getPathLength(word, position.x, position.y, orientation, sinPhi, cosPhi, &t_, &u_, &v_);
+        potentialLength = getPathLength(word, position.x, position.y, orientation, sinPhi, cosPhi, t_, u_, v_);
 
         if (potentialLength < bestPathLength) {
 
@@ -84,8 +76,156 @@ ReedsSheppActionSetPtr ReedsSheppModel::solve(const Pose2D &start, const Pose2D 
 
 }
 
+// return a list of poses from a given action set
+std::vector<Pose2D> ReedsSheppModel::discretize(const Pose2D &start, ReedsSheppActionSetPtr actionSet, double radcurv, double inverse_resolution) {
+
+    // get the prev pose
+    Pose2D prev(start);
+
+    // create the pose list
+    std::vector<Pose2D> poses;
+
+    // append the first pose
+    poses.push_back(prev);
+
+    // get the action size list size
+    unsigned int a_size = actionSet->actions.size();
+
+    if (0 < a_size) {
+
+        // get the iterator
+        for (std::vector<ReedsSheppAction>::iterator it = actionSet->actions.begin();  it < actionSet->actions.end(); ++it) {
+
+            // subdivide the entire arc length by the grid resolution
+            unsigned int n = std::ceil(it->length * radcurv * inverse_resolution);
+
+            // is it a line path?
+            if (RSStraight != it->steer) {
+
+                // it's a curve
+                // get the piece angle
+                double pieceAngle = it->length/n;
+
+                // get the current phi
+                double phi = pieceAngle / 2;
+
+                // avoiding sin repetitions
+                double sinPhi = std::sin(phi);
+
+                double L = 2*radcurv*sinPhi;
+
+                // get the x displacement
+                double dx = L*std::cos(phi);
+
+                // get the y displacement
+                double dy = L*sinPhi;
+
+                // assuming TurnLeft, is it a TurnRight?
+                if (RSTurnRight == it->steer) {
+
+                    // invert the y displacement
+                    dy = -dy;
+
+                    // invert the pieceAngle
+                    pieceAngle = -pieceAngle;
+
+                }
+
+                // assuming a ForwardGear, is it a backward instead?
+                if (BackwardGear == it->gear) {
+
+                    // invert the x displacement
+                    dx = -dx;
+
+                    // invert the pieceAngle
+                    // if the pieceAngle was inverted becase the RSTurnRight
+                    /// let's invert it again
+                    pieceAngle = -pieceAngle;
+
+                }
+
+                // the resulting Pose, after the movement
+                astar::Vector2D pos;
+
+                // iterate over the entire arc length
+                for (unsigned int i = 0; i < n; i++) {
+
+                    // update the position
+                    pos.x = dx;
+                    pos.y = dy;
+
+                    // rotate the position to the correct position
+                    pos.rotateZ(-prev.orientation);
+
+                    // update the prev Pose2D position
+                    prev.position.add(pos);
+
+                    // update the orientation
+                    prev.orientation += pieceAngle;
+
+                    // update the gear
+                    prev.gear = it->gear;
+
+                    // append to the pose list
+                    poses.push_back(prev);
+
+                }
+
+            } else {
+
+                // it's a straight line, so piece of cake
+                // get the piece arch length
+                double pieceLength = it->length * radcurv/n;
+
+                // the x displacement
+                double dx = pieceLength*std::cos(prev.orientation);
+
+                // the y displacement
+                double dy = pieceLength*std::sin(prev.orientation);
+
+                // verify the direction
+                if (BackwardGear == it->gear) {
+
+                    // invert the displacements
+                    dx = -dx;
+                    dy = -dy;
+
+                }
+
+                // iterate over the entire arc and append the new pose
+                for (unsigned int i = 0; i < n; i++) {
+
+                    // update the new position
+                    prev.position.add(dx, dy);
+
+                    // get the gear action
+                    prev.gear = it->gear;
+
+                    // append to the poses list
+                    poses.push_back(prev);
+
+                }
+
+            }
+
+        }
+
+    }
+
+    // return the pose list
+    return poses;
+}
+
+// PRIVATE METHODS
+// invalid angle test
+bool ReedsSheppModel::isInvalidAngle(double angle) {
+
+    return angle < 0 || angle > M_PI;
+
+}
+
 // calculate the optimal path length
-double ReedsSheppModel::getPathLength(PathWords w, double goal_x, double goal_y, double goal_orientation, double sinPhi, double cosPhi, double *t, double *u, double *v) {
+double ReedsSheppModel::getPathLength(PathWords w, double goal_x, double goal_y, double goal_orientation, double sinPhi, double cosPhi, double &t, double &u, double &v) {
 
     // the current path length
     double len;
@@ -260,7 +400,7 @@ ReedsSheppActionSetPtr ReedsSheppModel::buildPath(PathWords w, double t, double 
 }
 
 // left forward, straight forward and left forward movement - get the path length
-double ReedsSheppModel::getLfSfLf(double goal_x, double goal_y, double goal_orientation, double sinPhi, double cosPhi, double *t, double *u, double *v) {
+double ReedsSheppModel::getLfSfLf(double goal_x, double goal_y, double goal_orientation, double sinPhi, double cosPhi, double &t, double &u, double &v) {
 
     // Reeds-Shepp 8.1
     // C_C_C
@@ -270,21 +410,21 @@ double ReedsSheppModel::getLfSfLf(double goal_x, double goal_y, double goal_orie
     double y = goal_y - 1 + cosPhi;
 
     // update the t value
-    *t = std::atan2(y, x);
+    t = std::atan2(y, x);
 
     // update the u value
-    *u = std::sqrt(x*x + y*y);
+    u = std::sqrt(x*x + y*y);
 
     // update the v value
-    *v = mrpt::math::wrapToPi<double>(goal_orientation - *t);
+    v = mrpt::math::wrapToPi<double>(goal_orientation - t);
 
-    if (isInvalidAngle(*t) || isInvalidAngle(*v)) {
+    if (isInvalidAngle(t) || isInvalidAngle(v)) {
 
         return std::numeric_limits<double>::infinity();
 
     }
 
-    return *t + *u + *v;
+    return t + u + v;
 
 }
 
@@ -310,7 +450,7 @@ ReedsSheppActionSetPtr ReedsSheppModel::getLfSfLfpath(double t, double u, double
 }
 
 // left forward, straight forward and right forward movement - get the path length
-double ReedsSheppModel::getLfSfRf(double goal_x, double goal_y, double goal_orientation, double sinPhi, double cosPhi, double *t, double *u, double *v) {
+double ReedsSheppModel::getLfSfRf(double goal_x, double goal_y, double goal_orientation, double sinPhi, double cosPhi, double &t, double &u, double &v) {
 
     // Reeds-Shepp 8.2
 
@@ -328,24 +468,24 @@ double ReedsSheppModel::getLfSfRf(double goal_x, double goal_y, double goal_orie
     }
 
     // update the u value
-    *u = std::sqrt(u1squared - 4);
+    u = std::sqrt(u1squared - 4);
 
     // get the phi value
-    double phi = std::atan2(2.0, (*u));
+    double phi = std::atan2(2.0, (u));
 
     // update the t value
-    *t = mrpt::math::wrapToPi<double>(t1 + phi);
+    t = mrpt::math::wrapToPi<double>(t1 + phi);
 
     // update the v value
-    *v = mrpt::math::wrapToPi<double>(*t - goal_orientation);
+    v = mrpt::math::wrapToPi<double>(t - goal_orientation);
 
-    if (isInvalidAngle(*t) || isInvalidAngle(*v)) {
+    if (isInvalidAngle(t) || isInvalidAngle(v)) {
 
         return std::numeric_limits<double>::infinity();
 
     }
 
-    return *t + *u + *v;
+    return t + u + v;
 
 }
 
@@ -369,7 +509,7 @@ ReedsSheppActionSetPtr ReedsSheppModel::getLfSfRfpath(double t, double u, double
 }
 
 // left forward, right backward and left forward movement - get the path length
-double ReedsSheppModel::getLfRbLf(double goal_x, double goal_y, double goal_orientation, double sinPhi, double cosPhi, double *t, double *u, double *v) {
+double ReedsSheppModel::getLfRbLf(double goal_x, double goal_y, double goal_orientation, double sinPhi, double cosPhi, double &t, double &u, double &v) {
 
     // Reeds-Shepp 8.3
     // Uses a modified formula adapted from the c_c_c function
@@ -389,21 +529,21 @@ double ReedsSheppModel::getLfRbLf(double goal_x, double goal_y, double goal_orie
     double alpha = std::acos(u1 / 4);
 
     // update the t value
-    *t = mrpt::math::wrapTo2Pi<double>(M_PI_2 + alpha + phi);
+    t = mrpt::math::wrapTo2Pi<double>(M_PI_2 + alpha + phi);
 
     // update the u value
-    *u = mrpt::math::wrapTo2Pi<double>(M_PI - 2 * alpha);
+    u = mrpt::math::wrapTo2Pi<double>(M_PI - 2 * alpha);
 
     // update the v value
-    *v = mrpt::math::wrapTo2Pi<double>(goal_orientation - *t - *u);
+    v = mrpt::math::wrapTo2Pi<double>(goal_orientation - t - u);
 
-    if (isInvalidAngle(*t) || isInvalidAngle(*u) || isInvalidAngle(*v)) {
+    if (isInvalidAngle(t) || isInvalidAngle(u) || isInvalidAngle(v)) {
 
         return std::numeric_limits<double>::infinity();
 
     }
 
-    return *t + *u + *v;
+    return t + u + v;
 }
 
 // build the actual LfRbLf path based on given t, u and v
@@ -426,7 +566,7 @@ ReedsSheppActionSetPtr ReedsSheppModel::getLfRbLfpath(double t, double u, double
 }
 
 // left forward, right backward and left backward movement - get the path length
-double ReedsSheppModel::getLfRbLb(double goal_x, double goal_y, double goal_orientation, double sinPhi, double cosPhi, double *t, double *u, double *v) {
+double ReedsSheppModel::getLfRbLb(double goal_x, double goal_y, double goal_orientation, double sinPhi, double cosPhi, double &t, double &u, double &v) {
 
     // Reeds-Shepp 8.4
     // Uses a modified formula adapted from the c_cc function
@@ -446,15 +586,15 @@ double ReedsSheppModel::getLfRbLb(double goal_x, double goal_y, double goal_orie
     double alpha = std::acos(u1 / 4);
 
     // update the t value
-    *t = mrpt::math::wrapTo2Pi<double>(M_PI_2 + alpha + phi);
+    t = mrpt::math::wrapTo2Pi<double>(M_PI_2 + alpha + phi);
 
     // update the u value
-    *u = mrpt::math::wrapTo2Pi<double>(M_PI - 2 * alpha);
+    u = mrpt::math::wrapTo2Pi<double>(M_PI - 2 * alpha);
 
     // update the v value
-    *v = mrpt::math::wrapTo2Pi<double>(*t + *u - goal_orientation);
+    v = mrpt::math::wrapTo2Pi<double>(t + u - goal_orientation);
 
-    return *t + *u + *v;
+    return t + u + v;
 
 }
 
@@ -478,7 +618,7 @@ ReedsSheppActionSetPtr ReedsSheppModel::getLfRbLbpath(double t, double u, double
 }
 
 // left forward, right forward and left backward movement - get the path length
-double ReedsSheppModel::getLfRfLb(double goal_x, double goal_y, double goal_orientation, double sinPhi, double cosPhi, double *t, double *u, double *v) {
+double ReedsSheppModel::getLfRfLb(double goal_x, double goal_y, double goal_orientation, double sinPhi, double cosPhi, double &t, double &u, double &v) {
     // Reeds-Shepp 8.4
     // Uses a modified formula adapted from the cc_c function
     // from http://msl.cs.uiuc.edu/~lavalle/cs326a/rs.c
@@ -496,19 +636,19 @@ double ReedsSheppModel::getLfRfLb(double goal_x, double goal_y, double goal_orie
     double phi = std::atan2(eta, x);
 
     // update the u value
-    *u = std::acos((8.0 - u1 * u1) / 8.0);
+    u = std::acos((8.0 - u1 * u1) / 8.0);
 
-    double va = std::sin(*u);
+    double va = std::sin(u);
 
     double alpha = std::asin(2 * va / u1);
 
     // update the t value
-    *t = mrpt::math::wrapTo2Pi<double>(M_PI_2 - alpha + phi);
+    t = mrpt::math::wrapTo2Pi<double>(M_PI_2 - alpha + phi);
 
     // update the v value
-    *v = mrpt::math::wrapTo2Pi<double>(*t - *u - goal_orientation);
+    v = mrpt::math::wrapTo2Pi<double>(t - u - goal_orientation);
 
-    return *t + *u + *v;
+    return t + u + v;
 
 }
 
@@ -532,7 +672,7 @@ ReedsSheppActionSetPtr ReedsSheppModel::getLfRfLbpath(double t, double u, double
 }
 
 // left forward, right forward, left backward and right forward movement - get the path length
-double ReedsSheppModel::getLfRufLubRb(double goal_x, double goal_y, double goal_orientation, double sinPhi, double cosPhi, double *t, double *u, double *v) {
+double ReedsSheppModel::getLfRufLubRb(double goal_x, double goal_y, double goal_orientation, double sinPhi, double cosPhi, double &t, double &u, double &v) {
 
     // Reeds-Shepp 8.7
     // Uses a modified formula adapted from the ccu_cuc function
@@ -555,30 +695,30 @@ double ReedsSheppModel::getLfRufLubRb(double goal_x, double goal_y, double goal_
         double alpha = std::acos(u1 / 4 - 0.5);
 
         // update the t value
-        *t = mrpt::math::wrapTo2Pi<double>(M_PI_2 + phi - alpha);
+        t = mrpt::math::wrapTo2Pi<double>(M_PI_2 + phi - alpha);
 
         // update the u value
-        *u = mrpt::math::wrapTo2Pi<double>(M_PI - alpha);
+        u = mrpt::math::wrapTo2Pi<double>(M_PI - alpha);
 
         // update the v value
-        *v = mrpt::math::wrapTo2Pi<double>(goal_orientation - *t + 2 * (*u));
+        v = mrpt::math::wrapTo2Pi<double>(goal_orientation - t + 2 * (u));
 
     } else {
 
         double alpha = std::acos(u1 / 4 + 0.5);
 
         // update the t value
-        *t = mrpt::math::wrapTo2Pi<double>(M_PI_2 + phi + alpha);
+        t = mrpt::math::wrapTo2Pi<double>(M_PI_2 + phi + alpha);
 
         // update the u value
-        *u = mrpt::math::wrapTo2Pi<double>(alpha);
+        u = mrpt::math::wrapTo2Pi<double>(alpha);
 
         // update the v value
-        *v = mrpt::math::wrapTo2Pi<double>(goal_orientation - *t + 2 * (*u));
+        v = mrpt::math::wrapTo2Pi<double>(goal_orientation - t + 2 * (u));
 
     }
 
-    return *t + *u + *u + *v;
+    return t + u + u + v;
 
 }
 
@@ -605,7 +745,7 @@ ReedsSheppActionSetPtr ReedsSheppModel::getLfRufLubRbpath(double t, double u, do
 }
 
 // left forward, right backward, left backward and right forward movement - get the path length
-double ReedsSheppModel::getLfRubLubRf(double goal_x, double goal_y, double goal_orientation, double sinPhi, double cosPhi, double *t, double *u, double *v) {
+double ReedsSheppModel::getLfRubLubRf(double goal_x, double goal_y, double goal_orientation, double sinPhi, double cosPhi, double &t, double &u, double &v) {
 
     // Reeds-Shepp 8.8
     // Uses a modified formula adapted from the c_cucu_c function
@@ -630,17 +770,17 @@ double ReedsSheppModel::getLfRubLubRf(double goal_x, double goal_y, double goal_
     }
 
     // update the u value
-    *u = std::acos(va1);
-    double va2 = std::sin(*u);
+    u = std::acos(va1);
+    double va2 = std::sin(u);
     double alpha = std::asin(2 * va2 / u1);
 
     // update the t value
-    *t = mrpt::math::wrapTo2Pi<double>(M_PI_2 + phi + alpha);
+    t = mrpt::math::wrapTo2Pi<double>(M_PI_2 + phi + alpha);
 
     // update the v value
-    *v = mrpt::math::wrapTo2Pi<double>(*t - goal_orientation);
+    v = mrpt::math::wrapTo2Pi<double>(t - goal_orientation);
 
-    return *t + *u + *u + *v;
+    return t + u + u + v;
 
 }
 
@@ -667,7 +807,7 @@ ReedsSheppActionSetPtr ReedsSheppModel::getLfRubLubRfpath(double t, double u, do
 }
 
 // left forward, right backward PI over 2, straight backward and left backward movement - get the path length
-double ReedsSheppModel::getLfRbpi2SbLb(double goal_x, double goal_y, double goal_orientation, double sinPhi, double cosPhi, double *t, double *u, double *v) {
+double ReedsSheppModel::getLfRbpi2SbLb(double goal_x, double goal_y, double goal_orientation, double sinPhi, double cosPhi, double &t, double &u, double &v) {
 
     // Reeds-Shepp 8.9
     // Uses a modified formula adapted from the c_c2sca function
@@ -686,22 +826,22 @@ double ReedsSheppModel::getLfRbpi2SbLb(double goal_x, double goal_y, double goal
     double phi = std::atan2(eta, x);
 
     // update the u value
-    *u = std::sqrt(u1squared - 4) - 2;
-    if (0 > *u) {
+    u = std::sqrt(u1squared - 4) - 2;
+    if (0 > u) {
 
         return std::numeric_limits<double>::infinity();
 
     }
 
-    double alpha = std::atan2(2, (*u) + 2);
+    double alpha = std::atan2(2, (u) + 2);
 
     // update the t value
-    *t = mrpt::math::wrapTo2Pi<double>(M_PI_2 + phi + alpha);
+    t = mrpt::math::wrapTo2Pi<double>(M_PI_2 + phi + alpha);
 
     // update the v value
-    *v = mrpt::math::wrapTo2Pi<double>(*t + M_PI_2 - goal_orientation);
+    v = mrpt::math::wrapTo2Pi<double>(t + M_PI_2 - goal_orientation);
 
-    return *t + M_PI_2 + *u + *v;
+    return t + M_PI_2 + u + v;
 }
 
 // build the actual LfRbpi2SbLb path based on given t, u and v
@@ -727,7 +867,7 @@ ReedsSheppActionSetPtr ReedsSheppModel::getLfRbpi2SbLbpath(double t, double u, d
 }
 
 // left forward, right backward PI over 2, straight backward and right backward movement - get the path length
-double ReedsSheppModel::getLfRbpi2SbRb(double goal_x, double goal_y, double goal_orientation, double sinPhi, double cosPhi, double *t, double *u, double *v) {
+double ReedsSheppModel::getLfRbpi2SbRb(double goal_x, double goal_y, double goal_orientation, double sinPhi, double cosPhi, double &t, double &u, double &v) {
 
     // Reeds-Shepp 8.10
     // Uses a modified formula adapted from the c_c2scb function
@@ -746,15 +886,15 @@ double ReedsSheppModel::getLfRbpi2SbRb(double goal_x, double goal_y, double goal
     double phi = std::atan2(eta, x);
 
     // update the t value
-    *t = mrpt::math::wrapTo2Pi<double>(M_PI_2 + phi);
+    t = mrpt::math::wrapTo2Pi<double>(M_PI_2 + phi);
 
     // update the u value
-    *u = u1 - 2;
+    u = u1 - 2;
 
     // update the v value
-    *v = mrpt::math::wrapTo2Pi<double>(goal_orientation - (*t) - M_PI_2);
+    v = mrpt::math::wrapTo2Pi<double>(goal_orientation - t - M_PI_2);
 
-    return *t + M_PI_2 + *u + *v;
+    return t + M_PI_2 + u + v;
 
 }
 
@@ -781,7 +921,7 @@ ReedsSheppActionSetPtr ReedsSheppModel::getLfRbpi2SbRbpath(double t, double u, d
 }
 
 // left forward, straight forward, right forward PI over 2 and right backward movement - get the path length
-double ReedsSheppModel::getLfSfRfpi2Lb(double goal_x, double goal_y, double goal_orientation, double sinPhi, double cosPhi, double *t, double *u, double *v) {
+double ReedsSheppModel::getLfSfRfpi2Lb(double goal_x, double goal_y, double goal_orientation, double sinPhi, double cosPhi, double &t, double &u, double &v) {
 
     // Reeds-Shepp 8.9 (reversed)
     // Uses a modified formula adapted from the csc2_ca function
@@ -800,22 +940,22 @@ double ReedsSheppModel::getLfSfRfpi2Lb(double goal_x, double goal_y, double goal
     double phi = std::atan2(eta, x);
 
     // update the u value
-    *u = std::sqrt(u1squared - 4) - 2;
-    if (0 > (*u)) {
+    u = std::sqrt(u1squared - 4) - 2;
+    if (0 > (u)) {
 
         return std::numeric_limits<double>::infinity();
 
     }
 
-    double alpha = std::atan2((*u) + 2, 2);
+    double alpha = std::atan2((u) + 2, 2);
 
     // update the t value
-    *t = mrpt::math::wrapTo2Pi<double>(M_PI_2 + phi - alpha);
+    t = mrpt::math::wrapTo2Pi<double>(M_PI_2 + phi - alpha);
 
     // update the v value
-    *v = mrpt::math::wrapTo2Pi<double>((*t) - M_PI_2 - goal_orientation);
+    v = mrpt::math::wrapTo2Pi<double>(t - M_PI_2 - goal_orientation);
 
-    return *t + *u + M_PI_2 + *v;
+    return t + u + M_PI_2 + v;
 
 }
 
@@ -842,7 +982,7 @@ ReedsSheppActionSetPtr ReedsSheppModel::getLfSfRfpi2Lbpath(double t, double u, d
 }
 
 // left forward, straight forward, left forward PI over 2 and right backward movement - get the path length
-double ReedsSheppModel::getLfSfLfpi2Rb(double goal_x, double goal_y, double goal_orientation, double sinPhi, double cosPhi, double *t, double *u, double *v) {
+double ReedsSheppModel::getLfSfLfpi2Rb(double goal_x, double goal_y, double goal_orientation, double sinPhi, double cosPhi, double &t, double &u, double &v) {
 
     // Reeds-Shepp 8.10 (reversed)
     // Uses a modified formula adapted from the csc2_cb function
@@ -861,15 +1001,15 @@ double ReedsSheppModel::getLfSfLfpi2Rb(double goal_x, double goal_y, double goal
     double phi = std::atan2(eta, x);
 
     // update the t value
-    *t = mrpt::math::wrapTo2Pi<double>(phi);
+    t = mrpt::math::wrapTo2Pi<double>(phi);
 
     // update the u value
-    *u = u1 - 2;
+    u = u1 - 2;
 
     // update the t value
-    *v = mrpt::math::wrapTo2Pi<double>(-(*t) - M_PI_2 + goal_orientation);
+    v = mrpt::math::wrapTo2Pi<double>(-t - M_PI_2 + goal_orientation);
 
-    return *t + *u + M_PI_2 + *v;
+    return t + u + M_PI_2 + v;
 
 }
 
@@ -896,7 +1036,7 @@ ReedsSheppActionSetPtr ReedsSheppModel::getLfSfLfpi2Rbpath(double t, double u, d
 }
 
 // left forward, right backward PI over 2, straight backward, left backward PI over 2 and right forward movement - get the path length
-double ReedsSheppModel::getLfRbpi2SbLbpi2Rf(double goal_x, double goal_y, double goal_orientation, double sinPhi, double cosPhi, double *t, double *u, double *v) {
+double ReedsSheppModel::getLfRbpi2SbLbpi2Rf(double goal_x, double goal_y, double goal_orientation, double sinPhi, double cosPhi, double &t, double &u, double &v) {
 
     // Reeds-Shepp 8.11
     // Uses a modified formula adapted from the c_c2sc2_c function
@@ -915,22 +1055,22 @@ double ReedsSheppModel::getLfRbpi2SbLbpi2Rf(double goal_x, double goal_y, double
     double phi = std::atan2(eta, x);
 
     // update the u value
-    *u = std::sqrt(u1squared - 4) - 4;
-    if (0 > (*u)) {
+    u = std::sqrt(u1squared - 4) - 4;
+    if (0 > (u)) {
 
         return std::numeric_limits<double>::infinity();
 
     }
 
-    double alpha = std::atan2(2, (*u) + 4);
+    double alpha = std::atan2(2, (u) + 4);
 
     // update the t value
-    *t = mrpt::math::wrapTo2Pi<double>(M_PI_2 + phi + alpha);
+    t = mrpt::math::wrapTo2Pi<double>(M_PI_2 + phi + alpha);
 
     // update the v value
-    *v = mrpt::math::wrapTo2Pi<double>((*t) - goal_orientation);
+    v = mrpt::math::wrapTo2Pi<double>(t - goal_orientation);
 
-    return *t + *u + *v + M_PI;
+    return t + u + v + M_PI;
 
 }
 

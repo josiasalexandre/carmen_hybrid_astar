@@ -26,10 +26,19 @@ class HybridAstarMotionPlanner {
         // the path smoother
         astar::CGSmoother pathSmoother;
 
+        // the current goal
+        astar::Pose2D goal;
+
+        // the path to be published
+        std::list<astar::Pose2D> path;
+
+        // flag to validates the path
+        bool validPath;
+
         // PRIVATE METHODS
 
         // publish the current path
-        void publishPath();
+        void publishPath(std::list<astar::Pose2D>& path);
 
         // publish the current status
         void publishStatus();
@@ -45,6 +54,9 @@ class HybridAstarMotionPlanner {
 
         // basic constructor
         HybridAstarMotionPlanner(int argc, char** argv);
+
+        // registering the currrent static pointer
+        void init();
 
         // the main handler
         static void globalPoseMessageHandler(carmen_localize_ackerman_globalpos_message *msg);
@@ -78,5 +90,3 @@ class HybridAstarMotionPlanner {
 }
 
 #endif
-
-struct inc;

@@ -17,6 +17,7 @@ class VehicleModel {
         // PRIVATE METHODS
 
     public:
+
         // PUBLIC ATTRIBUTES
 
         // max wheel angle

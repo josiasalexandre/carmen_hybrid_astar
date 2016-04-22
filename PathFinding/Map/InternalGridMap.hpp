@@ -1,7 +1,9 @@
 #ifndef INTERNAL_GRID_MAP_HPP
 #define INTERNAL_GRID_MAP_HPP
 
-#include "GVDLau.hpp"
+#include "../GVDLau.hpp"
+#include "../../Entities/Pose2D.hpp"
+#include "MapCell.hpp"
 
 namespace astar {
 
@@ -27,6 +29,9 @@ class InternalGridMap {
 
         // update the GridMap
         void updateGridMap();
+
+        // find a cell which a given pose is localized
+        MapCellPtr poseToCell(const astar::Pose2D&);
 
 };
 

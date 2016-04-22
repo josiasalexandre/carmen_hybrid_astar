@@ -32,7 +32,7 @@ astar::Pose2D astar::VehicleModel::nextPose(
     double x, y, phi;
 
     // no turning radius?
-    if (astar::SteeringStraight == s) {
+    if (astar::RSStraight == s) {
 
         // just a straight movement, no turning radius
         x = len;
@@ -60,9 +60,9 @@ astar::Pose2D astar::VehicleModel::nextPose(
         x = L*((double) std::cos(phi2));
 
         // get the y coordinate
-        y = L*((double) std::cos(phi2));
+        y = L*sinPhi;
 
-        if (astar::SteeringRight == s) {
+        if (astar::RSTurnRight == s) {
 
             // change direction
             y = -y;
@@ -85,10 +85,10 @@ astar::Pose2D astar::VehicleModel::nextPose(
     astar::Vector2D v(x, y);
 
     // rotate around z axis
-    v = v.rotateZ(p.orientation);
+    v.rotateZ(p.orientation);
 
     // rotate the point to the appropriated result
-    return astar::Pose2D(p.position.translate(v), mrpt::math::wrapToPi<double>(p.orientation + phi));
+    return astar::Pose2D(p.position + v, mrpt::math::wrapToPi<double>(p.orientation + phi));
 
 }
 

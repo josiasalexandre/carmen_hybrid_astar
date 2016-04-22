@@ -149,6 +149,8 @@ int main() {
 
     }
 
+    delete(set);
+
     return 0;
 
 }

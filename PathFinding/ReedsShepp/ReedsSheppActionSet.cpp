@@ -33,7 +33,7 @@ double ReedsSheppActionSet::calculateCost(double unit, double reverseCost, doubl
     // get the actions size
     unsigned int a_size = actions.size();
 
-    if (a_size) {
+    if (0 < a_size) {
 
         if (1.0 == reverseCost && 0.0 == gearSwitchCost) {
 

@@ -1,6 +1,10 @@
 #ifndef CONJUGATE_GRADIENT_PATH_SMOOTHER_HPP
 #define CONJUGATE_GRADIENT_PATH_SMOOTHER_HPP
-#include <boost/config/no_tr1/complex.hpp>
+
+#include <list>
+
+#include "InternalGridMap.hpp"
+#include "../Entities/Pose2D.hpp"
 
 namespace astar {
 
@@ -17,7 +21,9 @@ class CGSmoother {
         // PUBLIC ATTRIBUTES
 
         // PUBLIC METHODS
-        
+
+        // smooth a given path
+        std::list<astar::Pose2D> smooth(std::list<astar::Pose2D>&, astar::InternalGridMap&);
 
 };
 

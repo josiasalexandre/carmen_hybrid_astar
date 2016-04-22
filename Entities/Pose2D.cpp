@@ -3,16 +3,22 @@
 #include <cmath>
 
 // simple constructor
-astar::Pose2D::Pose2D() : position(0.0, 0.0), orientation(0.0) {}
+astar::Pose2D::Pose2D() : position(0.0, 0.0), orientation(0.0), wheelAngle(0.0) {}
 
-// basic constructor
-astar::Pose2D::Pose2D(const astar::Vector2D &p, double o) : position(p), orientation(o) {}
+// basic constructor without wheelAngle
+astar::Pose2D::Pose2D(const astar::Vector2D &p, double o) : position(p), orientation(o), wheelAngle(0.0) {}
 
-// basic constructor
-astar::Pose2D::Pose2D(double x_, double y_, double orientation_) : position(x_, y_), orientation(orientation_) {}
+// basic constructor without wheelAngle
+astar::Pose2D::Pose2D(const astar::Vector2D &p, double o, double wheelAngle_) : position(p), orientation(o), wheelAngle(wheelAngle_) {}
+
+// basic constructor without wheelAngle
+astar::Pose2D::Pose2D(double x_, double y_, double orientation_) : position(x_, y_), orientation(orientation_), wheelAngle(0.0) {}
+
+// basic constructor with wheelAngle
+astar::Pose2D::Pose2D(double x_, double y_, double orientation_, double wheelAngle_) : position(x_, y_), orientation(orientation_), wheelAngle(wheelAngle_) {}
 
 // copy constructor
-astar::Pose2D::Pose2D(const astar::Pose2D &p) : position(p.position), orientation(p.orientation) {}
+astar::Pose2D::Pose2D(const astar::Pose2D &p) : position(p.position), orientation(p.orientation), wheelAngle(p.wheelAngle), v(p.v), gear(p.gear) {}
 
 // distance between two poses
 double astar::Pose2D::distance(const astar::Pose2D &p) {
