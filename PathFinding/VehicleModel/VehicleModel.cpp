@@ -5,28 +5,10 @@ astar::Pose2D astar::VehicleModel::nextPose(
                                             const astar::Pose2D &p,
                                             astar::Steer s,
                                             astar::Gear g,
-                                            double dt,
-                                            float &len
+                                            double length,
+                                            double turnRadius
                                            )
 {
-
-    // use the default parameters
-    return nextPose(p, s, g, defaultSpeed, dt, defaultTurnRadius, len);
-
-}
-// get the next pose, using the custom vehicle parameters
-astar::Pose2D astar::VehicleModel::nextPose(
-                                            const astar::Pose2D &p,
-                                            astar::Steer s,
-                                            astar::Gear g,
-                                            double speed,
-                                            double dt,
-                                            double turnRadius, float &len
-                                           )
-{
-
-    // update the length
-    len = speed*dt;
 
     // auxiliar variables
     double x, y, phi;
@@ -35,14 +17,14 @@ astar::Pose2D astar::VehicleModel::nextPose(
     if (astar::RSStraight == s) {
 
         // just a straight movement, no turning radius
-        x = len;
+        x = length;
         y = 0.0;
         phi = 0.0;
 
     } else {
 
         // get the wheel angle
-        phi = len/turnRadius;
+        phi = length/turnRadius;
 
         if (maxPhi < phi) {
 

@@ -1,6 +1,7 @@
 #include "ReedsSheppModel.hpp"
 
 #include <limits>
+#include <cmath>
 
 // local namespace
 using namespace astar;
@@ -77,16 +78,19 @@ ReedsSheppActionSetPtr ReedsSheppModel::solve(const Pose2D &start, const Pose2D 
 }
 
 // return a list of poses from a given action set
-std::vector<Pose2D> ReedsSheppModel::discretize(const Pose2D &start, ReedsSheppActionSetPtr actionSet, double radcurv, double inverse_resolution) {
+PoseArrayPtr ReedsSheppModel::discretize(const Pose2D &start, ReedsSheppActionSetPtr actionSet, double radcurv, double inverse_resolution) {
 
     // get the prev pose
     Pose2D prev(start);
 
     // create the pose list
-    std::vector<Pose2D> poses;
+    PoseArrayPtr path = new PoseArray();
+
+    // a reference helper
+    std::vector<Pose2D> &poses(path->poses);
 
     // append the first pose
-    poses.push_back(prev);
+   poses.push_back(prev);
 
     // get the action size list size
     unsigned int a_size = actionSet->actions.size();
@@ -97,7 +101,7 @@ std::vector<Pose2D> ReedsSheppModel::discretize(const Pose2D &start, ReedsSheppA
         for (std::vector<ReedsSheppAction>::iterator it = actionSet->actions.begin();  it < actionSet->actions.end(); ++it) {
 
             // subdivide the entire arc length by the grid resolution
-            unsigned int n = std::ceil(it->length * radcurv * inverse_resolution);
+            unsigned int n = ceil(it->length * radcurv * inverse_resolution);
 
             // is it a line path?
             if (RSStraight != it->steer) {
@@ -213,7 +217,8 @@ std::vector<Pose2D> ReedsSheppModel::discretize(const Pose2D &start, ReedsSheppA
     }
 
     // return the pose list
-    return poses;
+    return path;
+
 }
 
 // PRIVATE METHODS

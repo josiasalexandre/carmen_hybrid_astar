@@ -3,6 +3,7 @@
 
 #include "../../Entities/Pose2D.hpp"
 #include "../ReedsShepp/ReedsSheppAction.hpp"
+#include "../HybridAstar/HybridAstarNode.hpp"
 
 namespace astar {
 
@@ -80,11 +81,8 @@ class VehicleModel {
 
         // PUBLIC METHODS
 
-        // get the next pose, using the default vehicle parameters
-        astar::Pose2D nextPose(const astar::Pose2D&, astar::Steer, astar::Gear, double, float *);
-
         // get the next pose, using the custom vehicle parameters
-        astar::Pose2D nextPose(const astar::Pose2D&, astar::Steer, astar::Gear, double, double, double, float *);
+        astar::Pose2D nextPose(const astar::Pose2D&, astar::Steer, astar::Gear, double, double, double);
 
 };
 

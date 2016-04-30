@@ -17,8 +17,6 @@ ReedsSheppActionSet::ReedsSheppActionSet(double l) : actions(0), length(l) {}
 // add a new action
 void ReedsSheppActionSet::addAction(Steer s, Gear g, double len) {
 
-    //
-
     // append the new action to the list
     actions.push_back(ReedsSheppAction(s, g, len));
 
@@ -27,15 +25,21 @@ void ReedsSheppActionSet::addAction(Steer s, Gear g, double len) {
 
 }
 
+unsigned int ReedsSheppActionSet::size() {
+
+    return actions.size();
+}
+
+
 // the entire set cost
-double ReedsSheppActionSet::calculateCost(double unit, double reverseCost, double gearSwitchCost) {
+double ReedsSheppActionSet::calculateCost(double unit, double reverseFactor, double gearSwitchCost) {
 
     // get the actions size
     unsigned int a_size = actions.size();
 
     if (0 < a_size) {
 
-        if (1.0 == reverseCost && 0.0 == gearSwitchCost) {
+        if (1.0 == reverseFactor && 0.0 == gearSwitchCost) {
 
             return length*unit;
 
@@ -55,7 +59,7 @@ double ReedsSheppActionSet::calculateCost(double unit, double reverseCost, doubl
             if (BackwardGear == actions[i].gear) {
 
                 // multiply by the reverse cost
-                actionCost *= reverseCost;
+                actionCost *= reverseFactor;
 
             }
             if (prevGear != actions[i].gear) {

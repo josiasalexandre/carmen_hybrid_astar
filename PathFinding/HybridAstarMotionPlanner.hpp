@@ -1,8 +1,8 @@
 #ifndef HYBRID_ASTAR_MOTION_PLANNER_HPP
 #define HYBRID_ASTAR_MOTION_PLANNER_HPP
 
-#include "InternalGridMap.hpp"
-#include "HybridAstar.hpp"
+#include "GridMap/InternalGridMap.hpp"
+#include "HybridAstar/HybridAstar.hpp"
 #include "CGSmoother.hpp"
 #include "VehicleModel/VehicleModel.hpp"
 
@@ -18,7 +18,7 @@ class HybridAstarMotionPlanner {
         astar::VehicleModel vehicleModel;
 
         // the internal map
-        astar::InternalGridMap map;
+        astar::InternalGridMap grid;
 
         // the hybrid astar search algorith
         astar::HybridAstar pathFinder;

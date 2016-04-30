@@ -17,7 +17,6 @@ class ReedsSheppActionSet {
 
     public:
 
-
         // basic constructor
         ReedsSheppActionSet();
 
@@ -39,6 +38,9 @@ class ReedsSheppActionSet {
 
         // add a new ReedsSheppAction
         void addAction(astar::Steer, astar::Gear, double);
+
+        // get the actions vector size
+        unsigned int size();
 
         // the entire set cost
         double calculateCost(double, double, double);

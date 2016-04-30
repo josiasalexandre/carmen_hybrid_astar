@@ -1,6 +1,9 @@
 #ifndef POSE_2D_HPP
 #define POSE_2D_HPP
 
+#include <list>
+#include <vector>
+
 #include "../Helpers/wrap2pi.hpp"
 #include "Vector2D.hpp"
 #include "../PathFinding/ReedsShepp/ReedsSheppAction.hpp"
@@ -58,6 +61,9 @@ class Pose2D {
         // get difference between two thetas (yaw), overloading
         double get_orientation_diff(double);
 
+        // the assignment operator
+        void operator=(const Pose2D&);
+
         // == operator overloading
         bool operator==(const Pose2D&);
 
@@ -65,6 +71,41 @@ class Pose2D {
         bool operator!=(const Pose2D&);
 
 };
+
+// a helper class to avoid copies
+class PoseList {
+
+
+    public:
+
+        // EVERYTHING PUBLIC
+        std::list<Pose2D> poses;
+
+        ~PoseList() {
+
+            while(!poses.empty()) {
+
+
+
+            }
+
+        }
+
+};
+
+typedef PoseList* PoseListPtr;
+
+//
+class PoseArray {
+
+    public:
+
+        // EVERYTHING PUBLIC
+        std::vector<Pose2D> poses;
+
+};
+
+typedef PoseArray* PoseArrayPtr;
 
 }
 

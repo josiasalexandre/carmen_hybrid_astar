@@ -196,7 +196,7 @@ class ReedsSheppModel {
         astar::ReedsSheppActionSetPtr solve(const astar::Pose2D&, const astar::Pose2D&, double);
 
         // return a list of poses from a given action set
-        std::vector<Pose2D> discretize(const Pose2D&, ReedsSheppActionSetPtr, double, double);
+        astar::PoseArrayPtr discretize(const Pose2D&, ReedsSheppActionSetPtr, double, double);
 
 };
 

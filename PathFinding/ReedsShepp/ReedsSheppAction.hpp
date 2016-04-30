@@ -1,13 +1,9 @@
 #ifndef REEDS_SHEPP_ACTION_HPP
 #define REEDS_SHEPP_ACTION_HPP
 
+#include "ReedsSheppDefinitions.hpp"
+
 namespace astar {
-
-// define the steering values
-enum Steer {RSTurnLeft, RSStraight, RSTurnRight};
-
-// define the Gears
-enum Gear {ForwardGear, BackwardGear};
 
 class ReedsSheppAction {
 
@@ -22,10 +18,10 @@ class ReedsSheppAction {
         // PUBLIC ATTRIBUTES
 
         // steering
-        Steer steer;
+        astar::Steer steer;
 
         // direction
-        Gear gear;
+        astar::Gear gear;
 
         // the path length
         double length;
@@ -36,7 +32,7 @@ class ReedsSheppAction {
         ReedsSheppAction() {}
 
         // basic constructor
-        ReedsSheppAction(const Steer &s, const Gear &g, const double &len) : steer(s), gear(g), length(len) {}
+        ReedsSheppAction(const astar::Steer &s, const astar::Gear &g, const double &len) : steer(s), gear(g), length(len) {}
 
         // copy constructor
         ReedsSheppAction(const ReedsSheppAction &action) : steer(action.steer), gear(action.gear), length(action.length) {}

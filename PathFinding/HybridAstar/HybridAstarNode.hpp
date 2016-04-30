@@ -32,7 +32,7 @@ class HybridAstarNode {
         astar::ReedsSheppActionSetPtr actionSet;
 
         // the current cell
-        astar::Cell &cell;
+        astar::MapCellPtr cell;
 
         // the current node cost
         double g;
@@ -47,7 +47,7 @@ class HybridAstarNode {
         HybridAstarNode(const astar::Pose2D&, astar::ReedsSheppActionPtr, astar::Cell*, double, double, astar::HybridAstarNode*);
 
         // basic constructor
-        HybridAstarNode(const astar::Pose2D&, astar::ReedsSheppActionSetPtr, astar::Cell*, double, double, astar::HybridAstarNode*);
+        HybridAstarNode(const astar::Pose2D&, ReedsSheppActionSetPtr, astar::Cell*, double, double, astar::HybridAstarNode*);
 
         // basic destructor
         ~HybridAstarNode();
@@ -56,7 +56,11 @@ class HybridAstarNode {
         // < operator overloading, for priority queue compare purpose
         bool operator<(const astar::HybridAstarNode& n) const;
 
+        // assignement operator
+        void operator=(const astar::HybridAstarNode& n);
+
 };
+
 
 typedef HybridAstarNode* HybridAstarNodePtr;
 
@@ -79,6 +83,20 @@ class HyridAstarNodePtrComparator {
         }
 
 };
+
+// a simple container
+class HybridAstarNodeArray {
+
+    public:
+
+        // PUBLIC ATTRIBUTES
+        // the pointers must be handled outside this class
+        std::vector<HybridAstarNodePtr> nodes;
+
+};
+
+// just another pointer syntatic sugar
+typedef HybridAstarNodeArray* HybridAstarNodeArrayPtr;
 
 }
 

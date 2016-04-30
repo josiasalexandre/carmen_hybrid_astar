@@ -2,7 +2,7 @@
 #define COMBINED_HEURISTIC_HPP
 
 #include "../../Entities/Pose2D.hpp"
-#include "../InternalGridMap.hpp"
+#include "../GridMap/InternalGridMap.hpp"
 
 namespace astar {
 
