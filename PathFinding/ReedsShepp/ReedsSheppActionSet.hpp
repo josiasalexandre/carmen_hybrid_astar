@@ -43,7 +43,7 @@ class ReedsSheppActionSet {
         unsigned int size();
 
         // the entire set cost
-        double calculateCost(double, double, double);
+        double CalculateCost(double, double, double);
 
         // PUBLIC STATIC CLASS METHODS
 

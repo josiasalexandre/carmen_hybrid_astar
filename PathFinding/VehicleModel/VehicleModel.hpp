@@ -23,16 +23,16 @@ class VehicleModel {
 
         // max wheel angle
         // the phi
-        double maxPhi;
+        double maxphi;
 
         // the axle distance
-        double axleDist;
+        double axledist;
 
         // default speed
-        double defaultSpeed;
+        double default_speed;
 
         // default turn radius
-        double defaultTurnRadius;
+        double default_turn_radius;
 
         // the car length dimension
         double length;
@@ -44,45 +44,45 @@ class VehicleModel {
         double understeer;
 
         // distance between rear wheels
-        double rearWheelsDist;
+        double rear_wheels_dist;
 
         // the distance between front and rear axles
-        double frontRearAxlesDist;
+        double front_rear_axles_dist;
 
         // the distance between rear car and rear wheels
-        double rearCarWheelsDist;
+        double rear_car_wheels_dist;
 
         // the distace between front car and front wheels
-        double frontCarWheelsDist;
+        double front_car_wheels_dist;
 
         // the maximum foward accelerarion
-        double maxForwardAcceleration;
+        double max_forward_acceleration;
 
         // the maximum forward deceleration
-        double maxForwardDeceleration;
+        double max_forward_deceleration;
 
         // the maximum backward accelerarion
-        double maxBackwardAcceleration;
+        double max_backward_acceleration;
 
         // the maxium backward deceleration
-        double maxBackwardDeceleration;
+        double max_backward_deceleration;
 
         // the desired steering command rate
-        double steeringCommandRate;
+        double steering_command_rate;
 
         // the desired foward accelerarion
-        double desiredForwardAcceleration;
+        double desired_forward_acceleration;
 
         // the desired forward deceleration
-        double desiredForwardDeceleration;
+        double desired_forward_deceleration;
 
         // the desired backward deceleration
-        double desiredBackwardDeceleration;
+        double desired_backward_deceleration;
 
         // PUBLIC METHODS
 
         // get the next pose, using the custom vehicle parameters
-        astar::Pose2D nextPose(const astar::Pose2D&, astar::Steer, astar::Gear, double, double, double);
+        astar::Pose2D NextPose(const astar::Pose2D&, astar::Steer, astar::Gear, double, double, double);
 
 };
 

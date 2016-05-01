@@ -44,16 +44,16 @@ class HybridAstar {
         // PRIVATE METHODS
 
         // clear all the sets
-        void removeAllNodes();
+        void RemoveAllNodes();
 
         // reconstruct the path from the goal to the start pose
-        astar::PoseListPtr rebuildPath(HybridAstarNodePtr);
+        astar::PoseListPtr ReBuildPath(HybridAstarNodePtr);
 
         // get the Reeds-Shepp path to the goal and return the appropriated HybridAstarNode
-        HybridAstarNodePtr getReedsSheppChild(const Pose2D&, const Pose2D&);
+        HybridAstarNodePtr GetReedsSheppChild(const Pose2D&, const Pose2D&);
 
         // get the children nodes by expanding all gears and steeering
-        HybridAstarNodeArrayPtr getChildren(const Pose2D&, const Pose2D&, double);
+        HybridAstarNodeArrayPtr GetChidlren(const Pose2D&, const Pose2D&, double);
 
 
     public:
@@ -66,7 +66,7 @@ class HybridAstar {
         HybridAstar();
 
         // find a path to the goal
-        PoseListPtr findPath(const astar::Pose2D&, const astar::Pose2D&, astar::InternalGridMap&);
+        PoseListPtr FindPath(const astar::Pose2D&, const astar::Pose2D&, astar::InternalGridMap&);
 
 };
 

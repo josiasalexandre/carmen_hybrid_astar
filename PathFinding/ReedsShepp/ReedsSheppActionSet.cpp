@@ -32,7 +32,7 @@ unsigned int ReedsSheppActionSet::size() {
 
 
 // the entire set cost
-double ReedsSheppActionSet::calculateCost(double unit, double reverseFactor, double gearSwitchCost) {
+double ReedsSheppActionSet::CalculateCost(double unit, double reverseFactor, double gearSwitchCost) {
 
     // get the actions size
     unsigned int a_size = actions.size();

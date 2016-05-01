@@ -21,10 +21,10 @@ class Heuristic {
         // PUBLIC METHODS
 
         // update the heuristic around a new goal
-        void updateGoal(const astar::InternalGridMap& map, const astar::Pose2D&);
+        void UpdateGoal(const astar::InternalGridMap& map, const astar::Pose2D&);
 
         // get a heuristic value
-        double getHeuristicValue(astar::InternalGridMap&, const astar::Pose2D&, const astar::Pose2D&);
+        double GetHeuristicValue(astar::InternalGridMap&, const astar::Pose2D&, const astar::Pose2D&);
 
 };
 

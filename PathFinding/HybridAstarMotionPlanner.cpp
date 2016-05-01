@@ -62,7 +62,7 @@ void astar::HybridAstarMotionPlanner::globalPoseMessageHandler(carmen_localize_a
     astar::Pose2D start(msg->globalpos.x, msg->globalpos.y, msg->globalpos.theta, msg->phi, msg->v);
 
     // find a path to the goal
-    std::list<Pose2D> path = pathFinder.findPath(start, goal, map);
+    std::list<Pose2D> path = pathFinder.FindPath(start, goal, map);
 
     // is it a valid path?
     if (0 < path.size()) {

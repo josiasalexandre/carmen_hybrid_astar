@@ -106,82 +106,82 @@ class ReedsSheppModel {
         bool isInvalidAngle(double);
 
         // calculate the optimal path length
-        double getPathLength(PathWords w, double, double, double, double, double, double&, double&, double&);
+        double GetPathLength(PathWords w, double, double, double, double, double, double&, double&, double&);
 
         // build the Reeds-Shepp path
-        ReedsSheppActionSetPtr buildPath(PathWords w, double, double, double);
+        ReedsSheppActionSetPtr BuildPath(PathWords w, double, double, double);
 
         // left forward, straight forward and left forward movement - get the path length
-        double getLfSfLf(double, double, double, double, double, double&, double&, double&);
+        double GetLfSfLf(double, double, double, double, double, double&, double&, double&);
 
         // build the actual LfSfLf path based on given t, u and v
-        ReedsSheppActionSetPtr getLfSfLfpath(double, double, double);
+        ReedsSheppActionSetPtr GetLfSfLfpath(double, double, double);
 
         // left forward, straight forward and right forward movement - get the path length
-        double getLfSfRf(double, double, double, double, double, double&, double&, double&);
+        double GetLfSfRf(double, double, double, double, double, double&, double&, double&);
 
         // build the actual LfSfRf path based on given t, u and v
-        ReedsSheppActionSetPtr getLfSfRfpath(double, double, double);
+        ReedsSheppActionSetPtr GetLfSfRfpath(double, double, double);
 
         // left forward, right backward and left forward movement - get the path length
-        double getLfRbLf(double, double, double, double, double, double&, double&, double&);
+        double GetLfRbLf(double, double, double, double, double, double&, double&, double&);
 
         // build the actual LfRbLf path based on given t, u and v
-        ReedsSheppActionSetPtr getLfRbLfpath(double, double, double);
+        ReedsSheppActionSetPtr GetLfRbLfpath(double, double, double);
 
         // left forward, right backward and left backward movement - get the path length
-        double getLfRbLb(double, double, double, double, double, double&, double&, double&);
+        double GetLfRbLb(double, double, double, double, double, double&, double&, double&);
 
         // build the actual LfRbLb path based on given t, u and v
-        ReedsSheppActionSetPtr getLfRbLbpath(double, double, double);
+        ReedsSheppActionSetPtr GetLfRbLbpath(double, double, double);
 
         // left forward, right forward and left backward movement - get the path length
-        double getLfRfLb(double, double, double, double, double, double&, double&, double&);
+        double GetLfRfLb(double, double, double, double, double, double&, double&, double&);
 
         // build the actual LfRfLb path based on given t, u and v
-        ReedsSheppActionSetPtr getLfRfLbpath(double, double, double);
+        ReedsSheppActionSetPtr GetLfRfLbpath(double, double, double);
 
         // left forward, right forward, left backward and right forward movement - get the path length
-        double getLfRufLubRb(double, double, double, double, double, double&, double&, double&);
+        double GetLfRufLubRb(double, double, double, double, double, double&, double&, double&);
 
         // build the actual LfRufLubRb path based on given t, u and v
-        ReedsSheppActionSetPtr getLfRufLubRbpath(double, double, double);
+        ReedsSheppActionSetPtr GetLfRufLubRbpath(double, double, double);
 
         // left forward, right backward, left backward and right forward movement - get the path length
-        double getLfRubLubRf(double, double, double, double, double, double&, double&, double&);
+        double GetLfRubLubRf(double, double, double, double, double, double&, double&, double&);
 
         // build the actual LfRubLubRf path based on given t, u and v
-        ReedsSheppActionSetPtr getLfRubLubRfpath(double, double, double);
+        ReedsSheppActionSetPtr GetLfRubLubRfpath(double, double, double);
 
         // left forward, right backward PI over 2, straight backward and left backward movement - get the path length
-        double getLfRbpi2SbLb(double, double, double, double, double, double&, double&, double&);
+        double GetLfRbpi2SbLb(double, double, double, double, double, double&, double&, double&);
 
         // build the actual LfRbpi2SbLb path based on given t, u and v
-        ReedsSheppActionSetPtr getLfRbpi2SbLbpath(double, double, double);
+        ReedsSheppActionSetPtr GetLfRbpi2SbLbpath(double, double, double);
 
         // left forward, right backward PI over 2, straight backward and right backward movement - get the path length
-        double getLfRbpi2SbRb(double, double, double, double, double, double&, double&, double&);
+        double GetLfRbpi2SbLb(double, double, double, double, double, double&, double&, double&);
 
         // build the actual LfRbpi2SbRb path based on given t, u and v
-        ReedsSheppActionSetPtr getLfRbpi2SbRbpath(double, double, double);
+        ReedsSheppActionSetPtr GetLfRbpi2SbLbpath(double, double, double);
 
         // left forward, straight forward, right forward PI over 2 and right backward movement - get the path length
-        double getLfSfRfpi2Lb(double, double, double, double, double, double&, double&, double&);
+        double GetLfSfRfpi2Lb(double, double, double, double, double, double&, double&, double&);
 
         // build the actual LfSfRfpi2Lb path based on given t, u and v
-        ReedsSheppActionSetPtr getLfSfRfpi2Lbpath(double, double, double);
+        ReedsSheppActionSetPtr GetLfSfRfpi2Lbpath(double, double, double);
 
         // left forward, straight forward, left forward PI over 2 and right backward movement - get the path length
-        double getLfSfLfpi2Rb(double, double, double, double, double, double&, double&, double&);
+        double GetLfSfLfpi2Rb(double, double, double, double, double, double&, double&, double&);
 
         // build the actual LfSfLfpi2Rb path based on given t, u and v
-        ReedsSheppActionSetPtr getLfSfLfpi2Rbpath(double, double, double);
+        ReedsSheppActionSetPtr GetLfSfLfpi2Rbpath(double, double, double);
 
         // left forward, right backward PI over 2, straight backward, left backward PI over 2 and right forward movement - get the path length
-        double getLfRbpi2SbLbpi2Rf(double, double, double, double, double, double&, double&, double&);
+        double GetLfRbpi2SbLbpi2Rf(double, double, double, double, double, double&, double&, double&);
 
         // build the actual LfRbpi2SbLbpi2Rf path based on given t, u and v
-        ReedsSheppActionSetPtr getLfRbpi2SbLbpi2Rfpath(double, double, double);
+        ReedsSheppActionSetPtr GetLfRbpi2SbLbpi2Rfpath(double, double, double);
 
     public:
 
@@ -193,10 +193,10 @@ class ReedsSheppModel {
         // PUBLIC METHODS
 
         // solve the current start to goal pathfinding
-        astar::ReedsSheppActionSetPtr solve(const astar::Pose2D&, const astar::Pose2D&, double);
+        astar::ReedsSheppActionSetPtr Solve(const astar::Pose2D&, const astar::Pose2D&, double);
 
         // return a list of poses from a given action set
-        astar::PoseArrayPtr discretize(const Pose2D&, ReedsSheppActionSetPtr, double, double);
+        astar::PoseArrayPtr Discretize(const Pose2D&, ReedsSheppActionSetPtr, double, double);
 
 };
 

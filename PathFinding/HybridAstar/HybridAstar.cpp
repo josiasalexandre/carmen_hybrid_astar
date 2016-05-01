@@ -9,7 +9,7 @@ HybridAstar::HybridAstar() : grid(nullptr) {}
 // PRIVATE METHODS
 
 // remove all nodes
-void HybridAstar::removeAllNodes() {
+void HybridAstar::RemoveAllNodes() {
 
     HybridAstarNodePtr tmp;
 
@@ -61,7 +61,7 @@ void HybridAstar::removeAllNodes() {
 
 
 // rebuild an entire path given a node
-PoseListPtr HybridAstar::rebuildPath(HybridAstarNodePtr n) {
+PoseListPtr HybridAstar::ReBuildPath(HybridAstarNodePtr n) {
 
     // create the list
     PoseListPtr path = new PoseList();
@@ -87,7 +87,7 @@ PoseListPtr HybridAstar::rebuildPath(HybridAstarNodePtr n) {
         } else if (nullptr != n->actionSet) {
 
             // get the subpath provided by the action set discretization
-            PoseArrayPtr subPath = ReedsSheppModel::discretize(n->parent->pose, n->actionSet, vehicle.defaultTurnRadius, grid->inverseResolution);
+            PoseArrayPtr subPath = ReedsSheppModel::discretize(n->parent->pose, n->actionSet, vehicle.default_turn_radius, grid->inverse_resolution);
 
             // get the path size
             subPathSize = subPath->poses.size();
@@ -133,10 +133,10 @@ PoseListPtr HybridAstar::rebuildPath(HybridAstarNodePtr n) {
 }
 
 // get the Reeds-Shepp path to the goal and return the appropriated HybridAstarNode
-HybridAstarNodePtr HybridAstar::getReedsSheppChild(const Pose2D &start, const Pose2D &goal) {
+HybridAstarNodePtr HybridAstar::GetReedsSheppChild(const Pose2D &start, const Pose2D &goal) {
 
     // get the resulting set of actions
-    ReedsSheppActionSetPtr actionSet = rs.solve(start, goal, vehicle.defaultTurnRadius);
+    ReedsSheppActionSetPtr actionSet = rs.solve(start, goal, vehicle.default_turn_radius);
 
     if (0 < actionSet->actions.size()) {
 
@@ -144,7 +144,7 @@ HybridAstarNodePtr HybridAstar::getReedsSheppChild(const Pose2D &start, const Po
         bool safe = true;
 
         // get the poses in the Reeds-Shepp curve
-        PoseArrayPtr path = rs.discretize(start, actionSet, vehicle.defaultTurnRadius, grid->inverseResolution);
+        PoseArrayPtr path = rs.discretize(start, actionSet, vehicle.default_turn_radius, grid->inverse_resolution);
 
         // a reference helper, just in case
         std::vector<Pose2D>& poses(path->poses);
@@ -177,7 +177,7 @@ HybridAstarNodePtr HybridAstar::getReedsSheppChild(const Pose2D &start, const Po
 }
 
 // get the children nodes by expanding all gears and steeering
-HybridAstarNodeArrayPtr HybridAstar::getChildren(const Pose2D &start, const Pose2D &goal, Gear gear, double length) {
+HybridAstarNodeArrayPtr HybridAstar::GetChidlren(const Pose2D &start, const Pose2D &goal, Gear gear, double length) {
 
     // build the vector
     HybridAstarNodeArrayPtr children = new HybridAstarNodeArray();
@@ -195,7 +195,7 @@ HybridAstarNodeArrayPtr HybridAstar::getChildren(const Pose2D &start, const Pose
         Steer s = static_cast<Steer>(j);
 
         // get the next pose
-        child = vehicle.nextPose(start, s, gear, length, vehicle.defaultTurnRadius);
+        child = vehicle.NextPose(start, s, gear, length, vehicle.default_turn_radius);
 
         // set the gear
         child.gear = gear;
@@ -213,14 +213,14 @@ HybridAstarNodeArrayPtr HybridAstar::getChildren(const Pose2D &start, const Pose
     // expanding Reeds-Shepp curves now
 
     // Reeds-Shepp curve threshold value
-    double threshold = heuristic.getHeuristicValue(start, goal);
+    double threshold = heuristic.GetHeuristicValue(start, goal);
     double inverseThreshold = 10.0/(threshold*threshold);
 
     // quadratic fallof
     if (10 > threshold || inverseThreshold < rand()) {
 
         // the a new HybridAstarNode based on ReedsSheppModel
-        HybridAstarNodePtr rsNode = getReedsSheppChild(start, goal);
+        HybridAstarNodePtr rsNode = GetReedsSheppChild(start, goal);
 
         if (nullptr != rsNode) {
 
@@ -237,7 +237,7 @@ HybridAstarNodeArrayPtr HybridAstar::getChildren(const Pose2D &start, const Pose
 // PUBLIC METHODS
 
 // receives the grid, start and goal poses and find a path, if possible
-PoseListPtr HybridAstar::findPath(InternalGridMap &gridMap, const Pose2D& start, const Pose2D& goal) {
+PoseListPtr HybridAstar::FindPath(InternalGridMap &gridMap, const Pose2D& start, const Pose2D& goal) {
 
     // get the grid map pointer
     // useful inside others methods, just to avoid passing the parameter constantly
@@ -245,13 +245,13 @@ PoseListPtr HybridAstar::findPath(InternalGridMap &gridMap, const Pose2D& start,
     grid = &gridMap;
 
     // update the heuristic to the new goal
-    heuristic.updateGoal(gridMap, goal);
+    heuristic.UpdateGoal(gridMap, goal);
 
     // helpers
-    double heuristicValue = heuristic.getHeuristicValue(gridMap, start, goal);
+    double heuristic_value = heuristic.GetHeuristicValue(gridMap, start, goal);
 
     // find the current cell
-    CellPtr c = gridMap.poseToCell(start);
+    CellPtr c = gridMap.PoseToCell(start);
 
     // the available space around the vehicle
     // provides the total length between the current pose and the node's children
@@ -261,10 +261,10 @@ PoseListPtr HybridAstar::findPath(InternalGridMap &gridMap, const Pose2D& start,
     // length = gridMap.resolution
 
     // the simple case of dt
-    // dt = gridMap.resolution/vehicle.defaultSpeed
+    // dt = gridMap.resolution/vehicle.default_speed
 
     // create a new Node
-    HybridAstarNodePtr n = new HybridAstarNode(start, new ReedsSheppAction(astar::RSStraight, ForwardGear, 0), c, 0, heuristicValue, nullptr);
+    HybridAstarNodePtr n = new HybridAstarNode(start, new ReedsSheppAction(astar::RSStraight, ForwardGear, 0), c, 0, heuristic_value, nullptr);
 
     // push the start node to the queue
     open.push(n);
@@ -273,14 +273,14 @@ PoseListPtr HybridAstar::findPath(InternalGridMap &gridMap, const Pose2D& start,
     discovered.push_back(n);
 
     // reverse flag
-    bool reverseGear;
+    bool reverse_gear;
 
     // the cost from the start to the current position
-    double tentativeG;
+    double tentative_g;
 
     // the total estimated cost
     // from the start to the goal
-    double tentativeF;
+    double tentative_f;
 
     // the actual A* algorithm
     while(!open.empty()) {
@@ -295,13 +295,13 @@ PoseListPtr HybridAstar::findPath(InternalGridMap &gridMap, const Pose2D& start,
         if (goal == n->pose) {
 
             // rebuild the entire path
-            PoseListPtr resultingPath = rebuildPath(n, vehicle.defaultTurnRadius, gridMap.inverseResolution);
+            PoseListPtr resulting_path = ReBuildPath(n, vehicle.default_turn_radius, gridMap.inverse_resolution);
 
             // clear all opened and expanded nodes nodes
-            removeAllNodes();
+            RemoveAllNodes();
 
             // return the path
-            return resultingPath;
+            return resulting_path;
 
         }
 
@@ -309,7 +309,7 @@ PoseListPtr HybridAstar::findPath(InternalGridMap &gridMap, const Pose2D& start,
         n->cell->status = ExploredNode;
 
         // get the length based on the environment
-        length = std::max(gridMap.resolution, 0.5 * (gridMap.getObstacleDistance(n->pose.position) + gridMap.getVoronoiDistance(n->pose.position)));
+        length = std::max(gridMap.resolution, 0.5 * (gridMap.GetObstacleDistance(n->pose.position) + gridMap.GetVoronoiDistance(n->pose.position)));
 
         // iterate over the gears
         for (unsigned int i = 0; i < NumGears; i++) {
@@ -318,7 +318,7 @@ PoseListPtr HybridAstar::findPath(InternalGridMap &gridMap, const Pose2D& start,
             Gear gear = static_cast<Gear>(i);
 
             // get the children nodes by expanding all gears and steeering
-            HybridAstarNodeArrayPtr children = getChildren(n->pose, goal, gear, length);
+            HybridAstarNodeArrayPtr children = GetChidlren(n->pose, goal, gear, length);
 
             // reference syntatic sugar
             std::vector<HybridAstarNodePtr> &nodes(children->nodes);
@@ -333,17 +333,17 @@ PoseListPtr HybridAstar::findPath(InternalGridMap &gridMap, const Pose2D& start,
                 if (ExploredNode != c->status) {
 
                     // reverse?
-                    reverseGear = (ForwardGear == gear);
+                    reverse_gear = (ForwardGear == gear);
 
                     if (nullptr != it->action) {
 
                         // we a have a valid action, conventional expanding
-                        tentativeG = n->g + pathCost(n->pose, it->pose, length, reverseGear);
+                        tentative_g = n->g + PathCost(n->pose, it->pose, length, reverse_gear);
 
                     } else if (0 < it->actionSet->size()) {
 
                         // we have a valid action set, Reeds-Shepp analytic expanding
-                        tentativeG = n->g + it->actionSet->calculateCost(vehicle.defaultTurnRadius, reverseFactor, gearSwitchCost);
+                        tentative_g = n->g + it->actionSet->CalculateCost(vehicle.default_turn_radius, reverseFactor, gearSwitchCost);
 
                     } else {
 
@@ -357,13 +357,13 @@ PoseListPtr HybridAstar::findPath(InternalGridMap &gridMap, const Pose2D& start,
                     }
 
                     // get the estimated cost
-                    tentativeF = tentativeG + heuristic.getHeuristicValue(it->pose, goal);
+                    tentative_f = tentative_g + heuristic.GetHeuristicValue(it->pose, goal);
 
                     // update the cost
-                    it->g = tentativeG;
+                    it->g = tentative_g;
 
                     // update the heuristic value
-                    it->f = tentativeF;
+                    it->f = tentative_f;
 
                     // set the parent
                     it->parent = n;
@@ -383,12 +383,12 @@ PoseListPtr HybridAstar::findPath(InternalGridMap &gridMap, const Pose2D& start,
                         c->status = OpenedNode;
 
                         // update the cell value, same value used in the node
-                        c->value = tentativeF;
+                        c->value = tentative_f;
 
                         // add to the open set
                         open.push(it);
 
-                    } else if (OpenedNode == c->status && tentativeF < c->value) {
+                    } else if (OpenedNode == c->status && tentative_f < c->value) {
 
                         // the cell has a node but the current child is a better one
 
@@ -402,10 +402,10 @@ PoseListPtr HybridAstar::findPath(InternalGridMap &gridMap, const Pose2D& start,
                         c->status = OpenedNode;
 
                         // update the cell value, same value used in the node
-                        c->value = tentativeF;
+                        c->value = tentative_f;
 
                         // pryority queue consolidation
-                        open.consolidate();
+                        open.Consolidate();
 
                     }
 

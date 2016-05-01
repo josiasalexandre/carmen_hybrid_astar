@@ -1,12 +1,12 @@
 #include "VehicleModel.hpp"
 
 // get the next pose
-astar::Pose2D astar::VehicleModel::nextPose(
+astar::Pose2D astar::VehicleModel::NextPose(
                                             const astar::Pose2D &p,
                                             astar::Steer s,
                                             astar::Gear g,
                                             double length,
-                                            double turnRadius
+                                            double turn_radius
                                            )
 {
 
@@ -24,25 +24,25 @@ astar::Pose2D astar::VehicleModel::nextPose(
     } else {
 
         // get the wheel angle
-        phi = length/turnRadius;
+        phi = length/turn_radius;
 
-        if (maxPhi < phi) {
+        if (maxphi < phi) {
 
-            phi = maxPhi;
+            phi = maxphi;
 
         }
 
         double phi2 = phi/2;
 
-        double sinPhi = (double) std::sin(phi2);
+        double sinphi = (double) std::sin(phi2);
 
-        double L = 2*sinPhi*turnRadius;
+        double L = 2*sinphi*turn_radius;
 
         // get the x coordinate
         x = L*((double) std::cos(phi2));
 
         // get the y coordinate
-        y = L*sinPhi;
+        y = L*sinphi;
 
         if (astar::RSTurnRight == s) {
 
@@ -73,4 +73,3 @@ astar::Pose2D astar::VehicleModel::nextPose(
     return astar::Pose2D(p.position + v, mrpt::math::wrapToPi<double>(p.orientation + phi));
 
 }
-

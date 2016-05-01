@@ -17,7 +17,7 @@ class InternalGridMap {
         double resolution;
 
         // the inverse grid resolution
-        double inverseResolution;
+        double inverse_resolution;
 
         // the grid width
         unsigned int width;
@@ -30,7 +30,7 @@ class InternalGridMap {
 
 
         // the voronoy fiedl
-        astar::GVDLau voronoyField;
+        astar::GVDLau voronoy_field;
 
         // PRIVATE METHODS
 
@@ -45,16 +45,16 @@ class InternalGridMap {
         InternalGridMap();
 
         // update the GridMap
-        void updateGridMap();
+        void UpdateGridMap();
 
         // find a cell which a given pose is localized
-        MapCellPtr poseToCell(const astar::Pose2D&);
+        MapCellPtr PoseToCell(const astar::Pose2D&);
 
         // get the distance to the nearest obstacle
-        double getObstacleDistance(const astar::Vector2D&);
+        double GetObstacleDistance(const astar::Vector2D&);
 
         // get the distance to the nearest voronoy edge
-        double getVoronoiDistance(const astar::Vector2D&);
+        double GetVoronoiDistance(const astar::Vector2D&);
 
         // is a valid point?
         bool isValidPoint(const astar::Vector2D&);
