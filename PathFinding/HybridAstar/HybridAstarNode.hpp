@@ -19,7 +19,6 @@ class HybridAstarNode {
 
     public:
 
-
         // PUBLIC ATTRIBUTES
 
         // the current pose
@@ -29,7 +28,7 @@ class HybridAstarNode {
         astar::ReedsSheppActionPtr action;
 
         // the steering action set
-        astar::ReedsSheppActionSetPtr actionSet;
+        astar::ReedsSheppActionSetPtr action_set;
 
         // the current cell
         astar::MapCellPtr cell;

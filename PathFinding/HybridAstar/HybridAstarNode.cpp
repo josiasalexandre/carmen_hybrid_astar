@@ -1,5 +1,4 @@
 #include "HybridAstarNode.hpp"
-#include <boost/concept_check.hpp>
 
 using namespace astar;
 
@@ -11,7 +10,7 @@ HybridAstarNode::HybridAstarNode(
                                     double cost,
                                     double heuristicCost,
                                     HybridAstarNode *n
-                                ) : pose(p), action(rsAction), actionSet(0), cell(c), g(cost), f(heuristicCost), parent(n)
+                                ) : pose(p), action(rsAction), action_set(0), cell(c), g(cost), f(heuristicCost), parent(n)
 {
 
     // the current node should be known by the pointed MapCell
@@ -26,7 +25,7 @@ HybridAstarNode::HybridAstarNode(
                                     double cost,
                                     double heuristicCost,
                                     HybridAstarNodePtr n
-                                ) : pose(p), action(nullptr), actionSet(rsActionSet), cell(c), g(cost), f(heuristicCost), parent(n) {}
+                                ) : pose(p), action(nullptr), action_set(rsActionSet), cell(c), g(cost), f(heuristicCost), parent(n) {}
 
 // basic destructor
 HybridAstarNode::~HybridAstarNode() {
@@ -54,9 +53,9 @@ HybridAstarNode::~HybridAstarNode() {
     }
 
     // delete the action set
-    if (nullptr != actionSet) {
+    if (nullptr != action_set) {
 
-        delete(actionSet);
+        delete(action_set);
 
     }
 
@@ -91,14 +90,14 @@ void HybridAstarNode::operator=(const astar::HybridAstarNode& n) {
     action = n.action;
 
     // the action set
-    if (nullptr != actionSet) {
+    if (nullptr != action_set) {
 
-        delete(actionSet);
+        delete(action_set);
 
     }
 
     // the steering action set
-    actionSet = n.actionSet;
+    action_set = n.action_set;
 
     // the current cell
     cell = n.cell;

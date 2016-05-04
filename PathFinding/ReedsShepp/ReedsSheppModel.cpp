@@ -78,7 +78,7 @@ ReedsSheppActionSetPtr ReedsSheppModel::Solve(const Pose2D &start, const Pose2D 
 }
 
 // return a list of poses from a given action set
-PoseArrayPtr ReedsSheppModel::Discretize(const Pose2D &start, ReedsSheppActionSetPtr actionSet, double radcurv, double inverse_resolution) {
+PoseArrayPtr ReedsSheppModel::Discretize(const Pose2D &start, ReedsSheppActionSetPtr action_set, double radcurv, double inverse_resolution) {
 
     // get the prev pose
     Pose2D prev(start);
@@ -93,12 +93,12 @@ PoseArrayPtr ReedsSheppModel::Discretize(const Pose2D &start, ReedsSheppActionSe
    poses.push_back(prev);
 
     // get the action size list size
-    unsigned int a_size = actionSet->actions.size();
+    unsigned int a_size = action_set->actions.size();
 
     if (0 < a_size) {
 
         // get the iterator
-        for (std::vector<ReedsSheppAction>::iterator it = actionSet->actions.begin();  it < actionSet->actions.end(); ++it) {
+        for (std::vector<ReedsSheppAction>::iterator it = action_set->actions.begin();  it < action_set->actions.end(); ++it) {
 
             // subdivide the entire arc length by the grid resolution
             unsigned int n = ceil(it->length * radcurv * inverse_resolution);
@@ -328,75 +328,75 @@ ReedsSheppActionSetPtr ReedsSheppModel::BuildPath(PathWords w, double t, double 
 
         // Reeds-Shepp 8.1: CSC, same turn
         case LfSfLf: return GetLfSfLfpath(t, u, v);
-        case LbSbLb: return ReedsSheppActionSet::timeFlip(GetLfSfLfpath(t, u, v));
-        case RfSfRf: return ReedsSheppActionSet::reflect(GetLfSfLfpath(t, u, v));
-        case RbSbRb: return ReedsSheppActionSet::timeFlipAndReflect(GetLfSfLfpath(t, u, v));
+        case LbSbLb: return ReedsSheppActionSet::TimeFlip(GetLfSfLfpath(t, u, v));
+        case RfSfRf: return ReedsSheppActionSet::Reflect(GetLfSfLfpath(t, u, v));
+        case RbSbRb: return ReedsSheppActionSet::TimeFlipAndReflect(GetLfSfLfpath(t, u, v));
 
         // Reeds-Shepp 8.2: CSC, different turn
         case LfSfRf: return GetLfSfRfpath(t, u, v);
-        case LbSbRb: return ReedsSheppActionSet::timeFlip(GetLfSfRfpath(t, u, v));
-        case RfSfLf: return ReedsSheppActionSet::reflect(GetLfSfRfpath(t, u, v));
-        case RbSbLb: return ReedsSheppActionSet::timeFlipAndReflect(GetLfSfRfpath(t, u, v));
+        case LbSbRb: return ReedsSheppActionSet::TimeFlip(GetLfSfRfpath(t, u, v));
+        case RfSfLf: return ReedsSheppActionSet::Reflect(GetLfSfRfpath(t, u, v));
+        case RbSbLb: return ReedsSheppActionSet::TimeFlipAndReflect(GetLfSfRfpath(t, u, v));
 
         // Reeds-Shepp 8.3: C|C|C
         case LfRbLf: return GetLfRbLfpath(t, u, v);
-        case LbRfLb: return ReedsSheppActionSet::timeFlip(GetLfRbLfpath(t, u, v));
-        case RfLbRf: return ReedsSheppActionSet::reflect(GetLfRbLfpath(t, u, v));
-        case RbLfRb: return ReedsSheppActionSet::timeFlipAndReflect(GetLfRbLfpath(t, u, v));
+        case LbRfLb: return ReedsSheppActionSet::TimeFlip(GetLfRbLfpath(t, u, v));
+        case RfLbRf: return ReedsSheppActionSet::Reflect(GetLfRbLfpath(t, u, v));
+        case RbLfRb: return ReedsSheppActionSet::TimeFlipAndReflect(GetLfRbLfpath(t, u, v));
 
         // Reeds-Shepp 8.4: C|CC
         case LfRbLb: return GetLfRbLbpath(t, u, v);
-        case LbRfLf: return ReedsSheppActionSet::timeFlip(GetLfRbLbpath(t, u, v));
-        case RfLbRb: return ReedsSheppActionSet::reflect(GetLfRbLbpath(t, u, v));
-        case RbLfRf: return ReedsSheppActionSet::timeFlipAndReflect(GetLfRbLbpath(t, u, v));
+        case LbRfLf: return ReedsSheppActionSet::TimeFlip(GetLfRbLbpath(t, u, v));
+        case RfLbRb: return ReedsSheppActionSet::Reflect(GetLfRbLbpath(t, u, v));
+        case RbLfRf: return ReedsSheppActionSet::TimeFlipAndReflect(GetLfRbLbpath(t, u, v));
 
         // Reeds-Shepp 8.4: CC|C
         case LfRfLb: return GetLfRfLbpath(t, u, v);
-        case LbRbLf: return ReedsSheppActionSet::timeFlip(GetLfRfLbpath(t, u, v));
-        case RfLfRb: return ReedsSheppActionSet::reflect(GetLfRfLbpath(t, u, v));
-        case RbLbRf: return ReedsSheppActionSet::timeFlipAndReflect(GetLfRfLbpath(t, u, v));
+        case LbRbLf: return ReedsSheppActionSet::TimeFlip(GetLfRfLbpath(t, u, v));
+        case RfLfRb: return ReedsSheppActionSet::Reflect(GetLfRfLbpath(t, u, v));
+        case RbLbRf: return ReedsSheppActionSet::TimeFlipAndReflect(GetLfRfLbpath(t, u, v));
 
         // Reeds-Shepp 8.7: CCu|CuC
         case LfRufLubRb: return GetLfRufLubRbpath(t, u, v);
-        case LbRubLufRf: return ReedsSheppActionSet::timeFlip(GetLfRufLubRbpath(t, u, v));
-        case RfLufRubLb: return ReedsSheppActionSet::reflect(GetLfRufLubRbpath(t, u, v));
-        case RbLubRufLf: return ReedsSheppActionSet::timeFlipAndReflect(GetLfRufLubRbpath(t, u, v));
+        case LbRubLufRf: return ReedsSheppActionSet::TimeFlip(GetLfRufLubRbpath(t, u, v));
+        case RfLufRubLb: return ReedsSheppActionSet::Reflect(GetLfRufLubRbpath(t, u, v));
+        case RbLubRufLf: return ReedsSheppActionSet::TimeFlipAndReflect(GetLfRufLubRbpath(t, u, v));
 
         // Reeds-Shepp 8.8: C|CuCu|C
         case LfRubLubRf: return GetLfRubLubRfpath(t, u, v);
-        case LbRufLufRb: return ReedsSheppActionSet::timeFlip(GetLfRubLubRfpath(t, u, v));
-        case RfLubRubLf: return ReedsSheppActionSet::reflect(GetLfRubLubRfpath(t, u, v));
-        case RbLufRufLb: return ReedsSheppActionSet::timeFlipAndReflect(GetLfRubLubRfpath(t, u, v));
+        case LbRufLufRb: return ReedsSheppActionSet::TimeFlip(GetLfRubLubRfpath(t, u, v));
+        case RfLubRubLf: return ReedsSheppActionSet::Reflect(GetLfRubLubRfpath(t, u, v));
+        case RbLufRufLb: return ReedsSheppActionSet::TimeFlipAndReflect(GetLfRubLubRfpath(t, u, v));
 
         // Reeds-Shepp 8.9: C|C(pi/2)SC, same turn
         case LfRbpi2SbLb: return GetLfRbpi2SbLbpath(t, u, v);
-        case LbRfpi2SfLf: return ReedsSheppActionSet::timeFlip(GetLfRbpi2SbLbpath(t, u, v));
-        case RfLbpi2SbRb: return ReedsSheppActionSet::reflect(GetLfRbpi2SbLbpath(t, u, v));
-        case RbLfpi2SfRf: return ReedsSheppActionSet::timeFlipAndReflect(GetLfRbpi2SbLbpath(t, u, v));
+        case LbRfpi2SfLf: return ReedsSheppActionSet::TimeFlip(GetLfRbpi2SbLbpath(t, u, v));
+        case RfLbpi2SbRb: return ReedsSheppActionSet::Reflect(GetLfRbpi2SbLbpath(t, u, v));
+        case RbLfpi2SfRf: return ReedsSheppActionSet::TimeFlipAndReflect(GetLfRbpi2SbLbpath(t, u, v));
 
         // Reeds-Shepp 8.10: C|C(pi/2)SC, different turn
         case LfRbpi2SbRb: return GetLfRbpi2SbLbpath(t, u, v);
-        case LbRfpi2SfRf: return ReedsSheppActionSet::timeFlip(GetLfRbpi2SbLbpath(t, u, v));
-        case RfLbpi2SbLb: return ReedsSheppActionSet::reflect(GetLfRbpi2SbLbpath(t, u, v));
-        case RbLfpi2SfLf: return ReedsSheppActionSet::timeFlipAndReflect(GetLfRbpi2SbLbpath(t, u, v));
+        case LbRfpi2SfRf: return ReedsSheppActionSet::TimeFlip(GetLfRbpi2SbLbpath(t, u, v));
+        case RfLbpi2SbLb: return ReedsSheppActionSet::Reflect(GetLfRbpi2SbLbpath(t, u, v));
+        case RbLfpi2SfLf: return ReedsSheppActionSet::TimeFlipAndReflect(GetLfRbpi2SbLbpath(t, u, v));
 
         // Reeds-Shepp 8.9 (reversed): CSC(pi/2)|C, same turn
         case LfSfRfpi2Lb: return GetLfSfRfpi2Lbpath(t, u, v);
-        case LbSbRbpi2Lf: return ReedsSheppActionSet::timeFlip(GetLfSfRfpi2Lbpath(t, u, v));
-        case RfSfLfpi2Rb: return ReedsSheppActionSet::reflect(GetLfSfRfpi2Lbpath(t, u, v));
-        case RbSbLbpi2Rf: return ReedsSheppActionSet::timeFlipAndReflect(GetLfSfRfpi2Lbpath(t, u, v));
+        case LbSbRbpi2Lf: return ReedsSheppActionSet::TimeFlip(GetLfSfRfpi2Lbpath(t, u, v));
+        case RfSfLfpi2Rb: return ReedsSheppActionSet::Reflect(GetLfSfRfpi2Lbpath(t, u, v));
+        case RbSbLbpi2Rf: return ReedsSheppActionSet::TimeFlipAndReflect(GetLfSfRfpi2Lbpath(t, u, v));
 
         // Reeds-Shepp 8.10 (reversed): CSC(pi/2)|C, different turn
         case LfSfLfpi2Rb: return GetLfSfLfpi2Rbpath(t, u, v);
-        case LbSbLbpi2Rf: return ReedsSheppActionSet::timeFlip(GetLfSfLfpi2Rbpath(t, u, v));
-        case RfSfRfpi2Lb: return ReedsSheppActionSet::reflect(GetLfSfLfpi2Rbpath(t, u, v));
-        case RbSbRbpi2Lf: return ReedsSheppActionSet::timeFlipAndReflect(GetLfSfLfpi2Rbpath(t, u, v));
+        case LbSbLbpi2Rf: return ReedsSheppActionSet::TimeFlip(GetLfSfLfpi2Rbpath(t, u, v));
+        case RfSfRfpi2Lb: return ReedsSheppActionSet::Reflect(GetLfSfLfpi2Rbpath(t, u, v));
+        case RbSbRbpi2Lf: return ReedsSheppActionSet::TimeFlipAndReflect(GetLfSfLfpi2Rbpath(t, u, v));
 
         // Reeds-Shepp 8.11: C|C(pi/2)SC(pi/2)|C
         case LfRbpi2SbLbpi2Rf: return GetLfRbpi2SbLbpi2Rfpath(t, u, v);
-        case LbRfpi2SfLfpi2Rb: return ReedsSheppActionSet::timeFlip(GetLfRbpi2SbLbpi2Rfpath(t, u, v));
-        case RfLbpi2SbRbpi2Lf: return ReedsSheppActionSet::reflect(GetLfRbpi2SbLbpi2Rfpath(t, u, v));
-        case RbLfpi2SfRfpi2Lb: return ReedsSheppActionSet::timeFlipAndReflect(GetLfRbpi2SbLbpi2Rfpath(t, u, v));
+        case LbRfpi2SfLfpi2Rb: return ReedsSheppActionSet::TimeFlip(GetLfRbpi2SbLbpi2Rfpath(t, u, v));
+        case RfLbpi2SbRbpi2Lf: return ReedsSheppActionSet::Reflect(GetLfRbpi2SbLbpi2Rfpath(t, u, v));
+        case RbLfpi2SfRfpi2Lb: return ReedsSheppActionSet::TimeFlipAndReflect(GetLfRbpi2SbLbpi2Rfpath(t, u, v));
         default:
             return new ReedsSheppActionSet(std::numeric_limits<double>::infinity());
 

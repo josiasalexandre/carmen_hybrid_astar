@@ -48,13 +48,13 @@ class ReedsSheppActionSet {
         // PUBLIC STATIC CLASS METHODS
 
         // flip the actions in time
-        static ReedsSheppActionSet* timeFlip(ReedsSheppActionSet*);
+        static ReedsSheppActionSet* TimeFlip(ReedsSheppActionSet*);
 
         // reflect the path
-        static ReedsSheppActionSet* reflect(ReedsSheppActionSet*);
+        static ReedsSheppActionSet* Reflect(ReedsSheppActionSet*);
 
         // time flip and reflect in sequence
-        static ReedsSheppActionSet* timeFlipAndReflect(ReedsSheppActionSet*);
+        static ReedsSheppActionSet* TimeFlipAndReflect(ReedsSheppActionSet*);
 
 };
 

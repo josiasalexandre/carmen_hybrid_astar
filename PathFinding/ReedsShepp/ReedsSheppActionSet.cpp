@@ -87,7 +87,7 @@ double ReedsSheppActionSet::CalculateCost(double unit, double reverseFactor, dou
 }
 
 // flip the actions in time
-ReedsSheppActionSet* ReedsSheppActionSet::timeFlip(ReedsSheppActionSet *set) {
+ReedsSheppActionSet* ReedsSheppActionSet::TimeFlip(ReedsSheppActionSet *set) {
 
     if (nullptr != set) {
 
@@ -120,7 +120,7 @@ ReedsSheppActionSet* ReedsSheppActionSet::timeFlip(ReedsSheppActionSet *set) {
 }
 
 // reflect the path
-ReedsSheppActionSet* ReedsSheppActionSet::reflect(ReedsSheppActionSet *set) {
+ReedsSheppActionSet* ReedsSheppActionSet::Reflect(ReedsSheppActionSet *set) {
 
     if (nullptr != set) {
 
@@ -154,8 +154,8 @@ ReedsSheppActionSet* ReedsSheppActionSet::reflect(ReedsSheppActionSet *set) {
 
 //
 // time flip and reflect in sequence
-ReedsSheppActionSet* ReedsSheppActionSet::timeFlipAndReflect(ReedsSheppActionSet *set) {
+ReedsSheppActionSet* ReedsSheppActionSet::TimeFlipAndReflect(ReedsSheppActionSet *set) {
 
-    return ReedsSheppActionSet::reflect(ReedsSheppActionSet::timeFlip(set));
+    return ReedsSheppActionSet::Reflect(ReedsSheppActionSet::TimeFlip(set));
 
 }

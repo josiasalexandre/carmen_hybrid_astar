@@ -130,7 +130,7 @@ int main() {
 
     astar::Pose2D goal(x2, y2, t2);
 
-    set = rs.solve(start, goal, inverse_unit);
+    set = rs.Solve(start, goal, inverse_unit);
 
     if (nullptr != set) {
 

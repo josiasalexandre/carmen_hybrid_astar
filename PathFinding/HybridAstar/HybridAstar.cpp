@@ -70,7 +70,7 @@ PoseListPtr HybridAstar::ReBuildPath(HybridAstarNodePtr n) {
     HybridAstarNodePtr tmp = nullptr;
 
     // counter
-    unsigned int subPathSize = 0;
+    unsigned int subpathSize = 0;
 
     // reference syntatic sugar
     std::list<Pose2D> &poses(path->poses);
@@ -84,19 +84,19 @@ PoseListPtr HybridAstar::ReBuildPath(HybridAstarNodePtr n) {
             // save the current pose to the list
             poses.push_front(n.pose);
 
-        } else if (nullptr != n->actionSet) {
+        } else if (nullptr != n->action_set) {
 
             // get the subpath provided by the action set discretization
-            PoseArrayPtr subPath = ReedsSheppModel::discretize(n->parent->pose, n->actionSet, vehicle.default_turn_radius, grid->inverse_resolution);
+            PoseArrayPtr subpath = ReedsSheppModel::Discretize(n->parent->pose, n->action_set, vehicle.default_turn_radius, grid->inverse_resolution);
 
             // get the path size
-            subPathSize = subPath->poses.size();
+            subpathSize = subpath->poses.size();
 
-            // prepend the resulting subPath to the curren path
-            for (unsigned int i = subPathSize - 1; i >= 0; i--) {
+            // prepend the resulting subpath to the curren path
+            for (unsigned int i = subpathSize - 1; i >= 0; i--) {
 
                 // save the current pose to the list
-                poses.push_front(subPath->poses[i]);
+                poses.push_front(subpath->poses[i]);
 
             }
 
@@ -136,15 +136,15 @@ PoseListPtr HybridAstar::ReBuildPath(HybridAstarNodePtr n) {
 HybridAstarNodePtr HybridAstar::GetReedsSheppChild(const Pose2D &start, const Pose2D &goal) {
 
     // get the resulting set of actions
-    ReedsSheppActionSetPtr actionSet = rs.solve(start, goal, vehicle.default_turn_radius);
+    ReedsSheppActionSetPtr action_set = rs.Solve(start, goal, vehicle.default_turn_radius);
 
-    if (0 < actionSet->actions.size()) {
+    if (0 < action_set->actions.size()) {
 
         // flag to validate the Reeds-Shep curve
         bool safe = true;
 
         // get the poses in the Reeds-Shepp curve
-        PoseArrayPtr path = rs.discretize(start, actionSet, vehicle.default_turn_radius, grid->inverse_resolution);
+        PoseArrayPtr path = rs.Discretize(start, action_set, vehicle.default_turn_radius, grid->inverse_resolution);
 
         // a reference helper, just in case
         std::vector<Pose2D>& poses(path->poses);
@@ -340,10 +340,10 @@ PoseListPtr HybridAstar::FindPath(InternalGridMap &gridMap, const Pose2D& start,
                         // we a have a valid action, conventional expanding
                         tentative_g = n->g + PathCost(n->pose, it->pose, length, reverse_gear);
 
-                    } else if (0 < it->actionSet->size()) {
+                    } else if (0 < it->action_set->size()) {
 
                         // we have a valid action set, Reeds-Shepp analytic expanding
-                        tentative_g = n->g + it->actionSet->CalculateCost(vehicle.default_turn_radius, reverseFactor, gearSwitchCost);
+                        tentative_g = n->g + it->action_set->CalculateCost(vehicle.default_turn_radius, reverseFactor, gearSwitchCost);
 
                     } else {
 
