@@ -25,14 +25,23 @@ class VehicleModel {
         // the phi
         double maxphi;
 
-        // the axle distance
-        double axledist;
+        // the desired steering command rate
+        double steering_command_rate;
 
-        // default speed
+        // the sensivity to the understeer dynamic
+        double understeer;
+
+        // default turn radius, it
+        double max_turn_radius;
+
+        // default speed to simulation purpose
         double default_speed;
 
-        // default turn radius
-        double default_turn_radius;
+        // max allowed forward speed
+        double max_forward_speed;
+
+        // max allowed backward speed
+        double max_backward_speed;
 
         // the car length dimension
         double length;
@@ -40,14 +49,11 @@ class VehicleModel {
         // the car width dimension
         double width;
 
-        // the sensivity to the understeer dynamic
-        double understeer;
+        // the axle distance
+        double axledist;
 
         // distance between rear wheels
         double rear_wheels_dist;
-
-        // the distance between front and rear axles
-        double front_rear_axles_dist;
 
         // the distance between rear car and rear wheels
         double rear_car_wheels_dist;
@@ -67,20 +73,19 @@ class VehicleModel {
         // the maxium backward deceleration
         double max_backward_deceleration;
 
-        // the desired steering command rate
-        double steering_command_rate;
-
         // the desired foward accelerarion
         double desired_forward_acceleration;
 
         // the desired forward deceleration
         double desired_forward_deceleration;
 
+        // the desired backward acceleration
+        double desired_backward_acceleration;
+
         // the desired backward deceleration
         double desired_backward_deceleration;
 
         // PUBLIC METHODS
-
         // get the next pose, using the custom vehicle parameters
         astar::Pose2D NextPose(const astar::Pose2D&, astar::Steer, astar::Gear, double, double, double);
 

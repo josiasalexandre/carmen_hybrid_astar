@@ -1,9 +1,11 @@
 #ifndef INTERNAL_GRID_MAP_HPP
 #define INTERNAL_GRID_MAP_HPP
 
-#include "../GVDLau.hpp"
+#include "GVDLau.hpp"
 #include "../../Entities/Pose2D.hpp"
 #include "MapCell.hpp"
+
+#include "../../KDTree/KDTree.hpp"
 
 namespace astar {
 
@@ -13,24 +15,32 @@ class InternalGridMap {
 
         // PRIVATE ATTRIBUTES
 
-        // the grid resolution
-        double resolution;
-
-        // the inverse grid resolution
-        double inverse_resolution;
+        // the grid resolution and inverse_resolution
+        double resolution, inverse_resolution;
 
         // the grid width
-        unsigned int width;
+        unsigned int width, width_2;
 
         // the grid height
-        unsigned int height;
+        unsigned int height, height_2;
+
+        // the size
+        unsigned int size;
+
+        // the obstacle grid map
+        astar::MapCellPtr obstacle_map;
 
         // the map origin
         astar::Vector2D origin;
 
-
         // the voronoy fiedl
-        astar::GVDLau voronoy_field;
+        astar::GVDLau *voronoy_field;
+
+        // the obstacle distance KDTree
+        astar::KDTree<double, 2> obstacle_kdtree;
+
+        // the voronoy Distance KDTree
+        astar::KDTree<double, 2> voronoy_kdtree;
 
         // PRIVATE METHODS
 
@@ -65,7 +75,11 @@ class InternalGridMap {
 
 // just another helper
 typedef InternalGridMap* InternalGridMapPtr;
+typedef InternalGridMap& InternalGridMapRef;
 
 }
+
+// i is the row and j is the collumn ;-)
+#define GRID_MAP_INDEX(i, j) ((i)*width + j)
 
 #endif

@@ -15,16 +15,16 @@ class HybridAstarMotionPlanner {
         // PRIVATE ATTRIBUTES
 
         // the robot configuration
-        astar::VehicleModel vehicleModel;
+        astar::VehicleModel vehicle_model;
 
         // the internal map
         astar::InternalGridMap grid;
 
         // the hybrid astar search algorith
-        astar::HybridAstar pathFinder;
+        astar::HybridAstar path_finder;
 
         // the path smoother
-        astar::CGSmoother pathSmoother;
+        astar::CGSmoother path_smoother;
 
         // the current goal
         astar::Pose2D goal;
@@ -33,58 +33,50 @@ class HybridAstarMotionPlanner {
         std::list<astar::Pose2D> path;
 
         // flag to validates the path
-        bool validPath;
-
-        // PRIVATE METHODS
-
-        // publish the current path
-        void publishPath(std::list<astar::Pose2D>& path);
-
-        // publish the current status
-        void publishStatus();
-
-        // get all the necessary parameters
-        // read all parameters
-        void readParameters(int argc, char **argv);
+        bool valid_path;
 
         // a static member pointer
         static HybridAstarMotionPlanner* current;
 
+        // PRIVATE METHODS
+
+        // get all the necessary parameters
+        void get_parameters(int argc, char **argv);
+
     public:
 
         // basic constructor
-        HybridAstarMotionPlanner(int argc, char** argv);
+        HybridAstarMotionPlanner(int argc, char **argv);
 
-        // registering the currrent static pointer
-        void init();
+        // find a smooth find to the goal and publish
+        bool find_path();
 
-        // the main handler
-        static void globalPoseMessageHandler(carmen_localize_ackerman_globalpos_message *msg);
+        // set the the new goal
+        void set_goal_pose(double x, double y, double theta);
 
-        // for simulation purpose
-        static void truePoseMessageHandler(carmen_simulator_ackerman_truepos_message *msg);
+        // set the goal list
+        void set_goal_list(double x, double y, double theta);
 
-        // receive the odometry
-        static void odometryMessageHandler(carmen_base_ackerman_odometry_message *msg);
+        // update the map
+        void update_map(carmen_map_server_compact_cost_map_message *msg);
 
-        // set the new goal handler
-        static void setGoalMessageHandler(carmen_navigator_ackerman_set_goal_message *msg);
+        // update the odometry value
+        void set_odometry(double, double);
 
-        // goal list message handler
-        static void goalListMessageHandler(carmen_behavior_selector_goal_list_message *msg);
+        // update the motion planner mode
+        void set_parking_mode();
 
-        // behavior selector state message handler
-        static void stateMessageHandler(carmen_behavior_selector_state_message *msg);
+        //
+        void go();
 
-        // the compact cost map handler
-        static void compactCostMapMessageHandler(carmen_map_server_compact_cost_map_message *msg);
+        //
+        void stop();
 
-        // the compact lane map message handler
-        static void compactLaneMapMessageHandler(carmen_map_server_compact_lane_map_message *msg);
+        // publish the current path
+        void publish_path(std::list<astar::Pose2D>& path);
 
-        // register all handlers
-        void registerAllHandlers();
-
+        // publish the current status
+        void publish_status();
 };
 
 }

@@ -2,125 +2,231 @@
 #define VECTOR_TEMPLATE_HPP
 
 #include <array>
+#include <cmath>
 
 #include "Matrix.hpp"
 
 namespace astar {
 
+template<typename T>
 class Vector2D {
 
-    private:
+private:
 
-        // PRIVATE ATTRIBUTES
+    // PRIVATE ATTRIBUTES
 
-        // PRIVATE METHODS
+    // PRIVATE METHODS
 
-    public:
+public:
 
-        // PUBLIC ATTRIBUTES
+    // PUBLIC ATTRIBUTES
+    T x, y;
 
-        // the x and y coordinates
-        double x, y;
+    // basic constructor'   '
+    Vector2D() : x(0.0), y(0.0) {}
 
-        // PUBLIC METHODS
+    // copy constructor
+    Vector2D(const Vector2D &v) : x(v.x), y(v.y) {}
 
-        // basic constructor
-        Vector2D();
+    // explicit constructor
+    Vector2D(T x_, T y_) : x(x_), y(y_) {}
 
-        // copy constructor
-        Vector2D(const Vector2D&);
+    // distance between two vectors
+    T Distance(const Vector2D &v)
+    {
+        return std::sqrt((x - v.x)*(x - v.x) + (y - v.y)*(y - v.y));
+    }
 
-        // explicit constructor
-        Vector2D(double, double);
+    // squared distance between two vectors
+    T Distance2(const Vector2D &v)
+    {
+        return (x - v.x)*(x - v.x) + (y - v.y)*(y - v.y);
+    }
 
-        // distance between two vectors
-        double distance(const Vector2D&);
+    // norm
+    T Norm()
+    {
+        return std::sqrt(x*x + y*y);
+    }
 
-        // distance between two vectors
-        double distance2(const Vector2D&);
+    // add two vectors
+    void Add(const Vector2D &v)
+    {
+        x += v.x;
+        y += v.y;
+    }
 
-        // norm
-        double norm();
+    // add a given scalar to each axis values
+    void Add(T value)
+    {
+        x += value;
+        y += value;
+    }
 
-        // add two vectors
-        void add(const Vector2D&);
+    // add the scalars to each axis values
+    void Add(T v_x, T v_y)
+    {
+        x += v_x;
+        y += v_y;
+    }
 
-        // add a given scalar to each axis values - translation
-        void add(double);
+    // subtract a given vector from the current vector
+    void Subtract(const Vector2D &v)
+    {
+        x -= v.x;
+        y -= v.y;
+    }
 
-        // add the scalars to each axis values - translation
-        void add(double, double);
+    // subtract a given scalar from the current vector - translation
+    void Subtract(T value)
+    {
+        x -= value;
+        y -= value;
+    }
 
-        // subtract a given vector from the current vector - translation
-        void subtract(const Vector2D&);
+    // subtract the scalar values from the the current vector - translation
+    void Subtract(T v_x, T v_y)
+    {
+        x -= v_x;
+        y -= v_y;
+    }
 
-        // subtract a given scalar from the current vector - translation
-        void subtract(double);
+    // scale the current vector by a scalar
+    void Scale(T value)
+    {
+        x *= value;
+        y *= value;
+    }
 
-        // subtract the scalar values from the the current vector - translation
-        void subtract(double, double);
+    // scale the current vector by scalar in each axis, overloading
+    void Scale(T v_x, T v_y)
+    {
+        x *= v_x;
+        y *= v_y;
+    }
 
-        // multiply the current vector by another vector
-        void multiply(const Vector2D&);
+    // multiply the current vector by another vector
+    void Multiply(const Vector2D &v)
+    {
+        x *= v.x;
+        y *= v.y;
+    }
 
-        // scale the current vector by a given scalar
-        void scale(double);
+    // the dot product between the two vectors
+    T Dot(const Vector2D &v)
+    {
+        return x*v.x + y*v.y;
+    }
 
-        // scale the current vector by scalar values in each axis, overloading
-        void scale(double, double);
+    // translate the current vector by another vector
+    void Translate(Vector2D &vec)
+    {
+        Add(vec);
+    }
 
-        // the dot product between the two vectors
-        double dot(const Vector2D&);
+    // translation overloading
+    void Translate(T x_, T y_)
+    {
+        Add(x_, y_);
+    }
 
-        // translate the current vector by another vector
-        void translate(Vector2D&);
+    // translate the current vector by a scalar
+    void Translate(T value)
+    {
+        Add(value);
+    }
 
-        // translation overloading
-        void translate(double, double);
+    // rotate the current vector around a the z axis by a given angle
+    void RotateZ(T angle)
+    {
+        T oldX = x, oldY = y;
+        x = oldX*std::cos(angle) - oldY*std::sin(angle);
+        y = oldX*std::sin(angle) + oldY*std::cos(angle);
+    }
 
-        // translate the current vector by a scalar
-        void translate(double);
+    // rotate the current vector around a given point and by an angle
+    void RotateZ(const Vector2D &v, T angle)
+    {
+        // bring to origin
+        Subtract(v);
 
-        // rotate the current vector around a the z axis by a given angle
-        void rotateZ(double);
+        // rotate around the z axis
+        RotateZ(angle);
 
-        // rotate the current vector around a given point and by an angle
-        void rotateZ(const Vector2D&, double);
+        // move back to the appropriate position
+        Add(v);
+    }
 
-        // transform the vector by a given Matrix
-        void transform(const astar::MatrixT<double, 2, 2>&);
+    // transform the vector by a given Matrix
+    void Transform(const MatrixT<T, 2, 2>& matrix)
+    {
+        T oldX = x, oldY = y;
+        x = matrix.m[0][0]*oldX + matrix.m[0][1]*oldY;
+        y = matrix.m[1][0]*oldX + matrix.m[1][1]*oldY;
+    }
 
-        // OPERATOR OVERLOADING
+    // OPERATOR OVERLOADING
 
-        // assignment
-        void operator=(const Vector2D&);
+    // assignment
+    void operator=(const Vector2D &v)
+    {
+        x = v.x;
+        y = v.y;
+    }
 
-        // equals comparison
-        bool operator==(const Vector2D&);
+    // equals comparison
+    bool operator==(const Vector2D &v)
+    {
+        return (std::fabs(x - v.x) < 0.0001 && std::fabs(y - v.y) < 0.0001);
+    }
 
-        // different comparator
-        bool operator!=(const Vector2D&);
+    // different comparator
+    bool operator!=(const Vector2D &v)
+    {
+        return (std::fabs(x - v.x) > 0.0001 || std::fabs(y - v.y) > 0.0001);
+    }
 
-        // + operator, add a given vector to the current one, self.add
-        Vector2D operator+(const Vector2D&);
+    // + operator, add a given vector to the current one, self.add
+    Vector2D operator+(const Vector2D &v)
+    {
+        return Vector2D(x + v.x, y + v.y);
+    }
 
-        // + operator, add a given scalar value to the current one, self.add
-        Vector2D operator+(double);
+    // + operator, add a given scalar value to the current one, self.add
+    Vector2D operator+(T value)
+    {
+        return Vector2D(x + value, y + value);
+    }
 
-        // - operator, subtract a given vector from the current one values, self.subtract
-        Vector2D operator-(const Vector2D&);
+    // - operator, subtract a given vector from the current one values, self.subtract
+    Vector2D operator-(const Vector2D &v)
+    {
+        return Vector2D(x - v.x, y - v.y);
+    }
 
-        // + operator, add a given scalar value to the current one, self.add
-        Vector2D operator-(double);
+    // + operator, add a given scalar value to the current one, self.add
+    Vector2D operator-(T value)
+    {
+        return Vector2D(x - value, y - value);
+    }
 
-        // * operator, multiply/scale the current vector by another one, self multiply
-        Vector2D operator*(const Vector2D&);
+    // * operator, multiply/scale the current vector by another one
+    Vector2D operator*(const Vector2D &v)
+    {
+        return Vector2D(x*v.x, y*v.y);
+    }
 
-        // * operator, multiply/scale the current vector by a given value, self multiply
-        Vector2D operator*(double);
+    // * operator, multiply/scale the current vector by another one
+    Vector2D operator*(T value)
+    {
+        return Vector2D(x*value, y*value);
+    }
 
-        // / operator, divide the current vector by another one
-        Vector2D operator/(double);
+    // * operator, multiply/scale the current vector by another one
+    Vector2D operator/(T value)
+    {
+        return Vector2D(x/value, y/value);
+    }
 
 };
 

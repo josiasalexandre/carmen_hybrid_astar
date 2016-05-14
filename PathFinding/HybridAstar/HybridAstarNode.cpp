@@ -10,10 +10,12 @@ HybridAstarNode::HybridAstarNode(
                                     double cost,
                                     double heuristicCost,
                                     HybridAstarNode *n
-                                ) : pose(p), action(rsAction), action_set(0), cell(c), g(cost), f(heuristicCost), parent(n)
+                                ) : pose(p), action(rsAction), action_set(0), g(cost), f(heuristicCost), parent(n), cell(c), handle(nullptr)
 {
 
     // the current node should be known by the pointed MapCell
+    // set the node
+    cell->node = this;
 
 }
 
@@ -25,7 +27,14 @@ HybridAstarNode::HybridAstarNode(
                                     double cost,
                                     double heuristicCost,
                                     HybridAstarNodePtr n
-                                ) : pose(p), action(nullptr), action_set(rsActionSet), cell(c), g(cost), f(heuristicCost), parent(n) {}
+                                ) : pose(p), action(nullptr), action_set(rsActionSet), g(cost), f(heuristicCost), parent(n), cell(c), handle(nullptr)
+{
+
+    // the current node should be known by the pointed MapCell
+    // set the node
+    cell->node = this;
+
+}
 
 // basic destructor
 HybridAstarNode::~HybridAstarNode() {
@@ -33,17 +42,7 @@ HybridAstarNode::~HybridAstarNode() {
     // update the cell status
 
     // the cell should not point to any HybridAstarNode
-    if (nullptr != cell) {
-
-        cell->node = nullptr;
-
-        // the cell is available now
-        cell->available = true;
-
-        // update the cell status
-        cell->status = UnknownNode;
-
-    }
+    cell->node = nullptr;
 
     // delete the action
     if (nullptr != action) {

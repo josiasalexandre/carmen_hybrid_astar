@@ -5,6 +5,8 @@
 
 #include "../ReedsShepp/ReedsSheppActionSet.hpp"
 
+#include "../../PriorityQueue/PriorityQueueNode.hpp"
+
 #include <exception>
 
 namespace astar {
@@ -30,9 +32,6 @@ class HybridAstarNode {
         // the steering action set
         astar::ReedsSheppActionSetPtr action_set;
 
-        // the current cell
-        astar::MapCellPtr cell;
-
         // the current node cost
         double g;
 
@@ -41,6 +40,12 @@ class HybridAstarNode {
 
         // the parent node
         HybridAstarNode *parent;
+
+        // the current cell
+        astar::MapCellPtr cell;
+
+        // the priority queue handle
+        astar::PriorityQueueNodePtr<HybridAstarNode*> handle;
 
         // basic constructor with a given action
         HybridAstarNode(const astar::Pose2D&, astar::ReedsSheppActionPtr, astar::Cell*, double, double, astar::HybridAstarNode*);

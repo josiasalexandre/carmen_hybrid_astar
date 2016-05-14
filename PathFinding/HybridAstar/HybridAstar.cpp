@@ -2,9 +2,11 @@
 
 #include "../VehicleModel/VehicleModel.hpp"
 
+#include <thread>
+
 using namespace astar;
 
-HybridAstar::HybridAstar() : grid(nullptr) {}
+HybridAstar::HybridAstar() : grid(nullptr), reverse_factor(4), gear_switch_cost(8) {}
 
 // PRIVATE METHODS
 
@@ -14,18 +16,7 @@ void HybridAstar::RemoveAllNodes() {
     HybridAstarNodePtr tmp;
 
     // clear the open set
-    while(!open.empty()) {
-
-        // get the top element
-        tmp = open.top();
-
-        // remove the node form the set
-        open.pop();
-
-        // delete the node
-        delete(tmp);
-
-    }
+    open.DestroyHeap();
 
     // clear the closed set
     while(!discovered.empty()) {
@@ -59,9 +50,10 @@ void HybridAstar::RemoveAllNodes() {
 
 }
 
-
 // rebuild an entire path given a node
-PoseListPtr HybridAstar::ReBuildPath(HybridAstarNodePtr n) {
+PoseListPtr
+HybridAstar::ReBuildPath(HybridAstarNodePtr n)
+{
 
     // create the list
     PoseListPtr path = new PoseList();
@@ -237,37 +229,39 @@ HybridAstarNodeArrayPtr HybridAstar::GetChidlren(const Pose2D &start, const Pose
 // PUBLIC METHODS
 
 // receives the grid, start and goal poses and find a path, if possible
-PoseListPtr HybridAstar::FindPath(InternalGridMap &gridMap, const Pose2D& start, const Pose2D& goal) {
+PoseListPtr HybridAstar::FindPath(InternalGridMap &grid_map, const Pose2D& start, const Pose2D& goal) {
 
     // get the grid map pointer
     // useful inside others methods, just to avoid passing the parameter constantly
     // now, all HybridAstar methods have access to the same grid pointer
-    grid = &gridMap;
+    grid = &grid_map;
 
     // update the heuristic to the new goal
-    heuristic.UpdateGoal(gridMap, goal);
+    heuristic.UpdateGoal(grid_map, goal);
 
-    // helpers
-    double heuristic_value = heuristic.GetHeuristicValue(gridMap, start, goal);
+    // the start pose heuristic value
+    double heuristic_value = heuristic.GetHeuristicValue(grid_map, start, goal);
 
     // find the current cell
-    CellPtr c = gridMap.PoseToCell(start);
+    CellPtr c = grid_map.PoseToCell(start, false);
 
     // the available space around the vehicle
     // provides the total length between the current pose and the node's children
     double length;
 
     // the simple case of length
-    // length = gridMap.resolution
+    // length = grid_map.resolution
 
     // the simple case of dt
-    // dt = gridMap.resolution/vehicle.default_speed
+    // dt = grid_map.resolution/vehicle.default_speed
 
     // create a new Node
+    // the node updates the cell node pointer and the cell status
+    // see the HybridAstarNode constructor
     HybridAstarNodePtr n = new HybridAstarNode(start, new ReedsSheppAction(astar::RSStraight, ForwardGear, 0), c, 0, heuristic_value, nullptr);
 
     // push the start node to the queue
-    open.push(n);
+    n->handle = open.Add(n, heuristic_value);
 
     // push the start node to the discovered set
     discovered.push_back(n);
@@ -283,22 +277,22 @@ PoseListPtr HybridAstar::FindPath(InternalGridMap &gridMap, const Pose2D& start,
     double tentative_f;
 
     // the actual A* algorithm
-    while(!open.empty()) {
+    while(!open.isEmpty()) {
 
         // get the hight priority node
-        n = open.top();
-
-        // remove it from the open set
-        open.pop();
+        n = open.DeleteMin();
 
         // is it the desired goal?
         if (goal == n->pose) {
 
             // rebuild the entire path
-            PoseListPtr resulting_path = ReBuildPath(n, vehicle.default_turn_radius, gridMap.inverse_resolution);
+            PoseListPtr resulting_path = ReBuildPath(n, vehicle.default_turn_radius, grid_map.inverse_resolution);
 
-            // clear all opened and expanded nodes nodes
-            RemoveAllNodes();
+            // clear all opened and expanded nodes
+            std::thread clear_nodes(astar::HybridAstar::RemoveAllNodes(), this);
+
+            // detach the current thread from the child one
+            clear_nodes.detach();
 
             // return the path
             return resulting_path;
@@ -309,13 +303,16 @@ PoseListPtr HybridAstar::FindPath(InternalGridMap &gridMap, const Pose2D& start,
         n->cell->status = ExploredNode;
 
         // get the length based on the environment
-        length = std::max(gridMap.resolution, 0.5 * (gridMap.GetObstacleDistance(n->pose.position) + gridMap.GetVoronoiDistance(n->pose.position)));
+        length = std::max(grid_map.resolution, 0.5 * (grid_map.GetObstacleDistance(n->pose.position) + grid_map.GetVoronoiDistance(n->pose.position)));
 
         // iterate over the gears
         for (unsigned int i = 0; i < NumGears; i++) {
 
             // casting the gears
             Gear gear = static_cast<Gear>(i);
+
+            // is it reverse gear?
+            reverse_gear = (ForwardGear == gear);
 
             // get the children nodes by expanding all gears and steeering
             HybridAstarNodeArrayPtr children = GetChidlren(n->pose, goal, gear, length);
@@ -328,97 +325,99 @@ PoseListPtr HybridAstar::FindPath(InternalGridMap &gridMap, const Pose2D& start,
             for (std::vector<HybridAstarNodePtr>::iterator it = nodes.begin(); it < nodes.end(); ++it) {
 
                 // find the appropiated location in the grid
-                c = gridMap.poseToCell(it->pose);
+                // reusing the same "c" pointer declared above
+                c = grid_map.PoseToCell(it->pose, reverse_gear);
 
-                if (ExploredNode != c->status) {
+                // we must avoid cell = nullptr inside the HybridAstarNode
+                if (nullptr != c) {
 
-                    // reverse?
-                    reverse_gear = (ForwardGear == gear);
+                    if (ExploredNode != c->status) {
 
-                    if (nullptr != it->action) {
+                        if (nullptr != it->action) {
 
-                        // we a have a valid action, conventional expanding
-                        tentative_g = n->g + PathCost(n->pose, it->pose, length, reverse_gear);
+                            // we a have a valid action, conventional expanding
+                            tentative_g = n->g + PathCost(n->pose, it->pose, length, reverse_gear);
 
-                    } else if (0 < it->action_set->size()) {
+                        } else if (0 < it->action_set->size()) {
 
-                        // we have a valid action set, Reeds-Shepp analytic expanding
-                        tentative_g = n->g + it->action_set->CalculateCost(vehicle.default_turn_radius, reverseFactor, gearSwitchCost);
+                            // we have a valid action set, it was a Reeds-Shepp analytic expanding
+                            tentative_g = n->g + it->action_set->CalculateCost(vehicle.default_turn_radius, reverse_factor, gear_switch_cost);
 
-                    } else {
+                        } else {
 
-                        // we don't have any valid action, it's a bad error
-                        // add to the invalid nodes set
-                        invalid.push_back(it);
+                            // we don't have any valid action, it's a bad error
+                            // add to the invalid nodes set
+                            invalid.push_back(it);
 
-                        continue;
-                        // throw std::exception();
+                            // jump to the next iteration
+                            continue;
+                            // throw std::exception();
 
-                    }
+                        }
 
-                    // get the estimated cost
-                    tentative_f = tentative_g + heuristic.GetHeuristicValue(it->pose, goal);
+                        // get the estimated cost
+                        tentative_f = tentative_g + heuristic.GetHeuristicValue(it->pose, goal);
 
-                    // update the cost
-                    it->g = tentative_g;
+                        // update the cost
+                        it->g = tentative_g;
 
-                    // update the heuristic value
-                    it->f = tentative_f;
+                        // update the total value / g cost plus heuristic value
+                        it->f = tentative_f;
 
-                    // set the parent
-                    it->parent = n;
+                        // set the parent
+                        it->parent = n;
 
-                    // is a not opened node?
-                    if (UnknownNode == c->status) {
+                        // is it a not opened node?
+                        if (UnknownNode == c->status) {
 
-                        // the cell is empty and doesn't have any node
+                            // the cell is empty and doesn't have any node
 
-                        // set the cell pointer
-                        it->cell = c;
+                            // set the cell pointer
+                            it->cell = c;
 
-                        // update the cell pointer
-                        c->node = it;
+                            // update the cell pointer
+                            c->node = it;
 
-                        // udpate the cell status
-                        c->status = OpenedNode;
+                            // udpate the cell status
+                            c->status = OpenedNode;
 
-                        // update the cell value, same value used in the node
-                        c->value = tentative_f;
+                            // add to the open set
+                            it->handle = open.Add(it, tentative_f);
 
-                        // add to the open set
-                        open.push(it);
+                        } else if (OpenedNode == c->status && tentative_f < c->node->f) {
 
-                    } else if (OpenedNode == c->status && tentative_f < c->value) {
+                            // the cell has a node but the current child is a better one
 
-                        // the cell has a node but the current child is a better one
+                            // update the node at the cell
+                            // copy the handle to the current child, just to avoid losing that information
+                            it->handle = c->node->handle;
 
-                        // update the node at the cell
-                        *(c->node) = *it;
+                            // the old node is updated but not the Key in the priority queue
+                            // the handle is not not erased
+                            *(c->node) = *it;
 
-                        // update the node's MapCellPtr'
-                        it->cell = c;
+                            // udpate the cell status
+                            c->status = OpenedNode;
 
-                        // udpate the cell status
-                        c->status = OpenedNode;
+                            // decrease the key at the priority queue
+                            open.DecreaseKey(c->node->handle, tentative_f);
 
-                        // update the cell value, same value used in the node
-                        c->value = tentative_f;
-
-                        // pryority queue consolidation
-                        open.Consolidate();
+                        }
 
                     }
 
                 }
 
-                // add the node to the discovered set set
+                // add the node to the discovered set
                 discovered.push_back(it);
 
             }
 
         }
 
-
     }
+
+    // the A* could no find a valid path to the goal
+    return nullptr;
 
 }

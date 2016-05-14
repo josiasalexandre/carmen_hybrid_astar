@@ -29,39 +29,39 @@ int main() {
     // test copy constructor
     astar::Vector2D b(a);
     // test add single element
-    b.add(1);
+    b.Add(1);
     // test add multiple elements
-    b.add(-1, -1);
+    b.Add(-1, -1);
     // test add vector
-    b.add(a);
+    b.Add(a);
     // test subtract
-    b.subtract(1);
+    b.Subtract(1);
     // test subtract multiple elements
-    b.subtract(-1, -1);
+    b.Subtract(-1, -1);
     // test subtract vector
-    b.subtract(a);
+    b.Subtract(a);
     // test assignment operator
     astar::Vector2D c = b;
     // test translation
-    b.translate(10);
+    b.Translate(10);
     // test translation, multiple element
-    b.translate(-10, -10);
+    b.Translate(-10, -10);
     showVector(b, "b");
     // test translate vector
-    b.translate(a);
+    b.Translate(a);
     // test norm
-    double n = b.norm();
+    double n = b.Norm();
     // test distance
-    double d = b.distance(a + 1);
+    double d = b.Distance(a + 1);
     std::cout << std::endl << "D: " << d << std::endl;
     // test scale
-    b.scale(2);
+    b.Scale(2);
     showVector(b, "b scale 2");
     // test scale, multiple elements
-    b.scale(1, 1);
+    b.Scale(1, 1);
     showVector(b, "b scale 1 1");
     // test dot products
-    double dot = b.dot(c);
+    double dot = b.Dot(c);
     showVector(b, "b after dot");
     // distance between two vectors
     // test rotate
@@ -69,12 +69,12 @@ int main() {
 
     astar::Vector2D rot1 = rot;
 
-    rot.rotateZ(M_PI);
-    rot.rotateZ(M_PI_2);
-    rot.rotateZ(M_PI_2);
-    rot.rotateZ(astar::Vector2D(9, 9), M_PI);
-    rot.rotateZ(astar::Vector2D(9, 9), M_PI_2);
-    rot.rotateZ(astar::Vector2D(9, 9), M_PI_2);
+    rot.RotateZ(M_PI);
+    rot.RotateZ(M_PI_2);
+    rot.RotateZ(M_PI_2);
+    rot.RotateZ(astar::Vector2D(9, 9), M_PI);
+    rot.RotateZ(astar::Vector2D(9, 9), M_PI_2);
+    rot.RotateZ(astar::Vector2D(9, 9), M_PI_2);
     if (rot == rot1) {
 
         std::cout << std::endl << "Ok, rotation" << std::endl;
@@ -107,8 +107,8 @@ int main() {
     showPose2D(p);
     astar::Pose2D p1(p.position.x + 3, p.position.y + 4, p.orientation + M_PI_4);
     showPose2D(p1);
-    std::cout << std::endl << "Distante between poses: " << p.distance(p1) << std::endl;
-    std::cout << std::endl << "Distante2 between poses: " << p.distance2(p1) << std::endl;
+    std::cout << std::endl << "Distante between poses: " << p.Distance(p1) << std::endl;
+    std::cout << std::endl << "Distante2 between poses: " << p.Distance2(p1) << std::endl;
 
     std::cout << "RS MODEL" << std::endl;
 
