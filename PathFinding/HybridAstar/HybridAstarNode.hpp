@@ -1,13 +1,12 @@
 #ifndef HYBRID_ASTAR_NODE_HPP
 #define HYBRID_ASTAR_NODE_HPP
 
-#include "../../Entities/Pose2D.hpp"
-
 #include "../ReedsShepp/ReedsSheppActionSet.hpp"
 
 #include "../../PriorityQueue/PriorityQueueNode.hpp"
 
 #include <exception>
+#include "../../Entities/State2D.hpp"
 
 namespace astar {
 
@@ -23,8 +22,8 @@ class HybridAstarNode {
 
         // PUBLIC ATTRIBUTES
 
-        // the current pose
-        astar::Pose2D pose;
+        // the current state
+        astar::State2D state;
 
         // the steering action
         astar::ReedsSheppActionPtr action;
@@ -48,10 +47,10 @@ class HybridAstarNode {
         astar::PriorityQueueNodePtr<HybridAstarNode*> handle;
 
         // basic constructor with a given action
-        HybridAstarNode(const astar::Pose2D&, astar::ReedsSheppActionPtr, astar::Cell*, double, double, astar::HybridAstarNode*);
+        HybridAstarNode(const astar::State2D&, astar::ReedsSheppActionPtr, astar::MapCellPtr, double, double, astar::HybridAstarNode*);
 
         // basic constructor
-        HybridAstarNode(const astar::Pose2D&, ReedsSheppActionSetPtr, astar::Cell*, double, double, astar::HybridAstarNode*);
+        HybridAstarNode(const astar::State2D&, ReedsSheppActionSetPtr, astar::MapCellPtr, double, double, astar::HybridAstarNode*);
 
         // basic destructor
         ~HybridAstarNode();
@@ -60,7 +59,7 @@ class HybridAstarNode {
         // < operator overloading, for priority queue compare purpose
         bool operator<(const astar::HybridAstarNode& n) const;
 
-        // assignement operator
+        // Assignment operator
         void operator=(const astar::HybridAstarNode& n);
 
 };
@@ -82,7 +81,7 @@ class HyridAstarNodePtrComparator {
             }
 
             // exception handling
-            throw std::invalid_argument("Cant compare nullptr of type HybridAstarNodePtr!");
+            throw std::invalid_argument("Can't compare nullptr of type HybridAstarNodePtr!");
 
         }
 
@@ -99,7 +98,7 @@ class HybridAstarNodeArray {
 
 };
 
-// just another pointer syntatic sugar
+// just another pointer syntactic sugar
 typedef HybridAstarNodeArray* HybridAstarNodeArrayPtr;
 
 }

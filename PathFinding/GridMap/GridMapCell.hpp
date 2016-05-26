@@ -1,8 +1,5 @@
 /*
 // Author: Josias Alexandre Oliveira
-
-// Based on the Matt Bradley's Masters Degree thesis and work
-// Copyright (c) 2012 Matt Bradley
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of
 // this software and associated documentation files (the "Software"), to deal in
@@ -21,16 +18,17 @@
 // IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
+#ifndef INTERNAL_GRID_MAP_CELL_HPP
+#define INTERNAL_GRID_MAP_CELL_HPP
 
-
-#ifndef REEDS_SHEPP_ACTION_HPP
-#define REEDS_SHEPP_ACTION_HPP
-
-#include "ReedsSheppDefinitions.hpp"
+#include "../HybridAstar/HybridAstarNode.hpp"
 
 namespace astar {
 
-class ReedsSheppAction {
+// define the enumeration status
+enum CellStatus {UnknownNode, OpenedNode, ExploredNode};
+
+class GridMapCell {
 
     private:
 
@@ -42,41 +40,21 @@ class ReedsSheppAction {
 
         // PUBLIC ATTRIBUTES
 
-        // steering
-        astar::Steer steer;
+        // the occupancy
+        int occupancy;
 
-        // direction
-        astar::Gear gear;
+        // the cell status
+        CellStatus status;
 
-        // the path length
-        double length;
+        // the robot state
+        astar::HybridAstarNodePtr node;
 
         // PUBLIC METHODS
 
-        // basic constructor
-        ReedsSheppAction(const astar::Steer &s, const astar::Gear &g, const double &len) : steer(s), gear(g), length(len) {}
-
-        // copy constructor
-        ReedsSheppAction(const ReedsSheppAction &action) : steer(action.steer), gear(action.gear), length(action.length) {}
-
-        // = operator overloading
-        void operator=(const ReedsSheppAction &action) {
-
-            // get the steering
-            steer = action.steer;
-
-            // get the gear action
-            gear = action.gear;
-
-            // get the path length
-            length = action.length;
-
-        }
-
 };
 
-// define a pointer handler
-typedef ReedsSheppAction* ReedsSheppActionPtr;
+// define a reference pointer
+typedef GridMapCell* GridMapCellPtr;
 
 }
 

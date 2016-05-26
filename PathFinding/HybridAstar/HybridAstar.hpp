@@ -1,13 +1,36 @@
+/*
+// Author: Josias Alexandre Oliveira
+
+// Based on the Matt Bradley's Masters Degree thesis and work
+// Copyright (c) 2012 Matt Bradley
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy of
+// this software and associated documentation files (the "Software"), to deal in
+// the Software without restriction, including without limitation the rights to
+// use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+// the Software, and to permit persons to whom the Software is furnished to do so,
+// subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+// FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+// COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+// IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+// CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/
+
 #ifndef HYBRID_ASTAR_ALGORITHM_HPP
 #define HYBRID_ASTAR_ALGORITHM_HPP
 
 #include <vector>
 #include <list>
-#include <mutex>
 
 #include "../../PriorityQueue/PriorityQueue.hpp"
 #include "HybridAstarNode.hpp"
-#include "../../Entities/Pose2D.hpp"
+#include "../State2D.hpp"
 #include "../GridMap/InternalGridMap.hpp"
 #include "Heuristic.hpp"
 #include "../ReedsShepp/ReedsSheppModel.hpp"
@@ -31,10 +54,10 @@ private:
     ReedsSheppModel rs;
 
     // the Vehicle model
-    VehicleModel vehicle;
+    astar::VehicleModel &vehicle;
 
     // grid map pointer
-    astar::InternalGridMapPtr grid;
+    astar::InternalGridMapRef grid;
 
     // the heuristic
     astar::Heuristic heuristic;
@@ -42,14 +65,11 @@ private:
     // the opened nodes set
     astar::PriorityQueue<HybridAstarNodePtr> open;
 
-    // the expaned nodes set
+    // the expanded nodes set
     std::vector<HybridAstarNodePtr> discovered;
 
     // the invalid nodes set
     std::vector<HybridAstarNodePtr> invalid;
-
-    // a simple mutex to the open PriorityQueue
-    std::mutex open_mutex;
 
     // PRIVATE METHODS
 
@@ -57,16 +77,16 @@ private:
     void RemoveAllNodes();
 
     // reconstruct the path from the goal to the start pose
-    astar::PoseListPtr ReBuildPath(HybridAstarNodePtr);
+    astar::StateListPtr RebuildPath(HybridAstarNodePtr);
 
     // get the Reeds-Shepp path to the goal and return the appropriated HybridAstarNode
-    HybridAstarNodePtr GetReedsSheppChild(const astar::Pose2D&, const astar::Pose2D&);
+    HybridAstarNodePtr GetReedsSheppChild(const astar::State2D&, const astar::State2D&);
 
-    // get the children nodes by expanding all gears and steeering
-    HybridAstarNodeArrayPtr GetChidlren(const astar::Pose2D&, const astar::Pose2D&, double);
+    // get the children nodes by expanding all gears and steering
+    HybridAstarNodeArrayPtr GetChidlren(const astar::State2D&, const astar::State2D&, astar::Gear, double);
 
     // get the path cost
-    double PathCost(const astar::Pose2D& start, const astar::Pose2D& goal, double length, bool reverse_gear);
+    double PathCost(const astar::State2D& start, const astar::State2D& goal, double length, bool reverse_gear);
 
 public:
 
@@ -75,10 +95,10 @@ public:
     // PUBLIC METHODS
 
     // basic constructor
-    HybridAstar();
+    HybridAstar(astar::VehicleModel &vehicle_);
 
     // find a path to the goal
-    PoseListPtr FindPath(const astar::Pose2D&, const astar::Pose2D&, astar::InternalGridMap&);
+    StateListPtr FindPath(astar::InternalGridMap&, const astar::State2D&, const astar::State2D&);
 
 };
 

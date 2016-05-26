@@ -4,7 +4,7 @@
 #include <list>
 
 #include "InternalGridMap.hpp"
-#include "../Entities/Pose2D.hpp"
+#include "../State2D.hpp"
 
 namespace astar {
 
@@ -15,6 +15,7 @@ class CGSmoother {
         // PRIVATE ATTRIBUTES
 
         // PRIVATE METHODS
+        void GetDesiredOrientations();
 
     public:
 
@@ -23,7 +24,7 @@ class CGSmoother {
         // PUBLIC METHODS
 
         // smooth a given path
-        std::list<astar::Pose2D> smooth(std::list<astar::Pose2D>&, astar::InternalGridMap&);
+        astar::StateListPtr Smooth(astar::InternalGridMap&, astar::StateListPtr);
 
 };
 

@@ -4,13 +4,13 @@ using namespace astar;
 
 // basic constructor with a given action
 HybridAstarNode::HybridAstarNode(
-                                    const Pose2D &p,
+                                    const State2D &p,
                                     ReedsSheppActionPtr rsAction,
                                     const MapCellPtr c,
                                     double cost,
                                     double heuristicCost,
                                     HybridAstarNode *n
-                                ) : pose(p), action(rsAction), action_set(0), g(cost), f(heuristicCost), parent(n), cell(c), handle(nullptr)
+                                ) : state(p), action(rsAction), action_set(0), g(cost), f(heuristicCost), parent(n), cell(c), handle(nullptr)
 {
 
     // the current node should be known by the pointed MapCell
@@ -21,13 +21,13 @@ HybridAstarNode::HybridAstarNode(
 
 // the basic constructor with a given action set
 HybridAstarNode::HybridAstarNode(
-                                    const Pose2D &p,
+                                    const State2D &p,
                                     ReedsSheppActionSetPtr rsActionSet,
                                     MapCellPtr c,
                                     double cost,
                                     double heuristicCost,
                                     HybridAstarNodePtr n
-                                ) : pose(p), action(nullptr), action_set(rsActionSet), g(cost), f(heuristicCost), parent(n), cell(c), handle(nullptr)
+                                ) : state(p), action(nullptr), action_set(rsActionSet), g(cost), f(heuristicCost), parent(n), cell(c), handle(nullptr)
 {
 
     // the current node should be known by the pointed MapCell
@@ -63,20 +63,20 @@ HybridAstarNode::~HybridAstarNode() {
 
 // PUBLIC METHODS
 
-// < operator overloading, for priority queue compare purpose
+// < operator overloading, for element comparison inside the priority queue
 bool HybridAstarNode::operator<(const astar::HybridAstarNode& n) const {
 
     return f < n.f;
 
 }
 
-// assignement operator
+// assignment operator
 void HybridAstarNode::operator=(const astar::HybridAstarNode& n) {
 
     // copy the input node values
 
-    // the current pose
-    pose  = n.pose;
+    // the current state
+    state = n.state;
 
     // the steering action
     if (nullptr != action) {

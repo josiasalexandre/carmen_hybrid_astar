@@ -1,7 +1,7 @@
 #ifndef KINEMATIC_VEHICLE_MODEL_HPP
 #define KINEMATIC_VEHICLE_MODEL_HPP
 
-#include "../../Entities/Pose2D.hpp"
+#include "../../Entities/State2D.hpp"
 #include "../ReedsShepp/ReedsSheppAction.hpp"
 #include "../HybridAstar/HybridAstarNode.hpp"
 
@@ -28,7 +28,7 @@ class VehicleModel {
         // the desired steering command rate
         double steering_command_rate;
 
-        // the sensivity to the understeer dynamic
+        // the sensitivity to the understeer dynamic
         double understeer;
 
         // default turn radius, it
@@ -58,22 +58,22 @@ class VehicleModel {
         // the distance between rear car and rear wheels
         double rear_car_wheels_dist;
 
-        // the distace between front car and front wheels
+        // the distance between front car and front wheels
         double front_car_wheels_dist;
 
-        // the maximum foward accelerarion
+        // the maximum forward acceleration
         double max_forward_acceleration;
 
         // the maximum forward deceleration
         double max_forward_deceleration;
 
-        // the maximum backward accelerarion
+        // the maximum backward acceleration
         double max_backward_acceleration;
 
-        // the maxium backward deceleration
+        // the maximum backward deceleration
         double max_backward_deceleration;
 
-        // the desired foward accelerarion
+        // the desired forward acceleration
         double desired_forward_acceleration;
 
         // the desired forward deceleration
@@ -85,9 +85,30 @@ class VehicleModel {
         // the desired backward deceleration
         double desired_backward_deceleration;
 
+        // the desired deceleration
+        double desired_deceleration;
+
+        // the max lateral acceleration
+        double max_lateral_acceleration;
+
         // PUBLIC METHODS
         // get the next pose, using the custom vehicle parameters
-        astar::Pose2D NextPose(const astar::Pose2D&, astar::Steer, astar::Gear, double, double, double);
+        astar::State2D NextState(const astar::State2D&, astar::Steer, astar::Gear, double, double);
+
+        // get the next pose, using the custom vehicle parameters
+		astar::State2D NextState(const astar::State2D&, astar::Steer, astar::Gear, double, double, double);
+
+		// get the next pose, using the state steering
+		astar::State2D NextState(const astar::State2D&);
+
+		// get the desired wheel angle that connects two states
+		double GetWheelAngle(const astar::State2D&, const astar::State2D&);
+
+		// get the desired speed
+		double GetDesiredSpeed(const astar::State2D &prev, const astar::State2D &current, const astar::State2D &next);
+
+		// get the desired orientation
+		double GetDesiredOrientation(const astar::State2D &prev, const astar::State2D &current, const astar::State2D &next);
 
 };
 

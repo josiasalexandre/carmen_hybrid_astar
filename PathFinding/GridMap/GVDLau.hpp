@@ -31,6 +31,9 @@ class GVDLau {
         // set a given cell as obstacle
         void SetObstacle(int x, int y);
 
+        // set a given cell as free space
+        void UnsetObstacle(int x, int y);
+
 };
 
 }

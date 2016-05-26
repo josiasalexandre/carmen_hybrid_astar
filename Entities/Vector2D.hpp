@@ -23,7 +23,7 @@ public:
     T x, y;
 
     // basic constructor'   '
-    Vector2D() : x(0.0), y(0.0) {}
+    Vector2D() : x(0), y(0) {}
 
     // copy constructor
     Vector2D(const Vector2D &v) : x(v.x), y(v.y) {}
@@ -32,13 +32,13 @@ public:
     Vector2D(T x_, T y_) : x(x_), y(y_) {}
 
     // distance between two vectors
-    T Distance(const Vector2D &v)
+    T Distance(Vector2D &v)
     {
         return std::sqrt((x - v.x)*(x - v.x) + (y - v.y)*(y - v.y));
     }
 
     // squared distance between two vectors
-    T Distance2(const Vector2D &v)
+    T Distance2(Vector2D &v)
     {
         return (x - v.x)*(x - v.x) + (y - v.y)*(y - v.y);
     }
