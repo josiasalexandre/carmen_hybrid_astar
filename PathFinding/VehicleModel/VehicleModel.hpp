@@ -1,7 +1,7 @@
 #ifndef KINEMATIC_VEHICLE_MODEL_HPP
 #define KINEMATIC_VEHICLE_MODEL_HPP
 
-#include "../../Entities/State2D.hpp"
+#include "../../Entities/Pose2D.hpp"
 #include "../ReedsShepp/ReedsSheppAction.hpp"
 #include "../HybridAstar/HybridAstarNode.hpp"
 
@@ -21,9 +21,8 @@ class VehicleModel {
 
         // PUBLIC ATTRIBUTES
 
-        // max wheel angle
-        // the phi
-        double maxphi;
+        // the maximum wheel deflection
+        double max_wheel_deflection;
 
         // the desired steering command rate
         double steering_command_rate;
@@ -32,7 +31,7 @@ class VehicleModel {
         double understeer;
 
         // default turn radius, it
-        double max_turn_radius;
+        double min_turn_radius;
 
         // default speed to simulation purpose
         double default_speed;
@@ -92,23 +91,42 @@ class VehicleModel {
         double max_lateral_acceleration;
 
         // PUBLIC METHODS
-        // get the next pose, using the custom vehicle parameters
-        astar::State2D NextState(const astar::State2D&, astar::Steer, astar::Gear, double, double);
 
-        // get the next pose, using the custom vehicle parameters
-		astar::State2D NextState(const astar::State2D&, astar::Steer, astar::Gear, double, double, double);
+        // get the next pose with Pose, Steer, Gear, length and custom turn radius
+        astar::Pose2D NextPose(const astar::Pose2D&, astar::Steer, astar::Gear, double length, double radius = min_turn_radius) const;
 
-		// get the next pose, using the state steering
-		astar::State2D NextState(const astar::State2D&);
+        // get the next pose
+        astar::Pose2D NextPose(const astar::Pose2D&, double vel, double phi, double time) const;
+
+		// get the front axle state with respect to the rear axle pose
+		astar::State2D GetFrontAxleState(const astar::State2D&) const;
+
+		// get the fake front axle state with respect to the rear axle pose
+		astar::State2D GetFakeFrontAxleState(const astar::State2D&) const;
 
 		// get the desired wheel angle that connects two states
-		double GetWheelAngle(const astar::State2D&, const astar::State2D&);
+		double GetDesiredWheelAngle(const astar::Pose2D&, const astar::Pose2D&) const;
 
 		// get the desired speed
-		double GetDesiredSpeed(const astar::State2D &prev, const astar::State2D &current, const astar::State2D &next);
+		double GetCurvatureConstraint(const astar::Pose2D &prev, const astar::Pose2D &current, const astar::Pose2D &next) const;
+
+		// get the desired speed
+		double GetForwardSpeed(const astar::Pose2D &prev, const astar::Pose2D &current, const astar::Pose2D &next) const;
+
+		// get the desired speed
+		double GetBackwardSpeed(const astar::Pose2D &prev, const astar::Pose2D &current, const astar::Pose2D &next) const;
+
+		// get the max acceleration constraint
+		double GetAccelerationConstraint(double initial_speed, double displacement, astar::Gear g) const;
+
+		// get the max acceleration constraint
+		double GetDecelerationConstraint(double final_speed, double displacement, astar::Gear g) const;
+
+		// get the desired forward orientation
+		double GetForwardOrientation(const astar::Pose2D &prev, const astar::Pose2D &current, const astar::Pose2D &next) const;
 
 		// get the desired orientation
-		double GetDesiredOrientation(const astar::State2D &prev, const astar::State2D &current, const astar::State2D &next);
+		double GetBackwardOrientation(const astar::Pose2D &prev, const astar::Pose2D &current, const astar::Pose2D &next) const;
 
 };
 

@@ -32,13 +32,13 @@ public:
     Vector2D(T x_, T y_) : x(x_), y(y_) {}
 
     // distance between two vectors
-    T Distance(Vector2D &v)
+    T Distance(const Vector2D &v) const
     {
         return std::sqrt((x - v.x)*(x - v.x) + (y - v.y)*(y - v.y));
     }
 
     // squared distance between two vectors
-    T Distance2(Vector2D &v)
+    T Distance2(const Vector2D &v) const
     {
         return (x - v.x)*(x - v.x) + (y - v.y)*(y - v.y);
     }
@@ -49,8 +49,20 @@ public:
         return std::sqrt(x*x + y*y);
     }
 
+    // normalize
+    void Normalize()
+    {
+        T len = Norm();
+        if (0 != len)
+        {
+            x /= len;
+            y /= len;
+        }
+
+    }
+
     // add two vectors
-    void Add(const Vector2D &v)
+    void Add(const Vector2D &v) const
     {
         x += v.x;
         y += v.y;

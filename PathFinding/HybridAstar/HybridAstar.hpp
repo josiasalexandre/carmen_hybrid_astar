@@ -30,7 +30,7 @@
 
 #include "../../PriorityQueue/PriorityQueue.hpp"
 #include "HybridAstarNode.hpp"
-#include "../State2D.hpp"
+#include "../Pose2D.hpp"
 #include "../GridMap/InternalGridMap.hpp"
 #include "Heuristic.hpp"
 #include "../ReedsShepp/ReedsSheppModel.hpp"
@@ -77,16 +77,16 @@ private:
     void RemoveAllNodes();
 
     // reconstruct the path from the goal to the start pose
-    astar::StateListPtr RebuildPath(HybridAstarNodePtr);
+    astar::StateListPtr RebuildPath(HybridAstarNodePtr, const State2D&);
 
     // get the Reeds-Shepp path to the goal and return the appropriated HybridAstarNode
-    HybridAstarNodePtr GetReedsSheppChild(const astar::State2D&, const astar::State2D&);
+    HybridAstarNodePtr GetReedsSheppChild(const astar::Pose2D&, const astar::Pose2D&);
 
     // get the children nodes by expanding all gears and steering
-    HybridAstarNodeArrayPtr GetChidlren(const astar::State2D&, const astar::State2D&, astar::Gear, double);
+    HybridAstarNodeArrayPtr GetChidlren(const astar::Pose2D&, const astar::Pose2D&, astar::Gear, double);
 
     // get the path cost
-    double PathCost(const astar::State2D& start, const astar::State2D& goal, double length, bool reverse_gear);
+    double PathCost(const astar::Pose2D& start, const astar::Pose2D& goal, double length, bool reverse_gear);
 
 public:
 
@@ -98,7 +98,7 @@ public:
     HybridAstar(astar::VehicleModel &vehicle_);
 
     // find a path to the goal
-    StateListPtr FindPath(astar::InternalGridMap&, const astar::State2D&, const astar::State2D&);
+    astar::StateListPtr FindPath(astar::InternalGridMap&, const astar::State2D&, const astar::State2D&);
 
 };
 

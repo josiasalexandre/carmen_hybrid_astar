@@ -6,45 +6,45 @@
 
 #include "../Helpers/wrap2pi.hpp"
 #include "Vector2D.hpp"
+#include "Pose2D.hpp"
 #include "ReedsShepp/ReedsSheppAction.hpp"
 
 namespace astar {
 
-class State2D {
+class State2D : public astar::Pose2D {
 
     public:
 
         // PUBLIC ATTRIBUTES
 
-        // the position, x and y coordinates
-        astar::Vector2D<double> position;
+    // the current gear
+        astar::Gear gear;
 
-        // the heading
-        double orientation;
-
-        // registering the wheel angle
-        double wheel_angle;
-
-        // the speed at the current pose
+        // the desired speed
         double v;
 
-        // how much time
-        double time;
+        // the steering angle
+        double phi;
 
-        // the gear
-        astar::Gear gear;
+        // the command time
+        double t;
+
+        // distance to the last cuscp
+        double last_cusp_dist;
+
+        // coming to stop flag
+        bool coming_to_stop;
 
         // simple constructor
         State2D();
 
-        // basic constructor, only position and orientation are required
-        State2D(const astar::Vector2D<double> &pos, double o, double w_angle = 0, double vel = 0, double dt = 0, astar::Gear g = ForwardGear);
-
-        // most explicit constructor
-        State2D(double x_, double y_, double o, double w_angle = 0, double vel = 0, double dt = 0, astar::Gear g = ForwardGear);
+        // simple constructor, the input is a pose
+        State2D(
+                const astar::Pose2D&, astar::Gear g = astar::ForwardGear, double vel = 0.0, double wheel_angle = 0.0,
+                double t_ = 0.0, double lcd = 0, bool stop = false);
 
         // copy constructor
-        State2D(const State2D&);
+        State2D(const astar::State2D&);
 
         // distance between two poses
         double Distance(const State2D&);

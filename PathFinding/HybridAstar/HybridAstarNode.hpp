@@ -1,12 +1,11 @@
 #ifndef HYBRID_ASTAR_NODE_HPP
 #define HYBRID_ASTAR_NODE_HPP
 
-#include "../ReedsShepp/ReedsSheppActionSet.hpp"
-
-#include "../../PriorityQueue/PriorityQueueNode.hpp"
-
 #include <exception>
-#include "../../Entities/State2D.hpp"
+
+#include "../../Entities/Pose2D.hpp"
+#include "../../PriorityQueue/PriorityQueueNode.hpp"
+#include "../ReedsShepp/ReedsSheppActionSet.hpp"
 
 namespace astar {
 
@@ -22,8 +21,8 @@ class HybridAstarNode {
 
         // PUBLIC ATTRIBUTES
 
-        // the current state
-        astar::State2D state;
+        // the current pose
+        astar::Pose2D pose;
 
         // the steering action
         astar::ReedsSheppActionPtr action;
@@ -41,16 +40,19 @@ class HybridAstarNode {
         HybridAstarNode *parent;
 
         // the current cell
-        astar::MapCellPtr cell;
+        astar::GridMapCellPtr cell;
 
         // the priority queue handle
         astar::PriorityQueueNodePtr<HybridAstarNode*> handle;
 
         // basic constructor with a given action
-        HybridAstarNode(const astar::State2D&, astar::ReedsSheppActionPtr, astar::MapCellPtr, double, double, astar::HybridAstarNode*);
+        HybridAstarNode(
+                const astar::Pose2D&, ReedsSheppActionPtr,
+                astar::GridMapCellPtr = nullptr, double cost_ = 0.0, double h_cost = 0.0, astar::HybridAstarNode *n= nullptr);
 
         // basic constructor
-        HybridAstarNode(const astar::State2D&, ReedsSheppActionSetPtr, astar::MapCellPtr, double, double, astar::HybridAstarNode*);
+        HybridAstarNode(const astar::Pose2D&, ReedsSheppActionSetPtr,
+                astar::GridMapCellPtr = nullptr, double cost_ = 0.0, double h_cost = 0.0, astar::HybridAstarNode *n = nullptr);
 
         // basic destructor
         ~HybridAstarNode();

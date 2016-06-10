@@ -25,7 +25,7 @@
 #ifndef REEDS_SHEPP_MODEL_HPP
 #define REEDS_SHEPP_MODEL_HPP
 
-#include "../State2D.hpp"
+#include "../Pose2D.hpp"
 #include "ReedsSheppActionSet.hpp"
 
 namespace astar {
@@ -216,10 +216,10 @@ class ReedsSheppModel {
         // PUBLIC METHODS
 
         // solve the current start to goal pathfinding
-        astar::ReedsSheppActionSetPtr Solve(const astar::State2D&, const astar::State2D&, double);
+        astar::ReedsSheppActionSetPtr Solve(const astar::Pose2D&, const astar::Pose2D&, double);
 
         // return a list of poses from a given action set
-        astar::StateArrayPtr Discretize(const State2D&, ReedsSheppActionSetPtr, double, double);
+        static astar::StateArrayPtr Discretize(const Pose2D&, ReedsSheppActionSetPtr, double, double);
 
 };
 

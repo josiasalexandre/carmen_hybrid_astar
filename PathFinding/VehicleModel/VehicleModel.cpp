@@ -4,38 +4,31 @@
 
 using namespace astar;
 
-// get the next pose
-State2D VehicleModel::NextState(
-                                            const State2D &p,
-                                            Steer s,
-                                            Gear g,
-                                            double length,
-                                            double turn_radius
-                                           )
+// get the next pose with Pose, Steer, Gear, length and turn radius
+astar::Pose2D VehicleModel::NextPose(
+    const astar::Pose2D &current_pose, Steer steer, Gear gear, double length, double t_radius = min_turn_radius) const
 {
-
     // auxiliary variables
     double x, y, angle;
 
     // no turning radius?
-    if (RSStraight != s) {
+    if (astar::RSStraight != steer) {
 
-        // get the angle between the start and endpoint
-        angle = length/turn_radius;
+        angle = length/t_radius;
 
         double angle2 = angle/2;
 
-        double sin_angle_2 = (double) std::sin(angle2);
+        double sin_angle_2 = std::sin(angle2);
 
-        double L = 2*sin_angle_2*turn_radius;
+        double L = 2*sin_angle_2*t_radius;
 
         // get the x coordinate
-        x = L*((double) std::cos(angle2));
+        x = L*std::cos(angle2);
 
         // get the y coordinate
         y = L*sin_angle_2;
 
-        if (RSTurnRight == s) {
+        if (astar::RSTurnRight == steer) {
 
             // change direction
             y = -y;
@@ -52,7 +45,7 @@ State2D VehicleModel::NextState(
 
     }
 
-    if (BackwardGear == g) {
+    if (astar::BackwardGear == gear) {
 
         // change direction
         x = -x;
@@ -61,101 +54,86 @@ State2D VehicleModel::NextState(
     }
 
     // build a position vector at the relative position
-    Vector2D<double> v(x, y);
+    Vector2D<double> position(x, y);
 
     // rotate around z axis
-    v.RotateZ(p.orientation);
+    position.RotateZ(current_pose.orientation);
 
     // rotate the point to the appropriated result
-    return State2D(p.position + v, mrpt::math::wrapToPi<double>(p.orientation + angle));
+    return Pose2D(current_pose.position + position, mrpt::math::wrapToPi<double>(current_pose.orientation + angle));
 
 }
 
 // get the next pose
-State2D VehicleModel::NextState(
-                                            const State2D &p,
-                                            Steer s,
-                                            Gear g,
-                                            double speed,
-											double dt,
-                                            double turn_radius
-                                           )
-{
-	// get the length
-	double length = speed*dt;
+Pose2D VehicleModel::NextPose(const astar::Pose2D &current, double vel, double phi, double time) const {
 
-	return NextState(p, s, g, length, turn_radius);
-
-}
-
-// get the next pose, using the state steering
-State2D VehicleModel::NextState(const astar::State2D& current_state) {
-
-    // auxiliary variables
+    // temp variables
     double x, y, angle;
 
-    // get the displacement
-    double length = current_state.v*current_state.time;
+    // get the absolute length
+    double length = vel*time;
 
-    // no turning radius?
-    if (0 != current_state.wheel_angle) {
+    if (0.0 != phi) {
 
         // get the turn radius
         double turn_radius = distance_between_front_and_rear_axles /
-                std::tan(current_state.wheel_angle/(1.0 + current_state.v*current_state.v*understeer));
+                        std::tan(phi/(1.0 + vel*vel*understeer));
 
         angle = length/turn_radius;
 
         double angle2 = angle/2;
 
-        double sin_angle_2 = (double) std::sin(angle2);
+        double sin_angle_2 = std::sin(angle2);
 
         double L = 2*sin_angle_2*turn_radius;
 
         // get the x coordinate
-        x = L*((double) std::cos(angle2));
+        x = L*std::cos(angle2);
 
         // get the y coordinate
         y = L*sin_angle_2;
 
-        if (0 > current_state.wheel_angle) {
-
-            // change direction
-            y = -y;
-            angle = -angle;
-
-        }
-
     } else {
 
-        // just a straight movement, no turning radius
         x = length;
         y = 0.0;
         angle = 0.0;
 
     }
 
-    if (0 > current_state.v) {
-
-        // change direction
-        x = -x;
-        angle = -angle;
-
-    }
-
     // build a position vector at the relative position
-    Vector2D<double> pose(x, y);
+    Vector2D<double> position(x, y);
 
     // rotate around z axis
-    pose.RotateZ(current_state.orientation);
+    position.RotateZ(current.orientation);
 
     // rotate the point to the appropriated result
-    return State2D(current_state.position + pose, mrpt::math::wrapToPi<double>(current_state.orientation + angle));
+    return Pose2D(current.position + position, mrpt::math::wrapToPi<double>(current.orientation + angle));
+
+}
+
+// get the front axle pose with respect to the rear axle pose
+State2D VehicleModel::GetFrontAxleState(const astar::State2D &s) const {
+
+    double x = s.position.x + std::cos(s.orientation) * distance_between_front_and_rear_axles;
+    double y = s.position.y + std::sin(s.orientation) * distance_between_front_and_rear_axles;
+
+    return State2D(x, y, s.orientation, s.phi, s.v, s.gear, s.t, s.coming_to_stop, s.last_cusp_dist);
+
+}
+
+// get the front axle pose with respect to the rear axle pose
+State2D VehicleModel::GetFakeFrontAxleState(const astar::State2D &s) const {
+
+    double x = s.position.x - std::cos(s.orientation) * distance_between_front_and_rear_axles;
+    double y = s.position.y - std::sin(s.orientation) * distance_between_front_and_rear_axles;
+
+    return State2D(x, y, s.orientation, s.phi, s.v, s.gear, s.t, s.coming_to_stop, s.last_cusp_dist);
 
 }
 
 // get the desired wheel angle that connects two states
-double VehicleModel::GetWheelAngle(const State2D &a, const State2D &b) {
+double VehicleModel::GetDesiredWheelAngle(const Pose2D &a, const Pose2D &b) const {
 
     // move the second position to the first position reference
     Vector2D<double> goal(b.position - a.position);
@@ -172,14 +150,11 @@ double VehicleModel::GetWheelAngle(const State2D &a, const State2D &b) {
 }
 
 // get the desired speed
-double VehicleModel::GetDesiredSpeed(const State2D &prev, const State2D &current, const State2D &next) {
+double VehicleModel::GetCurvatureConstraint(const Pose2D &prev, const Pose2D &current, const Pose2D &next) const {
 
     // get the appropriated vectors
     Vector2D<double> current_v(current.position - prev.position);
     Vector2D<double> next_v(next.position - current.position);
-
-    // set the max speed
-    double max_speed = (astar::ForwardGear == current.gear) ? max_forward_speed : max_backward_speed;
 
     // get the angle between the two vectors
     double angle = std::fabs(mrpt::math::wrapToPi<double>((std::atan2(next_v.y, next_v.x) - std::atan2(current_v.y, current_v.x))));
@@ -188,23 +163,66 @@ double VehicleModel::GetDesiredSpeed(const State2D &prev, const State2D &current
     double radius = current_v.Norm() / angle;
 
     // get the curvature constraint
-    double curvature_constraint = std::sqrt(radius * max_lateral_acceleration);
+    return std::sqrt(radius * max_lateral_acceleration);
 
-    // return the minimum of curvature_constraint and max_speed
-    return std::min(curvature_constraint, max_speed);
+}
 
+// get the desired forward speed
+double VehicleModel::GetForwardSpeed(const Pose2D &prev, const Pose2D &current, const Pose2D &next) const {
+
+    return std::min(max_forward_speed, GetCurvatureConstraint(prev, current, next));
+
+}
+
+// get the desired backward speed
+double VehicleModel::GetBackwardSpeed(const Pose2D &prev, const Pose2D &current, const Pose2D &next) const {
+
+    return std::min(max_backward_speed, GetCurvatureConstraint(prev, current, next));
+
+}
+
+// get the acceleration constraint
+double VehicleModel::GetAccelerationConstraint(double initial_speed, double displacement, astar::Gear g) const {
+
+    if (astar::ForwardGear == g) {
+
+        return std::sqrt(initial_speed * initial_speed + 2 * max_forward_acceleration * displacement);
+
+    } else {
+
+        return std::sqrt(initial_speed * initial_speed + 2 * max_backward_acceleration * displacement);
+
+    }
+
+}
+
+// get the acceleration constraint
+double VehicleModel::GetDecelerationConstraint(double final_speed, double displacement, astar::Gear g) const {
+
+    if (astar::ForwardGear == g) {
+
+        return std::sqrt(final_speed * final_speed + 2 * max_forward_deceleration * displacement);
+
+    } else {
+
+        return std::sqrt(final_speed * final_speed + 2 * max_backward_deceleration * displacement);
+
+    }
 
 }
 
 // get the desired orientation
-double VehicleModel::GetDesiredOrientation(const astar::State2D &prev, const astar::State2D &current, const astar::State2D &next) {
+double VehicleModel::GetForwardOrientation(const astar::Pose2D &prev, const astar::Pose2D &current, const astar::Pose2D &next) const {
 
     astar::Vector2D<double> displacement = 0.25 * (next.position - prev.position) + 0.75 * (next.position - current.position);
-    double pathOrientation = std::atan2(displacement.y, displacement.x);
 
-    if (current.gear == BackwardGear)
-        pathOrientation = mrpt::math::wrapToPi<double>(pathOrientation + M_PI);
+    return std::atan2(displacement.y, displacement.x);
 
-    return pathOrientation;
+}
+
+// get the desired orientation
+double VehicleModel::GetBackwardOrientation(const astar::Pose2D &prev, const astar::Pose2D &current, const astar::Pose2D &next) const {
+
+    return mrpt::math::wrapToPi<double>(GetForwardOrientation(prev, current, next) + M_PI);
 
 }

@@ -4,37 +4,25 @@ using namespace astar;
 
 // basic constructor with a given action
 HybridAstarNode::HybridAstarNode(
-                                    const State2D &p,
-                                    ReedsSheppActionPtr rsAction,
-                                    const MapCellPtr c,
-                                    double cost,
-                                    double heuristicCost,
-                                    HybridAstarNode *n
-                                ) : state(p), action(rsAction), action_set(0), g(cost), f(heuristicCost), parent(n), cell(c), handle(nullptr)
-{
-
-    // the current node should be known by the pointed MapCell
-    // set the node
-    cell->node = this;
-
-}
+        const Pose2D &p,
+        ReedsSheppActionPtr rsAction,
+        const GridMapCellPtr c = nullptr,
+        double cost = 0.0,
+        double heuristicCost = 0.0,
+        HybridAstarNode *n = nullptr
+    ) : pose(p), action(rsAction), action_set(0), g(cost), f(heuristicCost), parent(n), cell(c), handle(nullptr)
+{}
 
 // the basic constructor with a given action set
 HybridAstarNode::HybridAstarNode(
-                                    const State2D &p,
-                                    ReedsSheppActionSetPtr rsActionSet,
-                                    MapCellPtr c,
-                                    double cost,
-                                    double heuristicCost,
-                                    HybridAstarNodePtr n
-                                ) : state(p), action(nullptr), action_set(rsActionSet), g(cost), f(heuristicCost), parent(n), cell(c), handle(nullptr)
-{
-
-    // the current node should be known by the pointed MapCell
-    // set the node
-    cell->node = this;
-
-}
+    const Pose2D &p,
+    ReedsSheppActionSetPtr rsActionSet,
+    GridMapCellPtr c = nullptr,
+    double cost,
+    double heuristicCost,
+    HybridAstarNodePtr n
+    ) : pose(p), action(nullptr), action_set(rsActionSet), g(cost), f(heuristicCost), parent(n), cell(c), handle(nullptr)
+{}
 
 // basic destructor
 HybridAstarNode::~HybridAstarNode() {
@@ -75,8 +63,8 @@ void HybridAstarNode::operator=(const astar::HybridAstarNode& n) {
 
     // copy the input node values
 
-    // the current state
-    state = n.state;
+    // the current pose
+    pose = n.pose;
 
     // the steering action
     if (nullptr != action) {

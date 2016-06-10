@@ -29,8 +29,8 @@ publish_hybrid_astar_motion_commands()
         for (unsigned int i = 0;  i < p_size; i++)
         {
             commands[i].v = path[i].v;
-            commands[i].phi = path[i].wheel_angle;
-            commands[i].time = path[i].time;
+            commands[i].phi = path[i].phi;
+            commands[i].time = path[i].t;
         }
 
         if (g_hybrid_astar->use_obstacle_avoider)
@@ -53,7 +53,11 @@ localize_ackerman_globalpos_message_handler(carmen_localize_ackerman_globalpos_m
 {
     if (g_hybrid_astar->activated)
     {
-        astar::State2D start(msg->globalpos.x, msg->globalpos.y, msg->globalpos.theta, msg->phi, msg->v);
+        // get the current gear
+        astar::Gear gear = msg->v < 0 ? astar::BackwardGear : astar::ForwardGear;
+
+        astar::Pose2D start = g_hybrid_astar->estimate_initial_pose(
+                msg->globalpos.x, msg->globalpos.y, msg->globalpos.theta, carmen_get_time() - msg->timestamp);
 
         if (g_hybrid_astar->replan(start))
             publish_hybrid_astar_motion_commands();

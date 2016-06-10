@@ -4,6 +4,7 @@
 #include <carmen/carmen.h>
 #include <carmen/map_server_messages.h>
 
+#include "../Entities/State2D.hpp"
 #include "GridMap/InternalGridMap.hpp"
 #include "HybridAstar/HybridAstar.hpp"
 #include "Smoother/CGSmoother.hpp"
@@ -40,9 +41,9 @@ class HybridAstarMotionPlanner {
         double odometry_speed;
 
         // the current odometry wheel_angle
-        double odometry_wheel_angle;
+        double odometry_steering_angle;
 
-        // the current goal
+        // the current terminal state
         astar::State2D goal;
 
         // the path to be followed
@@ -74,7 +75,10 @@ class HybridAstarMotionPlanner {
         void set_odometry(double v, double phi);
 
         // estimate the robot inital pose
-        astar::State2D estimate_initial_pose(double x, double y, double theta, double timestamp);
+        astar::State2D estimate_initial_state(double x, double y, double theta, double v, double phi, double dt);
+
+        // estimate the robot initial state
+        astar::State2D estimate_initial_state(double x, double y, double theta, double dt);
 
         // find a smooth find to the goal and publish
         bool replan(astar::State2D &start);
@@ -84,7 +88,6 @@ class HybridAstarMotionPlanner {
 
         // update the map
         void update_map(carmen_map_server_compact_cost_map_message *msg);
-
 
         // convert the current path to the desired output format (carmen_ackerman_motion_command_t)
         std::vector<astar::State2D> get_path();

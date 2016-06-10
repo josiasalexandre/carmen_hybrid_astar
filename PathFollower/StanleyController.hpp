@@ -27,32 +27,110 @@
 
 namespace astar {
 
-    class StanleyController {
+enum ControllerState {CSStandby, CSStopped, CSForwardDrive, CSReverseDrive, CSComplete};
 
-        private:
+class StanleyController {
 
-            // the current path
-            astar::StateListPtr path;
+    private:
 
-             // set the appropriated low speeds around the stopping points
-            void UpdateLowSpeedRegions(astar::StateListPtr, std::vector<std::list<astar::State2D>::iterator>&, astar::VehicleModel&);
+        // the vehicle model
+        astar::VehicleModel &vehicle_model;
 
-            // update the path around stopping points
-            void UpdateStoppingPoints(astar::StateListPtr, astar::VehicleModel&);
+        // the robot state
+        State2D car;
 
-            // get the desired command given two states
-            // the first and the last states remains the same
-            astar::StateListPtr ConsolidateStateList(astar::StateListPtr, astar::VehicleModel&);
+        // the controller state
+        ControllerState cs = CSStandby;
 
-        public:
+        // the way point index
+        unsigned int next_waypoint;
+        unsigned int prev_waypoint;
 
-            // basic constructor
-            StanleyController();
+        // the resolution time to build the command list
+        double dt;
 
-            // get a Command list to follow a given path
-            std::vector<State2D> BuildCommandList(astar::StateListPtr, astar::VehicleModel&);
+        // reverse mode flag
+        bool reverse_mode;
 
-    };
+        // the fake front axle position
+        Pose2D front_axle, fake_front_axle;
+
+        // the closest point
+        Pose2D closest_point;
+
+        // left and right vectors
+        Vector2D<double> left, right;
+
+        // the input path
+        std::vector<State2D> raw_path;
+
+        // the current forward path
+        std::vector<State2D> forward_path;
+
+        // the current reverse path
+        std::vector<State2D> reverse_path;
+
+        // the consolidated path flag
+        bool consolidated_path;
+
+        // the raw path size
+        unsigned int raw_path_size;
+
+        // the raw path last index
+        int raw_path_last_index;
+
+        // the stopping points vector
+        std::vector<unsigned int> stopping;
+
+        // double the past phi error
+        double prev_wheel_angle_error;
+
+        // the velocity past error
+        double vpasterror;
+
+        // the last cusp
+        unsigned int last_cusp;
+
+         // set the appropriated low speeds around the stopping points
+        void UpdateLowSpeedRegions(const astar::VehicleModel&);
+
+        // get the desired command given two states
+        // the first and the last states remains the same
+        bool ConsolidateStateList(astar::StateArrayPtr);
+
+        // how far the car has moved between two points in the path
+        double HowFarAlong(const astar::Pose2D &, const astar::Pose2D&, const astar::Pose2D&);
+
+        // find the previous and next index in the path
+        void Localize(const astar::State2D&, unsigned int &prev_index, unsigned int &next_index);
+
+        // find the closest point next to the front axle, fake or not
+        State2D FindClosesPoint(const astar::State2D&, const astar::State2D&, const astar::State2D&);
+
+        // the stopping point action
+        astar::State2D Stopped(const astar::State2D&);
+
+        // travel along the path - forward
+        astar::State2D ForwardDrive(const astar::State2D&);
+
+        // travel along the path - forward
+        astar::State2D ReverseDrive(const astar::State2D&);
+
+        // path following simulation
+        StateArrayPtr FollowPathSimulation();
+
+    public:
+
+        // basic constructor
+        StanleyController(const astar::VehicleModel&);
+
+        // get a Command list to follow a given path
+        StateArrayPtr BuildAndFollowPath(astar::StateListPtr);
+
+        // follow a given path
+        StateArrayPtr FollowPath(const astar::State2D&);
+
+};
 
 }
 

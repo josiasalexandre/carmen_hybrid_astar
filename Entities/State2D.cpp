@@ -5,20 +5,19 @@
 using namespace astar;
 
 // simple constructor
-State2D::State2D() : position(0.0, 0.0), orientation(0.0), wheel_angle(0.0), time(0.0), v(0.0), gear(ForwardGear){}
+State2D::State2D() :
+        Pose2D::Pose2D(), gear(), v(0.0), phi(0.0), t(0.0), last_cusp_dist(0.0), coming_to_stop(false) {}
 
-// basic pose constructor with Vector2D
-State2D::State2D(const Vector2D<double> &pos, double o, double w_angle = 0.0, double vel = 0.0, double dt = 0.0, Gear g = ForwardGear) :
-        position(pos), orientation(o), wheel_angle(w_angle), v(vel), time(dt), gear(g) {}
-
-
-// explicit constructor
-State2D::State2D(double x_, double y_, double o, double w_angle = 0.0, double vel = 0.0, double dt = 0.0, Gear g = ForwardGear) :
-		position(x_, y_), orientation(o), wheel_angle(w_angle), v(vel), time(0), gear(ForwardGear) {}
+// simple constructor, the input is a pose
+State2D::State2D(
+        const Pose2D &p, Gear g = ForwardGear, double vel = 0.0, double wheel_angle = 0.0,
+        double time = 0, double lcd = 0, bool stop = false
+        ) : Pose2D::Pose2D(p), gear(g), v(vel), phi(wheel_angle), t(time), last_cusp_dist(lcd), coming_to_stop(stop) {}
 
 // copy constructor
-State2D::State2D(const State2D &s) :
-        position(s.position), orientation(s.orientation), wheel_angle(s.wheel_angle), v(s.v), time(s.time), gear(s.gear) {}
+State2D::State2D(const astar::State2D &s):
+    Pose2D::Pose2D(s), gear(s.gear), v(s.v), phi(s.phi), t(s.t), last_cusp_dist(s.last_cusp_dist, coming_to_stop(s.coming_to_stop)) {}
+
 
 // distance between two poses
 double State2D::Distance(const State2D &p)
@@ -46,25 +45,27 @@ double State2D::GetOrientationDiff(double t)
 }
 
 // the assignment operator
-void State2D::operator=(const State2D &p)
+void State2D::operator=(const State2D &s)
 {
-    position = p.position;
-    orientation = p.orientation;
-    wheel_angle = p.wheel_angle;
-    v = p.v;
-    gear = p.gear;
-    timestamp = p.timestamp;
+    position = s.position;
+    orientation = s.orientation;
+    v = s.v;
+    phi = s.phi;
+    t = s.t;
+    gear = s.gear;
+    coming_to_stop = s.coming_to_stop;
+    last_cusp_dist = s.last_cusp_dist;
 }
 
 // == operator overloading
-bool State2D::operator ==(const State2D &p)
+bool State2D::operator==(const State2D &s)
 {
-    return std::fabs(position.x - p.position.x) < 0.001 && std::fabs(position.y - p.position.y) < 0.001 && std::fabs(orientation - p.orientation) < 0.001;
+    return (0.0001 > std::fabs(position.Distance2(position)) && 0.001 > std::fabs(orientation - orientation));
 }
 
 // != operator overloading
-bool State2D::operator !=(const State2D &p)
+bool State2D::operator!=(const State2D &s)
 {
-    return !(std::fabs(position.x - p.position.x) < 0.001 && std::fabs(position.y - p.position.y) < 0.001 && std::fabs(orientation - p.orientation) < 0.001);
+    return (0.0001 < std::fabs(position.Distance2(position)) || 0.001 < std::fabs(orientation - orientation));
 }
 

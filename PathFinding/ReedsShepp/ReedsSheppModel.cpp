@@ -35,7 +35,7 @@ ReedsSheppModel::ReedsSheppModel() {}
 // PUBLIC METHODS
 
 // solve the current start to goal pathfinding
-ReedsSheppActionSetPtr ReedsSheppModel::Solve(const State2D &start, const State2D &goal, double inverse_unit) {
+ReedsSheppActionSetPtr ReedsSheppModel::Solve(const Pose2D &start, const Pose2D &goal, double inverse_unit) {
 
     // Translate the goal so that the start position is at the origin
     Vector2D<double> position((goal.position.x - start.position.x)*inverse_unit, (goal.position.y - start.position.y)*inverse_unit);
@@ -100,19 +100,20 @@ ReedsSheppActionSetPtr ReedsSheppModel::Solve(const State2D &start, const State2
 }
 
 // return a list of poses from a given action set
-StateArrayPtr ReedsSheppModel::Discretize(const State2D &start, ReedsSheppActionSetPtr action_set, double radcurv, double inverse_resolution) {
-
+StateArrayPtr ReedsSheppModel::Discretize(
+        const Pose2D &start, ReedsSheppActionSetPtr action_set, double radcurv, double inverse_resolution)
+{
     // get the previous pose
     State2D prev(start);
 
-    // create the pose list
+    // create the pose array
     StateArrayPtr path = new StateArray();
 
     // a reference helper
     std::vector<State2D> &states(path->states);
 
     // append the first pose
-   states.push_back(prev);
+    states.push_back(State2D(prev, action_set->actions[1].gear));
 
     // get the action size list size
     unsigned int a_size = action_set->actions.size();
@@ -157,7 +158,7 @@ StateArrayPtr ReedsSheppModel::Discretize(const State2D &start, ReedsSheppAction
 
                 }
 
-                // assuming a ForwardGear, is it a backward instead?
+                // we have assumed ForwardGear, is it a backward instead?
                 if (BackwardGear == it->gear) {
 
                     // invert the x displacement
@@ -181,7 +182,7 @@ StateArrayPtr ReedsSheppModel::Discretize(const State2D &start, ReedsSheppAction
                     pos.y = dy;
 
                     // rotate the position to the correct position
-                    pos.RotateZ(-prev.orientation);
+                    pos.RotateZ(prev.orientation);
 
                     // update the prev State2D position
                     prev.position.Add(pos);

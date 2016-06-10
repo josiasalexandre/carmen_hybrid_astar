@@ -69,7 +69,7 @@ class InternalGridMap {
         bool InitializeGridMap(unsigned int w, unsigned int h, double res, const astar::Vector2D<double>& origin, double orientation);
 
         // find a cell which a given pose is localized
-        GridMapCellPtr StateToCell(const astar::State2D&);
+        GridMapCellPtr PoseToCell(const astar::Pose2D&);
 
         // get the distance to the nearest obstacle
         double GetObstacleDistance(const astar::Vector2D<double>&);
@@ -81,7 +81,10 @@ class InternalGridMap {
         bool isValidPoint(const astar::Vector2D<double>&);
 
         // is a safe place?
-        bool isSafePlace(const astar::State2D&);
+        bool isSafePlace(const astar::Pose2D&);
+
+        // is a safe place?
+        bool isSafePlace(const astar::Vector2D<double> &position, double orientation);
 };
 
 // just another helper

@@ -54,6 +54,9 @@ class ReedsSheppAction {
         // PUBLIC METHODS
 
         // basic constructor
+        ReedsSheppAction() : steer(RSStraight), gear(ForwardGear), length(0.0) {}
+
+        // basic constructor
         ReedsSheppAction(const astar::Steer &s, const astar::Gear &g, const double &len) : steer(s), gear(g), length(len) {}
 
         // copy constructor

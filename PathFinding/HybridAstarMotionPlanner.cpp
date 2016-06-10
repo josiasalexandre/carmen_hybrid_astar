@@ -4,11 +4,11 @@ using namespace astar;
 
 // basic constructor
 HybridAstarMotionPlanner::HybridAstarMotionPlanner(int argc, char **argv) :
-    vehicle_model(), path_finder(vehicle_model), valid_path(false), simulation_mode(true), activated(true), initialized_grid_map(false) {
-
+    vehicle_model(), path_finder(vehicle_model), valid_path(false), simulation_mode(true), activated(true),
+    initialized_grid_map(false), path_smoother(vehicle_model)
+{
     // read all parameters
     get_parameters(argc, argv);
-
 }
 
 // PRIVATE METHODS
@@ -22,7 +22,7 @@ HybridAstarMotionPlanner::get_parameters(int argc, char **argv)
 
     // vehicle parameters
     carmen_param_t vehicle_params_list[21] = {
-        {(char *)"robot",   (char *)"max_steering_angle",                           CARMEN_PARAM_DOUBLE, &vehicle_model.maxphi,                                         1, NULL},
+        {(char *)"robot",   (char *)"max_steering_angle",                           CARMEN_PARAM_DOUBLE, &vehicle_model.max_wheel_deflection,                           1, NULL},
         {(char *)"robot",   (char *)"desired_steering_command_rate",                CARMEN_PARAM_DOUBLE, &vehicle_model.steering_command_rate,                          1, NULL},
         {(char *)"robot",   (char *)"understeer_coeficient",                        CARMEN_PARAM_DOUBLE, &vehicle_model.understeer,                                     1, NULL},
         {(char *)"robot",   (char *)"robot_maximum_capable_curvature",              CARMEN_PARAM_DOUBLE, &vehicle_model.max_turn_radius,                                1, NULL},
@@ -55,33 +55,55 @@ HybridAstarMotionPlanner::get_parameters(int argc, char **argv)
 bool
 HybridAstarMotionPlanner::replan(State2D &start)
 {
+    if (start == goal) {
+        return false;
+    }
+
     path.clear();
 
-    if (grid.isSafePlace(goal))
+    if (path_follower.consolidated_path)
     {
-        // the Hybrid A* search, first stage
-        StateListPtr raw_path = path_finder.FindPath(grid, start, goal);
+        // get the desired command list
+        StateArrayPtr final_path = path_follower.FollowPath(start);
 
-        if (raw_path)
+        // copy the command list
+        path = final_path->states;
+
+        // delete the tmp command list
+        delete final_path;
+
+    } else {
+
+        if (grid.isSafePlace(goal.position, goal.orientation))
         {
-            // the path smoothing through conjugate gradient optimization and the final non-parametric interpolation, second stage
-            StateListPtr smoothed_path = path_smoother.Smooth(grid, raw_path);
+            // the Hybrid A* search, first stage
+            StateListPtr raw_path = path_finder.FindPath(grid, start, goal);
 
-            // get the appropriate orientations and build the path's command list
-            StateListPtr final_path = path_follower.ConsolidateStateList(smoothed_path, vehicle_model);
+            if (0 < raw_path->states.size())
+            {
+                // the path smoothing through conjugate gradient optimization and the final
+                // non-parametric interpolation, it's the second stage
+                StateListPtr smoothed_path = path_smoother.Smooth(raw_path, grid);
 
-            // copy the final path to the output path
-            std::copy(final_path->states.begin(), final_path->states.end(), path);
+                // get the appropriate orientations and build the path's command list
+                StateArrayPtr command_list = path_follower.BuildAndFollowPath(smoothed_path);
 
-            // remove the intermediate paths
+                // copy the command list
+                path = command_list->states;
+
+                // remove the smoothed path
+                delete smoothed_path;
+                delete command_list;
+            }
+
             delete raw_path;
-            delete smoothed_path;
-            delete final_path;
+
         }
 
     }
 
     return (0 < path.size());
+
 }
 
 // set the the new goal
@@ -147,22 +169,34 @@ HybridAstarMotionPlanner::set_odometry(double v, double phi)
     odometry_speed = v;
 
     // save the wheel angle
-    odometry_wheel_angle = phi;
+    odometry_steering_angle = phi;
 
 }
 
 // estimate the initial robot state
-State2D HybridAstarMotionPlanner::estimate_initial_pose(double x, double y, double theta, double delta_t) {
+State2D HybridAstarMotionPlanner::estimate_initial_state(double x, double y, double theta, double v, double phi, double dt) {
 
-    // predict the initial robot state
-    return vehicle_model.NextState(State2D(x, y, theta, odometry_wheel_angle, odometry_speed, delta_t));
+    // get the gear
+    Gear g = (0 > v) ? BackwardGear : ForwardGear;
 
+    // predict the initial robot pose
+    Pose2D initial_pose(vehicle_model.NextPose(Pose2D(x, y, theta), v, phi, dt));
+
+    // set the new state
+    return State2D(initial_pose, v, phi, dt, g);
 
 }
 
-std::vector<State2D>
-HybridAstarMotionPlanner::get_path()
-{
+// estimate the initial robot state
+State2D HybridAstarMotionPlanner::estimate_initial_state(double x, double y, double theta, double dt) {
+
+    return estimate_initial_state(x, y, theta, odometry_speed, odometry_steering_angle, dt);
+
+}
+
+std::vector<State2D> HybridAstarMotionPlanner::get_path() {
+
     return path;
+
 }
 
