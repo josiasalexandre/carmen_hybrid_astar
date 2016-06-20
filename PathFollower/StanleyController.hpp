@@ -130,6 +130,10 @@ class StanleyController {
         // follow a given path
         StateArrayPtr FollowPath(const astar::State2D&);
 
+        // the controller has a valid plan?
+        bool HasValidPath(const astar::State2D&);
+
+
 };
 
 }

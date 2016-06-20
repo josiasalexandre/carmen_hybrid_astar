@@ -61,7 +61,7 @@ HybridAstarMotionPlanner::replan(State2D &start)
 
     path.clear();
 
-    if (path_follower.consolidated_path)
+    if (path_follower.HasValidPath(start))
     {
         // get the desired command list
         StateArrayPtr final_path = path_follower.FollowPath(start);

@@ -5,7 +5,7 @@ using namespace astar;
 
 // basic constructor
 StanleyController::StanleyController(const VehicleModel &vehicle) :
-        vehicle_model(vehicle), c(CSStandby), next_waypoint(0), prev_waypoint(0),
+        vehicle_model(vehicle), cs(CSStandby), next_waypoint(0), prev_waypoint(0),
         dt(0.1), reverse_mode(false), front_axle(), fake_front_axle(), closest_point(),
         left(), right(), raw_path(), forward_path(), reverse_path(), consolidated_path(false),
         raw_path_size(0), raw_path_last_index(0), stopping(), prev_wheel_angle_error(0), vpasterror(0.0), last_cusp(0) {}
@@ -131,146 +131,148 @@ void StanleyController::UpdateLowSpeedRegions(const VehicleModel &vehicle) {
 // the first and the last states remains the same
 bool StanleyController::ConsolidateStateList(StateListPtr input_path) {
 
-    // get the input path size and the last index
-    raw_path_size = input_path->states.size();
+    // syntactic sugar
+    std::list<State2D> &input(input_path->states);
 
-    if (5 < raw_path_size) {
+    // clear the internal paths
+    raw_path.clear();
+    forward_path.clear();
+    reverse_path.clear();
 
-        raw_path_last_index = raw_path_size - 1;
+    // clear the stopping list
+    stopping.clear();
 
-        // syntactic sugar
-        std::list<State2D> &input(input_path->states);
+    // get the limit iterators
+    std::list<State2D>::iterator end = input.end();
+    std::list<State2D>::iterator last = --input.end();
 
-        // clear the internal paths
-        raw_path.clear();
-        forward_path.clear();
-        reverse_path.clear();
+    // get the list iterators
+    std::list<State2D>::iterator prev = input.begin();
+    std::list<State2D>::iterator current = std::advance(prev, 1);
+    std::list<State2D>::iterator next = std::advance(current, 1);
 
-        // clear the stopping list
-        stopping.clear();
+    // save the first state to the internal state lists
+    raw_path.push_back(*prev);
+    forward_path.push_back(vehicle_model.GetFrontAxleState(*prev));
+    reverse_path.push_back(vehicle_model.GetFakeFrontAxleState(*prev));
 
-        // get the limit iterators
-        std::list<State2D>::iterator end = input.end();
-        std::list<State2D>::iterator last = --input.end();
+    // register the stopping points index
+    unsigned int index = 0;
 
-        // get the list iterators
-        std::list<State2D>::iterator prev = input.begin();
-        std::list<State2D>::iterator current = std::advance(prev, 1);
-        std::list<State2D>::iterator next = std::advance(current, 1);
+    // is the car stopped?
+    if (0.0 == prev->v) {
 
-        // save the first state to the internal state lists
-        raw_path.push_back(*prev);
-        forward_path.push_back(vehicle_model.GetFrontAxleState(*prev));
-        reverse_path.push_back(vehicle_model.GetFakeFrontAxleState(*prev));
+       // save to the stopping points list
+        stopping.push_back(index);
 
-        // register the stopping points index
-        unsigned int index = 0;
+        // set the car controller state
+        cs = CSStopped;
 
-        // is the car stopped?
-        if (0.0 == prev->v) {
+    } else {
 
-           // save to the stopping points list
-            stopping.push_back(index);
+        if (ForwardGear == prev->gear) {
 
             // set the car controller state
-            cs = CSStopped;
+            cs = CSForwardDrive;
 
         } else {
 
-            if (ForwardGear == prev->gear) {
+            // set the car controller state
+            cs = CSReverseDrive;
 
-                // set the car controller state
-                cs = CSForwardDrive;
+        }
+
+    }
+
+    // get the desired command between the current and the next point
+    prev->phi = vehicle_model.GetDesiredWheelAngle(*prev, *current);
+
+    // update the index
+    index += 1;
+
+    // iterate the entire list but the second last element
+    while (next != end) {
+
+        // the common case
+        if (current->gear == prev->gear) {
+
+            // get the desired wheel angle
+            current->phi = vehicle_model.GetDesiredWheelAngle(*current, *next);
+
+            if (ForwardGear == current->gear) {
+
+                // get the desired orientation at this point
+                current->orientation = vehicle_model.GetForwardOrientation(*prev, *current, *next);
+
+                // get the max speed
+                current->v = vehicle_model.GetForwardSpeed(*prev, *current, *next);
+
 
             } else {
 
-                // set the car controller state
-                cs = CSReverseDrive;
+                // get the desired orientation at this point
+                current->orientation = vehicle_model.GetBackwardOrientation(*prev, *current, *next);
+
+                // get the max speed
+                current->v = vehicle_model.GetBackwardSpeed(*prev, *current, *next);
+
+                // get the desired wheel angle
+                current->phi = -current->phi;
 
             }
 
+
+        } else {
+
+            // the speed should be zero around any stopping point
+            current->v = 0.0;
+
+            // save to the stopping points list
+            stopping.push_back(index);
+
         }
+
+        // append to the current raw path
+        raw_path.push_back(*current);
+
+        // append to the current forward path
+        forward_path.push_back(vehicle_model.GetFrontAxleState(*current));
+
+        // append to the current internal path
+        reverse_path.push_back(vehicle_model.GetFakeFrontAxleState(*current));
 
         // update the index
         index += 1;
 
-        // iterate the entire list but the second last element
-        while (next != end) {
-
-            // the common case
-            if (current->gear == prev->gear) {
-
-                if (ForwardGear == current->gear) {
-
-                    // get the desired orientation at this point
-                    current->orientation = vehicle_model.GetForwardOrientation(*prev, *current, *next);
-
-                    // get the max speed
-                    current->v = vehicle_model.GetForwardSpeed(*prev, *current, *next);
-
-                } else {
-
-                    // get the desired orientation at this point
-                    current->orientation = vehicle_model.GetBackwardOrientation(*prev, *current, *next);
-
-                    // get the max speed
-                    current->v = vehicle_model.GetBackwardSpeed(*prev, *current, *next);
-
-                }
-
-            } else {
-
-                // the speed should be zero around any stopping point
-                current->v = 0.0;
-
-                // save to the stopping points list
-                stopping.push_back(index);
-
-            }
-
-            // append to the current raw path
-            raw_path.push_back(*current);
-
-            // append to the current forward path
-            forward_path.push_back(vehicle_model.GetFrontAxleState(*current));
-
-            // append to the current internal path
-            reverse_path.push_back(vehicle_model.GetFakeFrontAxleState(*current));
-
-            // update the index
-            index += 1;
-
-            // update the iterators
-            prev = current;
-            current = next;
-            ++next;
-
-        }
-
-        // the last point has the goal speed
-        // we don't need to change that speed
-        // append to the current raw path
-        raw_path.push_back(*last);
-
-        // append to the current forward path
-        forward_path.push_back(vehicle_model.GetFrontAxleState(*last));
-
-        // append to the current internal path
-        reverse_path.push_back(vehicle_model.GetFakeFrontAxleState(*last));
-
-        // verify the parking mode
-        // save to the stopping points list
-        stopping.push_back(index);
-
-    } else {
-
-        // reset the raw path size and index
-        raw_path_last_index = raw_path_size = 0;
-
-        return false;
+        // update the iterators
+        prev = current;
+        current = next;
+        ++next;
 
     }
 
+    // the last point has the goal speed
+    // we don't need to change that speed
+    // append to the current raw path
+    raw_path.push_back(*last);
+
+    // append to the current forward path
+    forward_path.push_back(vehicle_model.GetFrontAxleState(*last));
+
+    // append to the current internal path
+    reverse_path.push_back(vehicle_model.GetFakeFrontAxleState(*last));
+
+    // verify the parking mode
+    // save to the stopping points list
+    stopping.push_back(index);
+
+    // update the reference sizes
+    // get the input path size and the last index
+    raw_path_size = raw_path.size();
+    raw_path_last_index = raw_path_size - 1;
+
+    // get the required speed around curves and stopping points
+    // TODO -> we need to get slower speed next to obstacles
     UpdateLowSpeedRegions(vehicle);
 
     return true;
@@ -373,10 +375,11 @@ State2D StanleyController::FindClosesPoint(const astar::State2D &s, const astar:
     } else {
 
         double m = (next.position.y - prev.position.y) / (next.position.x - prev.position.x);
+        double m2 = m * m;
         double b = next.position.y - m * next.position.x;
 
-        state.position.x = (m * s.position.y + s.position.x - m * b) / (m * m + 1);
-        state.position.y = (m * m * s.position.y + m * s.position.x + b) / (m * m + 1);
+        state.position.x = (m * s.position.y + s.position.x - m * b) / (m2 + 1);
+        state.position.y = (m2 * s.position.y + m * s.position.x + b) / (m2 + 1);
 
     }
 
@@ -680,14 +683,7 @@ StateArrayPtr StanleyController::FollowPath(const State2D &start) {
     // set the car pose
     car = start;
 
-    // get the current state
-    ControllerState current_state = cs;
-
-    // save the current waypoints
-    unsigned int prev_w = prev_waypoint;
-    unsigned int next_w = next_waypoint;
-
-    while (CSComplete != cs && next_waypoint < raw_path_size) {
+    while (CSComplete != cs) {
 
         switch (cs) {
 
@@ -733,7 +729,7 @@ StateArrayPtr StanleyController::FollowPath(const State2D &start) {
         }
 
         // update the car pose
-        car = vehicle_model.NextState(car);
+        car = NextState();
 
     }
 
@@ -750,7 +746,7 @@ StateArrayPtr StanleyController::BuildAndFollowPath(astar::StateListPtr input_pa
 
         consolidated_path = ConsolidateStateList(input_path);
 
-        return FollowPathSimulation();
+        return FollowPath(input_path->states.front());
 
     }
 

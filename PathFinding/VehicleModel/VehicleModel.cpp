@@ -142,7 +142,7 @@ double VehicleModel::GetDesiredWheelAngle(const Pose2D &a, const Pose2D &b) cons
     goal.RotateZ(-a.orientation);
 
     // get the turn radius
-    double turnRadius = (goal.x*goal.x + goal.y*goal.y)/(2.0*goal.y);
+    double turnRadius = std::min((goal.x*goal.x + goal.y*goal.y)/(2.0*goal.y), min_turn_radius);
 
     // get the desired wheel angle
     return std::atan(distance_between_front_and_rear_axles/turnRadius);
@@ -214,7 +214,7 @@ double VehicleModel::GetDecelerationConstraint(double final_speed, double displa
 // get the desired orientation
 double VehicleModel::GetForwardOrientation(const astar::Pose2D &prev, const astar::Pose2D &current, const astar::Pose2D &next) const {
 
-    astar::Vector2D<double> displacement = 0.25 * (next.position - prev.position) + 0.75 * (next.position - current.position);
+    astar::Vector2D<double> displacement(0.25 * (next.position - prev.position) + 0.75 * (next.position - current.position));
 
     return std::atan2(displacement.y, displacement.x);
 
