@@ -1,5 +1,5 @@
-#ifndef HYBRID_ASTAR_MOTION_PLANNER_HPP
-#define HYBRID_ASTAR_MOTION_PLANNER_HPP
+#ifndef HYBRID_ASTAR_PATH_FINDER_HPP
+#define HYBRID_ASTAR_PATH_FINDER_HPP
 
 #include <carmen/carmen.h>
 #include <carmen/map_server_messages.h>
@@ -13,7 +13,7 @@
 
 namespace astar {
 
-class HybridAstarMotionPlanner {
+class HybridAstarPathFinder {
 
     private:
 
@@ -34,26 +34,23 @@ class HybridAstarMotionPlanner {
         // the path smoother
         astar::CGSmoother path_smoother;
 
-        // custom Stanley method
-        astar::StanleyController path_follower;
-
         // the current odometry speed
         double odometry_speed;
 
         // the current odometry wheel_angle
         double odometry_steering_angle;
 
+        // the current robot state
+        astar::State2D robot;
+
         // the current terminal state
         astar::State2D goal;
 
-        // the path to be followed
-        std::vector<astar::State2D> path;
+        // is it a valid goal?
+        bool valid_goal;
 
-        // flag to validate the path
-        bool valid_path;
-
-        // flag to activate the motion planner
-        bool activated;
+        // the goal list
+        astar::StateArrayPtr goal_list;
 
         // flag to set obstacle avoider usage
         bool use_obstacle_avoider;
@@ -69,29 +66,41 @@ class HybridAstarMotionPlanner {
     public:
 
         // basic constructor
-        HybridAstarMotionPlanner(int argc, char **argv);
+        HybridAstarPathFinder(int argc, char **argv);
 
         // update the odometry value
         void set_odometry(double v, double phi);
 
         // estimate the robot inital pose
-        astar::State2D estimate_initial_state(double x, double y, double theta, double v, double phi, double dt);
+        void estimate_initial_state(double x, double y, double theta, double v, double phi, double dt);
 
         // estimate the robot initial state
-        astar::State2D estimate_initial_state(double x, double y, double theta, double dt);
+        void estimate_initial_state(double x, double y, double theta, double dt);
+
+        // get the robot state
+        astar::State2D get_robot_state();
 
         // find a smooth find to the goal and publish
-        bool replan(astar::State2D &start);
+        astar::StateArrayPtr replan();
 
-        // set the the new goal
-        void set_goal_pose(double x, double y, double theta, double vel = 0);
+        // set the new goal
+        void set_goal_state(const State2D&);
+
+        // set the new goal
+        void set_goal_state(double x, double y, double theta, double vel = 0);
+
+        // set the goal list
+        void set_goal_list(astar::StateArrayPtr);
 
         // update the map
         void update_map(carmen_map_server_compact_cost_map_message *msg);
 
         // convert the current path to the desired output format (carmen_ackerman_motion_command_t)
-        std::vector<astar::State2D> get_path();
+        astar::StateArrayPtr get_path();
 
+        // PUBLIC ATTRIBUTE
+        // flag to activate the motion planner
+        bool activated;
 };
 
 }

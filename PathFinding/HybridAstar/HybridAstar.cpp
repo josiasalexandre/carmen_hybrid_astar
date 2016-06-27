@@ -257,9 +257,8 @@ HybridAstarNodeArrayPtr HybridAstar::GetChidlren(const Pose2D &start, const Pose
 }
 
 // PUBLIC METHODS
-
 // receives the grid, start and goal states and find a path, if possible
-StateListPtr HybridAstar::FindPath(InternalGridMap &grid_map, const State2D& start, const State2D& goal) {
+StateListPtr HybridAstar::FindPath(InternalGridMap &grid_map, const State2D &start, const State2D &goal) {
 
     // get the grid map pointer
     // useful inside others methods, just to avoid passing the parameter constantly

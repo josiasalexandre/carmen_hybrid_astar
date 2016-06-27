@@ -24,7 +24,7 @@ class CGSmoother {
         // PUBLIC METHODS
 
         // smooth a given path
-        astar::StateListPtr Smooth(astar::StateListPtr, astar::InternalGridMap&);
+        astar::StateListPtr Smooth(astar::InternalGridMap&, astar::StateListPtr);
 
 };
 

@@ -6,10 +6,11 @@
 #include <carmen/navigator_ackerman_interface.h>
 #include <carmen/robot_ackerman_interface.h>
 
-#include "PathFinding/HybridAstarMotionPlanner.hpp"
+#include "PathFinding/HybridAstarPathFinder.hpp"
+#include "Interface/HybridAstarInterface.hpp"
 
 // ugly global pointer
-astar::HybridAstarMotionPlanner *g_hybrid_astar;
+astar::HybridAstarPathFinder *g_hybrid_astar;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 //                                                                                           //
@@ -17,28 +18,53 @@ astar::HybridAstarMotionPlanner *g_hybrid_astar;
 //                                                                                           //
 ///////////////////////////////////////////////////////////////////////////////////////////////
 void
-publish_hybrid_astar_motion_commands()
+publish_hybrid_astar_path(astar::StateArrayPtr path)
 {
-    std::vector<astar::State2D> path = g_hybrid_astar->get_path();
-    unsigned int p_size = path.size();
 
-    carmen_ackerman_motion_command_p commands = new carmen_ackerman_motion_command_t[p_size];
+    static bool first_time = true;
 
-    if (commands)
+    if (nullptr != path)
     {
-        for (unsigned int i = 0;  i < p_size; i++)
+        std::vector<astar::State2D> &states(path->states);
+
+        unsigned int p_size = states.size();
+
+        // build a new message
+        carmen_hybrid_astar_path_message_t msg;
+
+        // get the direct access
+        carmen_ackerman_path_point_p path = msg.path;
+
+        // build the path message
+        msg.path = new carmen_ackerman_path_point_t[p_size];
+        msg.path_length = p_size;
+
+        // some helpers
+        carmen_ackerman_path_point_t &current;
+        astar::State2D &state;
+
+        if (msg && 0 < p_size)
         {
-            commands[i].v = path[i].v;
-            commands[i].phi = path[i].phi;
-            commands[i].time = path[i].t;
+            for (unsigned int i = 0;  i < p_size; i++)
+            {
+                current = path[i];
+                state = states[i];
+
+                // copy all the values
+                current.x = state.position.x;
+                current.y = state.position.y;
+                current.theta = state.orientation;
+                current.v = state.v;
+                current.phi = state.phi;
+                current.time = state.t;
+            }
+
+            // publish the current data
+            carmen_hybrid_astar_publish_path_message(&msg);
         }
 
-        if (g_hybrid_astar->use_obstacle_avoider)
-            carmen_robot_ackerman_publish_motion_command(commands, p_size);
-        else
-            carmen_base_ackerman_publish_motion_command(commands, p_size);
-
-        delete(commands);
+        // remove the temp data
+        delete(msg.path);
     }
 }
 
@@ -53,14 +79,15 @@ localize_ackerman_globalpos_message_handler(carmen_localize_ackerman_globalpos_m
 {
     if (g_hybrid_astar->activated)
     {
-        // get the current gear
-        astar::Gear gear = msg->v < 0 ? astar::BackwardGear : astar::ForwardGear;
-
-        astar::Pose2D start = g_hybrid_astar->estimate_initial_pose(
+        // get the start pose
+        g_hybrid_astar->estimate_initial_state(
                 msg->globalpos.x, msg->globalpos.y, msg->globalpos.theta, carmen_get_time() - msg->timestamp);
 
-        if (g_hybrid_astar->replan(start))
-            publish_hybrid_astar_motion_commands();
+        // get the resulting path
+        astar::StateArrayPtr path = g_hybrid_astar->replan();
+
+        if (nullptr != path)
+            publish_hybrid_astar_path(path);
     }
 }
 
@@ -70,25 +97,76 @@ simulator_ackerman_truepos_message_handler(carmen_simulator_ackerman_truepos_mes
     if (g_hybrid_astar->activated)
     {
         // the current message is incomplete
-        astar::State2D start =
-                g_hybrid_astar->estimate_initial_pose(msg->truepose.x, msg->truepose.y, msg->truepose.theta, carmen_get_time() - msg->timestamp);
+        g_hybrid_astar->estimate_initial_state(
+                msg->truepose.x, msg->truepose.y, msg->truepose.theta, carmen_get_time() - msg->timestamp);
 
-        if (g_hybrid_astar->replan(start))
-            publish_hybrid_astar_motion_commands();
+        // get the resulting path
+        astar::StateArrayPtr path = g_hybrid_astar->replan();
+
+        if (nullptr != path)
+            publish_hybrid_astar_path(path);
     }
 }
 
 static void
 navigator_ackerman_set_goal_message_handler(carmen_navigator_ackerman_set_goal_message *msg)
 {
-    g_hybrid_astar->set_goal_pose(msg->x, msg->y, carmen_normalize_theta(msg->theta), 0);
+    g_hybrid_astar->set_goal_state(msg->x, msg->y, carmen_normalize_theta(msg->theta), 0);
 }
 
 static void
 behaviour_selector_goal_list_message_handler(carmen_behavior_selector_goal_list_message *msg)
 {
     if (msg && 0 < msg->size && msg->goal_list)
-        g_hybrid_astar->set_goal_pose(msg->goal_list->x, msg->goal_list->y, msg->goal_list->theta, msg->goal_list->v);
+    {
+        // goal states
+        astar::State2D goal;
+
+        // the goal list
+        astar::StateArrayPtr internal_goal_list = new astar::StateArray();
+        std::vector<astar::State2D> &goals(internal_goal_list->states);
+
+        unsigned int msg_size = msg->size;
+        carmen_ackerman_traj_point_t *goal_list = msg->goal_list;
+
+        unsigned int index = 0;
+
+        // the current robot state
+        astar::State2D robot = g_hybrid_astar->get_robot_state();
+
+        bool first_goal_found = false;
+
+        // save the current goal list
+        for (unsigned int i = 0; i < msg_size; i++)
+        {
+            goal.position.x = goal_list[i].x;
+            goal.position.y = goal_list[i].y;
+            goal.orientation = goal_list[i].theta;
+            goal.v = goal_list[i].v;
+            goal.phi = goal_list[i].phi;
+
+            if (0 > goal.v)
+                goal.gear = astar::ForwardGear;
+            else
+                goal.gear = astar::BackwardGear;
+
+            // save the current goal to the internal list
+            goals.push_back(goal);
+
+            // register
+            if (8.0 < goal.Distance(robot) && !first_goal_found)
+            {
+                index = i;
+                first_goal_found = true;
+            }
+        }
+
+        // set the goal state
+        g_hybrid_astar->set_goal_state(goals[index]);
+
+        // set the goal state list
+        g_hybrid_astar->set_goal_list(internal_goal_list);
+    }
 }
 
 static void
@@ -207,10 +285,8 @@ register_handlers()
 int
 main(int argc, char **argv)
 {
-
-
     // build the HybridAstarMotionPlanner
-    g_hybrid_astar = new astar::HybridAstarMotionPlanner(argc, argv);
+    g_hybrid_astar = new astar::HybridAstarPathFinder(argc, argv);
 
     carmen_ipc_initialize(argc, argv);
     carmen_param_check_version(argv[0]);
