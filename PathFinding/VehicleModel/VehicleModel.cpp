@@ -112,6 +112,18 @@ Pose2D VehicleModel::NextPose(const astar::Pose2D &current, double vel, double p
 
 }
 
+// get the next state
+astar::State2D VehicleModel::NextState(const astar::State2D &current) {
+
+    // creates a new state based on the current input
+    State2D s(current);
+
+    // get the next position and orientation
+    s = NextPose(s, s.v, s.phi, s.t);
+
+    return s;
+}
+
 // get the front axle pose with respect to the rear axle pose
 State2D VehicleModel::GetFrontAxleState(const astar::State2D &s) const {
 

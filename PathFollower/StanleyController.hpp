@@ -102,10 +102,10 @@ class StanleyController {
         double HowFarAlong(const astar::Pose2D &, const astar::Pose2D&, const astar::Pose2D&);
 
         // find the previous and next index in the path
-        void Localize(const astar::State2D&, unsigned int &prev_index, unsigned int &next_index);
+        void Localize(const astar::State2D&, unsigned int&, unsigned int&);
 
         // find the closest point next to the front axle, fake or not
-        State2D FindClosesPoint(const astar::State2D&, const astar::State2D&, const astar::State2D&);
+        Pose2D FindClosesPoint(const astar::State2D&, const astar::State2D&, const astar::State2D&);
 
         // the stopping point action
         astar::State2D Stopped(const astar::State2D&);
@@ -116,16 +116,13 @@ class StanleyController {
         // travel along the path - forward
         astar::State2D ReverseDrive(const astar::State2D&);
 
-        // path following simulation
-        StateArrayPtr FollowPathSimulation();
-
     public:
 
         // basic constructor
         StanleyController(const astar::VehicleModel&);
 
         // get a Command list to follow a given path
-        StateArrayPtr BuildAndFollowPath(astar::StateListPtr);
+        StateArrayPtr BuildAndFollowPath(astar::StateArrayPtr);
 
         // follow a given path
         StateArrayPtr FollowPath(const astar::State2D&);
@@ -133,6 +130,8 @@ class StanleyController {
         // the controller has a valid plan?
         bool HasValidPath(const astar::State2D&);
 
+        // path following simulation
+        StateArrayPtr FollowPathSimulation(astar::StateArrayPtr);
 
 };
 

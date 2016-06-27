@@ -61,6 +61,9 @@ class State2D : public astar::Pose2D {
         // the assignment operator
         void operator=(const State2D&);
 
+        // alternative assignement operator
+        void operator=(const Pose2D&);
+
         // == operator overloading
         bool operator==(const State2D&);
 

@@ -57,6 +57,15 @@ void State2D::operator=(const State2D &s)
     last_cusp_dist = s.last_cusp_dist;
 }
 
+
+// alternative assignement operator
+void State2D::operator=(const Pose2D &p) {
+
+    position = p.position;
+    orientation = p.orientation;
+
+}
+
 // == operator overloading
 bool State2D::operator==(const State2D &s)
 {

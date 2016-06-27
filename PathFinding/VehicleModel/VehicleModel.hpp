@@ -98,6 +98,9 @@ class VehicleModel {
         // get the next pose
         astar::Pose2D NextPose(const astar::Pose2D&, double vel, double phi, double time) const;
 
+        // get the next state
+        astar::State2D NextState(const astar::State2D&);
+
 		// get the front axle state with respect to the rear axle pose
 		astar::State2D GetFrontAxleState(const astar::State2D&) const;
 
