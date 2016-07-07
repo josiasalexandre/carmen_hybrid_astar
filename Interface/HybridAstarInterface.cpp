@@ -24,13 +24,6 @@ void carmen_hybrid_astar_publish_path_message(carmen_hybrid_astar_path_message_p
     IPC_RETURN_TYPE err;
     static int first_time = 1;
 
-    if (first_time)
-    {
-        err = IPC_defineMsg(CARMEN_HYBRID_ASTAR_PATH_NAME, IPC_VARIABLE_LENGTH, CARMEN_HYBRID_ASTAR_PATH_FMT);
-        carmen_test_ipc_exit(err, "Could not define message", CARMEN_HYBRID_ASTAR_PATH_NAME);
-        first_time = 0;
-    }
-
     message->timestamp = carmen_get_time();
     message->host = carmen_get_host();
 

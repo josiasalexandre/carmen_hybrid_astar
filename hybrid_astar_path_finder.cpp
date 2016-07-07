@@ -80,7 +80,7 @@ localize_ackerman_globalpos_message_handler(carmen_localize_ackerman_globalpos_m
     if (g_hybrid_astar->activated)
     {
         // get the start pose
-        g_hybrid_astar->estimate_initial_state(
+        g_hybrid_astar->set_initial_state(
                 msg->globalpos.x, msg->globalpos.y, msg->globalpos.theta, carmen_get_time() - msg->timestamp);
 
         // get the resulting path
@@ -97,7 +97,7 @@ simulator_ackerman_truepos_message_handler(carmen_simulator_ackerman_truepos_mes
     if (g_hybrid_astar->activated)
     {
         // the current message is incomplete
-        g_hybrid_astar->estimate_initial_state(
+        g_hybrid_astar->set_initial_state(
                 msg->truepose.x, msg->truepose.y, msg->truepose.theta, carmen_get_time() - msg->timestamp);
 
         // get the resulting path
@@ -153,7 +153,7 @@ behaviour_selector_goal_list_message_handler(carmen_behavior_selector_goal_list_
             // save the current goal to the internal list
             goals.push_back(goal);
 
-            // register
+            // registering the current goal index
             if (8.0 < goal.Distance(robot) && !first_goal_found)
             {
                 index = i;
@@ -291,8 +291,13 @@ main(int argc, char **argv)
     carmen_ipc_initialize(argc, argv);
     carmen_param_check_version(argv[0]);
 
+    // register all the current handlers
     register_handlers();
 
+    // define the hybrid astar message
+    carmen_hybrid_astar_define_path_message();
+
+    // the main IPC loop
     carmen_ipc_dispatch();
 
     // delete the global pointer

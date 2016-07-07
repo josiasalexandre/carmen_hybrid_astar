@@ -59,23 +59,20 @@ HybridAstarPathFinder::replan() {
     if (valid_goal) {
 
         // find the path to the goal
-        StateListPtr raw_path = path_finder.FindPath(grid, robot, goal);
+        StateArrayPtr path = path_finder.FindPath(grid, robot, goal);
 
-        if (3 < raw_path->states.size()) {
+        if (3 < path->states.size()) {
 
-            // smooth the path
-            StateArrayPtr smooth_path = path_smoother.Smooth(grid, raw_path);
-
-            // delete the raw path
-            delete(raw_path);
+            // the actual path smoothing process
+            path_smoother.Smooth(grid, path);
 
             // return the smothed path
-            return smooth_path;
+            return path;
 
         }
 
         // delete the raw path
-        delete(raw_path);
+        delete(path);
     }
 
     return nullptr;
@@ -120,7 +117,7 @@ void HybridAstarPathFinder::set_goal_list(astar::StateArrayPtr goals) {
 // get the carmen compact cost map and rebuild our internal grid map representation
 void
 HybridAstarPathFinder::update_map(carmen_map_server_compact_cost_map_message *msg) {
-    if (!initialized_grid_map ||
+    if (grid.isEmpty() ||
             msg->config.x_size != grid.width ||
             msg->config.y_size != grid.height ||
             msg->config.size != grid.size)
@@ -128,7 +125,7 @@ HybridAstarPathFinder::update_map(carmen_map_server_compact_cost_map_message *ms
         Vector2D<double> map_origin(msg->config.x_origin, msg->config.y_origin);
 
         initialized_grid_map = grid.InitializeGridMap(
-                msg->config.x_size, msg->config.y_size, msg->config.resolution, map_origin, 0);
+                msg->config.x_size, msg->config.y_size, msg->config.resolution, map_origin, 0.0);
     }
 
     int compact_map_size = msg->size;
@@ -156,7 +153,7 @@ HybridAstarPathFinder::update_map(carmen_map_server_compact_cost_map_message *ms
             grid.OccupyCell(tmp);
     }
 
-    grid.UpdateGridMap();
+    grid.Update();
 }
 
 // update the odometry value
@@ -172,7 +169,7 @@ HybridAstarPathFinder::set_odometry(double v, double phi) {
 }
 
 // estimate the initial robot state
-void HybridAstarPathFinder::estimate_initial_state(double x, double y, double theta, double v, double phi, double dt) {
+void HybridAstarPathFinder::set_initial_state(double x, double y, double theta, double v, double phi, double dt) {
 
     // predict the initial robot pose
     robot = vehicle_model.NextPose(Pose2D(x, y, theta), v, phi, dt);
@@ -184,9 +181,9 @@ void HybridAstarPathFinder::estimate_initial_state(double x, double y, double th
 }
 
 // estimate the initial robot state
-void HybridAstarPathFinder::estimate_initial_state(double x, double y, double theta, double dt) {
+void HybridAstarPathFinder::set_initial_state(double x, double y, double theta, double dt) {
 
-    estimate_initial_state(x, y, theta, odometry_speed, odometry_steering_angle, dt);
+    set_initial_state(x, y, theta, odometry_speed, odometry_steering_angle, dt);
 
 }
 

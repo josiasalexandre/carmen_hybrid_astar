@@ -4,6 +4,7 @@
 #include <exception>
 
 #include "../../Entities/Pose2D.hpp"
+#include "../GridMap/GridMapCell.hpp"
 #include "../../PriorityQueue/PriorityQueueNode.hpp"
 #include "../ReedsShepp/ReedsSheppActionSet.hpp"
 

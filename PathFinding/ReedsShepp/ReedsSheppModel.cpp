@@ -895,7 +895,7 @@ ReedsSheppActionSetPtr ReedsSheppModel::GetLfRbpi2SbLbpath(double t, double u, d
 }
 
 // left forward, right backward PI over 2, straight backward and right backward movement - get the path length
-double ReedsSheppModel::GetLfRbpi2SbLb(double goal_x, double goal_y, double goal_orientation, double sin_o, double cos_o, double &t, double &u, double &v) {
+double ReedsSheppModel::GetLfRbpi2SbRb(double goal_x, double goal_y, double goal_orientation, double sin_o, double cos_o, double &t, double &u, double &v) {
 
     // Reeds-Shepp 8.10
     // Uses a modified formula adapted from the c_c2scb function
@@ -927,7 +927,7 @@ double ReedsSheppModel::GetLfRbpi2SbLb(double goal_x, double goal_y, double goal
 }
 
 // build the actual LfRbpi2SbRb path based on given t, u and v
-ReedsSheppActionSetPtr ReedsSheppModel::GetLfRbpi2SbLbpath(double t, double u, double v) {
+ReedsSheppActionSetPtr ReedsSheppModel::GetLfRbpi2SbRbpath(double t, double u, double v) {
 
     // build a new action set
     ReedsSheppActionSetPtr actions =  new ReedsSheppActionSet();

@@ -72,10 +72,10 @@ class HybridAstarPathFinder {
         void set_odometry(double v, double phi);
 
         // estimate the robot inital pose
-        void estimate_initial_state(double x, double y, double theta, double v, double phi, double dt);
+        void set_initial_state(double x, double y, double theta, double v, double phi, double dt);
 
         // estimate the robot initial state
-        void estimate_initial_state(double x, double y, double theta, double dt);
+        void set_initial_state(double x, double y, double theta, double dt);
 
         // get the robot state
         astar::State2D get_robot_state();

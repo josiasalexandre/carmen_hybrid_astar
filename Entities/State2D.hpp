@@ -5,9 +5,7 @@
 #include <vector>
 
 #include "../Helpers/wrap2pi.hpp"
-#include "Vector2D.hpp"
 #include "Pose2D.hpp"
-#include "ReedsShepp/ReedsSheppAction.hpp"
 
 namespace astar {
 

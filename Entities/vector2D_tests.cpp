@@ -2,9 +2,9 @@
 #include <cmath>
 #include <string>
 
-#include "Entities/Vector2D.hpp"
-#include "Entities/Pose2D.hpp"
-#include "PathFinding/ReedsShepp/ReedsSheppModel.hpp"
+#include "Vector2D.hpp"
+#include "Pose2D.hpp"
+#include "../PathFinding/ReedsShepp/ReedsSheppModel.hpp"
 
 void showVector(astar::Vector2D<double> &v, std::string name) {
 
@@ -25,9 +25,9 @@ void showPose2D(astar::Pose2D &p) {
 int main() {
 
     // test basic constructor
-    astar::Vector2D a(0, 0);
+    astar::Vector2D<double> a(0, 0);
     // test copy constructor
-    astar::Vector2D b(a);
+    astar::Vector2D<double> b(a);
     // test add single element
     b.Add(1);
     // test add multiple elements
@@ -41,7 +41,7 @@ int main() {
     // test subtract vector
     b.Subtract(a);
     // test assignment operator
-    astar::Vector2D c = b;
+    astar::Vector2D<double> c = b;
     // test translation
     b.Translate(10);
     // test translation, multiple element
@@ -65,16 +65,16 @@ int main() {
     showVector(b, "b after dot");
     // distance between two vectors
     // test rotate
-    astar::Vector2D rot(10, 10);
+    astar::Vector2D<double> rot(10, 10);
 
-    astar::Vector2D rot1 = rot;
+    astar::Vector2D<double> rot1 = rot;
 
     rot.RotateZ(M_PI);
     rot.RotateZ(M_PI_2);
     rot.RotateZ(M_PI_2);
-    rot.RotateZ(astar::Vector2D(9, 9), M_PI);
-    rot.RotateZ(astar::Vector2D(9, 9), M_PI_2);
-    rot.RotateZ(astar::Vector2D(9, 9), M_PI_2);
+    rot.RotateZ(astar::Vector2D<double>(9, 9), M_PI);
+    rot.RotateZ(astar::Vector2D<double>(9, 9), M_PI_2);
+    rot.RotateZ(astar::Vector2D<double>(9, 9), M_PI_2);
     if (rot == rot1) {
 
         std::cout << std::endl << "Ok, rotation" << std::endl;
@@ -87,17 +87,17 @@ int main() {
 
     // test overloading operators
     showVector(rot, "ROT");
-    astar::Vector2D sumV = rot + rot;
+    astar::Vector2D<double> sumV = rot + rot;
     showVector(rot, "ROT");
     showVector(sumV, "sum");
-    astar::Vector2D sum2 = rot + rot*2;
-    astar::Vector2D sub = rot - b;
-    astar::Vector2D sub2 = rot - 2;
+    astar::Vector2D<double> sum2 = rot + rot*2;
+    astar::Vector2D<double> sub = rot - b;
+    astar::Vector2D<double> sub2 = rot - 2;
     showVector(rot, "ROT after rot -2");
-    astar::Vector2D mult = (rot + 2)*2;
-    astar::Vector2D mult2 = rot*rot;
+    astar::Vector2D<double> mult = (rot + 2)*2;
+    astar::Vector2D<double> mult2 = rot*rot;
     showVector(mult2, "mult2");
-    astar::Vector2D div = rot/1.5;
+    astar::Vector2D<double> div = rot/1.5;
     showVector(rot, "ROT after all");
     showVector(b, "b after all");
 
@@ -110,6 +110,7 @@ int main() {
     std::cout << std::endl << "Distante between poses: " << p.position.Distance(p1.position) << std::endl;
     std::cout << std::endl << "Distante2 between poses: " << p.position.Distance2(p1.position) << std::endl;
 
+    /*
     std::cout << "RS MODEL" << std::endl;
 
     astar::ReedsSheppModel rs;
@@ -127,8 +128,10 @@ int main() {
     double t2 = M_PI_2;
 
     astar::Pose2D start(x1, y1, t1);
+    std::cout << "\nStart: " << x1 << ", " << y1 << ", " << t1 << ".\n";
 
     astar::Pose2D goal(x2, y2, t2);
+    std::cout << "Goal: " << x2 << ", " << y2 << ", " << t2 << ".\n";
 
     set = rs.Solve(start, goal, inverse_unit);
 
@@ -150,6 +153,8 @@ int main() {
     }
 
     delete(set);
+
+    */
 
     return 0;
 

@@ -77,7 +77,7 @@ private:
     void RemoveAllNodes();
 
     // reconstruct the path from the goal to the start pose
-    astar::StateListPtr RebuildPath(HybridAstarNodePtr, const State2D&);
+    astar::StateArrayPtr RebuildPath(HybridAstarNodePtr, const State2D&);
 
     // get the Reeds-Shepp path to the goal and return the appropriated HybridAstarNode
     HybridAstarNodePtr GetReedsSheppChild(const astar::Pose2D&, const astar::Pose2D&);
@@ -98,7 +98,7 @@ public:
     HybridAstar(astar::VehicleModel &vehicle_);
 
     // find a path to the goal
-    astar::StateListPtr FindPath(astar::InternalGridMap&, const astar::State2D&, const astar::State2D&);
+    astar::StateArrayPtr FindPath(astar::InternalGridMap&, const astar::State2D&, const astar::State2D&);
 
 };
 

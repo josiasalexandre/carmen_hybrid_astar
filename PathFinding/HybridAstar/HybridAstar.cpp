@@ -75,10 +75,13 @@ void HybridAstar::RemoveAllNodes() {
 
 // rebuild an entire path given a node
 // reconstruct the path from the goal to the start state
-StateListPtr HybridAstar::RebuildPath(HybridAstarNodePtr n, const State2D &goal)
+StateArrayPtr HybridAstar::RebuildPath(HybridAstarNodePtr n, const State2D &goal)
 {
     // create the list
-    StateListPtr path = new StateList();
+    StateListPtr nodes = new StateList();
+
+    // reference syntactic sugar
+    std::list<State2D> &states(nodes->states);
 
     // a helper node pointer
     HybridAstarNodePtr tmp = nullptr;
@@ -86,8 +89,8 @@ StateListPtr HybridAstar::RebuildPath(HybridAstarNodePtr n, const State2D &goal)
     // counter
     unsigned int subpathSize = 0;
 
-    // reference syntactic sugar
-    std::list<State2D> &states(path->states);
+    // the current state
+    State2D s;
 
     // building the path
     while(nullptr != n) {
@@ -95,8 +98,12 @@ StateListPtr HybridAstar::RebuildPath(HybridAstarNodePtr n, const State2D &goal)
         // is there a single action?
         if (nullptr != n->action) {
 
+            // update the current state
+            s = n->pose;
+            s.gear = n->action->gear;
+
             // save the current state to the list
-            states.push_front(State2D(n->pose, n->action->gear));
+            states.push_front(s);
 
         } else if (nullptr != n->action_set) {
 
@@ -121,35 +128,46 @@ StateListPtr HybridAstar::RebuildPath(HybridAstarNodePtr n, const State2D &goal)
 
     }
 
-    // move every node's gear to it's parent node
+    // the output state array
+    StateArrayPtr path = new StateArray();
+
+    // reference syntactic sugar
+    std::vector<State2D> &out(path->states);
+
+    // move every node's gear to the it's parent node
+    // and append the current
     if (1 < states.size()) {
 
-        // get the end
+        // get the first iterator
+        std::list<State2D>::iterator prev = states.begin();
+
+        // get the next iterator
+        std::list<State2D>::iterator next = std::advance(prev, 1);
+
+        // get the end iterator
         std::list<State2D>::iterator end = states.end();
 
-        std::list<State2D>::iterator next = end;
-        --next;
-
-        std::list<State2D>::iterator prev = next;
-        --prev;
-
-        while (end != prev) {
+        while (next != end) {
 
             // copy the next gear
             prev->gear = next->gear;
 
-            // update the pointers
-            next = prev;
-            --prev;
+            // append to the output vector
+            out.push_back(*prev);
 
+            // advance to the next states
+            prev = next;
+            ++next;
         }
 
-    }
+        // append the last state
+        out.push_back(*prev);
 
+    }
     // save the endpoint speed to the final state
     if (0 < states.size()) {
 
-        states.back().v = goal.v;
+        out.back().v = goal.v;
 
     }
 
@@ -258,7 +276,8 @@ HybridAstarNodeArrayPtr HybridAstar::GetChidlren(const Pose2D &start, const Pose
 
 // PUBLIC METHODS
 // receives the grid, start and goal states and find a path, if possible
-StateListPtr HybridAstar::FindPath(InternalGridMap &grid_map, const State2D &start, const State2D &goal) {
+
+StateArrayPtr HybridAstar::FindPath(InternalGridMap &grid_map, const State2D &start, const State2D &goal) {
 
     // get the grid map pointer
     // useful inside others methods, just to avoid passing the parameter constantly
@@ -451,6 +470,6 @@ StateListPtr HybridAstar::FindPath(InternalGridMap &grid_map, const State2D &sta
     // the A* could no find a valid path to the goal
     RemoveAllNodes();
 
-    return new StateList();
+    return new StateArray();
 
 }

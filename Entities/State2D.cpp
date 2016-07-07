@@ -10,13 +10,14 @@ State2D::State2D() :
 
 // simple constructor, the input is a pose
 State2D::State2D(
-        const Pose2D &p, Gear g = ForwardGear, double vel = 0.0, double wheel_angle = 0.0,
-        double time = 0, double lcd = 0, bool stop = false
+    const Pose2D &p, Gear g,
+    double vel, double wheel_angle,
+    double time, double lcd, bool stop
         ) : Pose2D::Pose2D(p), gear(g), v(vel), phi(wheel_angle), t(time), last_cusp_dist(lcd), coming_to_stop(stop) {}
 
 // copy constructor
 State2D::State2D(const astar::State2D &s):
-    Pose2D::Pose2D(s), gear(s.gear), v(s.v), phi(s.phi), t(s.t), last_cusp_dist(s.last_cusp_dist, coming_to_stop(s.coming_to_stop)) {}
+    Pose2D::Pose2D(s), gear(s.gear), v(s.v), phi(s.phi), t(s.t), last_cusp_dist(s.last_cusp_dist), coming_to_stop(s.coming_to_stop) {}
 
 
 // distance between two poses

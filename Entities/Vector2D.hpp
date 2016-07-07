@@ -62,7 +62,7 @@ public:
     }
 
     // add two vectors
-    void Add(const Vector2D &v) const
+    void Add(const Vector2D &v)
     {
         x += v.x;
         y += v.y;

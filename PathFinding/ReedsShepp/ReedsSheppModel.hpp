@@ -25,7 +25,7 @@
 #ifndef REEDS_SHEPP_MODEL_HPP
 #define REEDS_SHEPP_MODEL_HPP
 
-#include "../Pose2D.hpp"
+#include "../../Entities/State2D.hpp"
 #include "ReedsSheppActionSet.hpp"
 
 namespace astar {
@@ -183,10 +183,10 @@ class ReedsSheppModel {
         ReedsSheppActionSetPtr GetLfRbpi2SbLbpath(double, double, double);
 
         // left forward, right backward PI over 2, straight backward and right backward movement - get the path length
-        double GetLfRbpi2SbLb(double, double, double, double, double, double&, double&, double&);
+        double GetLfRbpi2SbRb(double, double, double, double, double, double&, double&, double&);
 
         // build the actual LfRbpi2SbRb path based on given t, u and v
-        ReedsSheppActionSetPtr GetLfRbpi2SbLbpath(double, double, double);
+        ReedsSheppActionSetPtr GetLfRbpi2SbRbpath(double, double, double);
 
         // left forward, straight forward, right forward PI over 2 and right backward movement - get the path length
         double GetLfSfRfpi2Lb(double, double, double, double, double, double&, double&, double&);

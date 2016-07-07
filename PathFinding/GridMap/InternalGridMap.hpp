@@ -29,22 +29,24 @@ class InternalGridMap {
         // the size
         unsigned int size;
 
+        // the grid map origin
+        astar::Vector2D<double> origin;
+
         // the obstacle grid map
         astar::GridMapCellPtr grid_map;
 
         // the map origin
         astar::Vector2D<double> origin;
 
+        // the map orientation
+        double orientation;
+
         // the voronoy field
         astar::GVDLau *voronoy_field;
 
-        // the obstacle distance KDTree
-        astar::KDTree<double, 2> obstacle_kdtree;
-
-        // the voronoy Distance KDTree
-        astar::KDTree<double, 2> voronoy_kdtree;
-
         // PRIVATE METHODS
+        // initialize the entire voronoy field map
+        void BuildGVD();
 
     public:
 
@@ -56,17 +58,25 @@ class InternalGridMap {
         // basic constructor
         InternalGridMap();
 
-        // update the GridMap
-        void UpdateGridMap();
+        bool InitializeGridMap(
+            unsigned int w,
+            unsigned int h,
+            double res,
+            const astar::Vector2D<double> &_origin,
+            double _orientation
+        );
+
+        // is empty?
+        bool isEmpty();
+
+        // update the GridMap and the Voronoy Field
+        void Update();
 
         // occupy a given cell
         void OccupyCell(astar::GridMapCellPtr c);
 
         // clear a given cell
         void ClearCell(astar::GridMapCellPtr c);
-
-        // initialize the entire grid map
-        bool InitializeGridMap(unsigned int w, unsigned int h, double res, const astar::Vector2D<double>& origin, double orientation);
 
         // find a cell which a given pose is localized
         GridMapCellPtr PoseToCell(const astar::Pose2D&);
