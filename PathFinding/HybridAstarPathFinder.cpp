@@ -117,43 +117,69 @@ void HybridAstarPathFinder::set_goal_list(astar::StateArrayPtr goals) {
 // get the carmen compact cost map and rebuild our internal grid map representation
 void
 HybridAstarPathFinder::update_map(carmen_map_server_compact_cost_map_message *msg) {
-    if (grid.isEmpty() ||
-            msg->config.x_size != grid.width ||
-            msg->config.y_size != grid.height ||
-            msg->config.size != grid.size)
-    {
-        Vector2D<double> map_origin(msg->config.x_origin, msg->config.y_origin);
 
-        initialized_grid_map = grid.InitializeGridMap(
-                msg->config.x_size, msg->config.y_size, msg->config.resolution, map_origin, 0.0);
+    if (nullptr != msg) {
+
+        // get the msg dimensions
+        unsigned int w = msg->config.x_size;
+        unsigned int h = msg->config.y_size;
+
+        unsigned int map_size = width*height;
+        unsigned int msg_size = msg->size;
+
+        double res = msg->config.resolution;
+
+        int *x_coord = msg->coord_x;
+        int *y_coord = msg->coord_y;
+
+        double *val = msg->value;
+        double v;
+
+        if (grid.isEmpty()) {
+
+            // create a new grid map
+            GridMapCellPtr grid_map = new GridMapCell[map_size];
+
+            for (unsigned int i = 0; i < map_size; ++i)
+                grid_map[i] = -1;
+
+            // get the map values
+            for (unsigned int i = 0; i < msg_size; ++i) {
+
+                if (0.5 < val[i]) {
+
+                    grid_map[GRID_MAP_INDEX(x_coord[i], y_coord[i])] = 1;
+
+                } else {
+
+                    grid_map[GRID_MAP_INDEX(x_coord[i], y_coord[i])] = 0;
+
+                }
+
+            }
+
+            // initialize the grid map
+            grid.InitializeGridMap(grid_map, w, h, res, astar::Vector2D<double>(msg->config.x_origin, msg->config.y_origin), 0.0);
+
+        }else {
+
+            // update the map values
+            for (unsigned int i = 0; i < msg_size; ++i) {
+
+                if (0.5 > val[i]) {
+                    grid.ClearCell(x_coord[i], y_coord[i]);
+                } else {
+                    grid.OccupyCell(x_coord[i], y_coord[i]);
+                }
+
+            }
+
+            // update the grid map
+            grid.Update();
+
+        }
+
     }
-
-    int compact_map_size = msg->size;
-
-    int *x_coord = msg->coord_x;
-    int *y_coord = msg->coord_y;
-    int x, y;
-    double *val = msg->value;
-    double current_value, *old_value;
-
-    GridMapCellPtr c = grid.grid_map;
-    GridMapCellPtr tmp;
-
-    for (int i = 0; i < compact_map_size; i++)
-    {
-        current_value = val[i];
-        x = x_coord[i];
-        y = y_coord[i];
-
-        tmp = c + GRID_MAP_INDEX(x, y);
-
-        if (0.5 > current_value && 0 != tmp->occupancy)
-            grid.ClearCell(tmp);
-        else if (0.5 <= current_value && && 1 != tmp->occupancy)
-            grid.OccupyCell(tmp);
-    }
-
-    grid.Update();
 }
 
 // update the odometry value

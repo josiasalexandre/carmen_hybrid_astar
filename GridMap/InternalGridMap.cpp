@@ -17,7 +17,7 @@ InternalGridMap::InternalGridMap() :
     voronoy_field(nullptr) {}
 
 
-bool InternalGridMap::InitializeGridMap(
+void InternalGridMap::InitializeGridMap(
         unsigned int w,
         unsigned int h,
         double res,
@@ -47,30 +47,51 @@ bool InternalGridMap::InitializeGridMap(
         // reallocate the entire grid map
         grid_map = new GridMapCell[size];
 
-        return true;
     }
 
-    return false;
+    return;
+}
+
+// grid map getter
+GridMapCellPtr InternalGridMap::GetGridMap() {
+
+    return grid_map;
+
+}
+
+bool InternalGridMap::isEmpty() {
+
+    return nullptr == grid_map;
+
 }
 
 // initialize the entire grid map
 void InternalGridMap::Update() {
 
-
+    // TODO
 
 }
-
-// occupy a given cell
-void InternalGridMap::OccupyCell(astar::GridMapCellPtr c);
 
 // clear a given cell
 void InternalGridMap::ClearCell(astar::GridMapCellPtr c);
 
 // find a cell which a given pose is localized
-GridMapCellPtr InternalGridMap::PoseToCell(const astar::Pose2D&) {}
+GridMapCellPtr InternalGridMap::PoseToCell(const astar::Pose2D &p) {
+
+    int x = std::floor((p.position.x - origin.x)/resolution);
+    int y = std::floor((p.position.y - origin.y)/resolution);
+
+    if (0 <= x && width > x && 0 <= y && height > y)
+        return &grid_map[GRID_MAP_INDEX(x, y)];
+
+    return nullptr;
+}
 
 // get the distance to the nearest obstacle
-double InternalGridMap::GetObstacleDistance(const astar::Vector2D<double>&);
+double InternalGridMap::GetObstacleDistance(const astar::Vector2D<double> &point) {
+
+    return 0;
+}
 
 // get the distance to the nearest voronoy edge
 double InternalGridMap::GetVoronoiDistance(const astar::Vector2D<double>&);

@@ -57,6 +57,9 @@ class GridMapCell {
 // define a reference pointer
 typedef GridMapCell* GridMapCellPtr;
 
+// define a reference
+typedef GridMapCell& GridMapCellRef;
+
 }
 
 #endif

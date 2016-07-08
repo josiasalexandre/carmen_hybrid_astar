@@ -5,7 +5,6 @@
 
 namespace astar {
 
-
 template<typename T, unsigned int D>
 class KDTreeNode {
 

@@ -14,7 +14,6 @@ class GVDLau {
         // PRIVATE ATTRIBUTES
         astar::InternalGridMapRef map;
 
-
         // PRIVATE METHODS
 
     public:
