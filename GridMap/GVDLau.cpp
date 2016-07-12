@@ -630,7 +630,7 @@ void GVDLau::RemoveObstacle(int row, int col) {
 void GVDLau::Update() {
 
 	UpdateDistanceMap();
-	// UpdateVoronoiMap();
+	UpdateVoronoiMap();
 	// UpdatePathCostMap();
 
 }
