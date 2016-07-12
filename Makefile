@@ -12,7 +12,7 @@ CXXFLAGS += -std=c++0x
 #IFLAGS +=
 
 # Required default libraries to comunicate with Carmen Core.
-LFLAGS += -lparam_interface -lipc -lglobal -lgrid_mapping_interface -lmap_server_interface -llocalize_ackerman_interface
+LFLAGS += -std=c++0x -lparam_interface -lipc -lglobal -lgrid_mapping_interface -lmap_server_interface -llocalize_ackerman_interface
 CFLAGS += -Wall
 
 # Source code files (.c, .cpp)
