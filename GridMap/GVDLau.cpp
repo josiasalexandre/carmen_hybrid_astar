@@ -631,7 +631,7 @@ void GVDLau::Update() {
 
 	UpdateDistanceMap();
 	UpdateVoronoiMap();
-	// UpdatePathCostMap();
+	UpdatePathCostMap();
 
 }
 
