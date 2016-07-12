@@ -37,6 +37,9 @@ class InternalGridMap {
 
         // PRIVATE METHODS
 
+        // remove the current grid map
+        void RemoveGridMap();
+
     public:
 
         // PUBLIC ATTRIBUTES
@@ -66,6 +69,9 @@ class InternalGridMap {
 
         // return a cell given a pose
         GridMapCellPtr PoseToCell(const astar::Pose2D&);
+
+        // get the current grid map
+        astar::GVDLau* GetGVD();
 
 };
 

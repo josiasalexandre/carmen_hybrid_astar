@@ -17,25 +17,33 @@ InternalGridMap::InternalGridMap() :
 // basic destructor
 InternalGridMap::~InternalGridMap() {
 
+	// Remove the current grid
+	RemoveGridMap();
+
+}
+
+// remove the current grid map
+void InternalGridMap::RemoveGridMap() {
+
 	if (nullptr != grid_map) {
+
+		for (unsigned int i = 0; i < height; ++i) {
+			delete [] grid_map[i];
+		}
+
 		delete [] grid_map;
+
 	}
 
 }
 
+// get the map parameters and allocate the grid map in the memmory
 void InternalGridMap::InitializeGridMap(unsigned int h, unsigned int w, double res, const astar::Vector2D<double> &_origin) {
 
 	if (w != width || h != height || res != resolution || _origin != origin) {
 
-		if (nullptr != grid_map) {
-
-			for (unsigned int i = 0; i < height; ++i) {
-				delete [] grid_map[i];
-			}
-
-			delete [] grid_map;
-
-		}
+		// Remove the current grid map
+		RemoveGridMap();
 
 		// copy the new parameters
 		width = w;
@@ -57,7 +65,7 @@ void InternalGridMap::InitializeGridMap(unsigned int h, unsigned int w, double r
 		}
 
 		// restart the voronoi diagram
-		voronoi.Initialize(height, width);
+		voronoi.InitializeEmpty(height, width);
 
 	}
 
@@ -102,22 +110,30 @@ bool InternalGridMap::isSafePlace(const std::vector<astar::Circle> &body, double
 // occupy a given cell
 void InternalGridMap::OccupyCell(int row, int col) {
 
-	// occupy the given cell
-	grid_map[row][col].occupancy = 1.0;
+	if (1.0 != grid_map[row][col].occupancy) {
 
-	// set the given cell as an obstacle
-	voronoi.SetObstacle(row, col);
+		// occupy the given cell
+		grid_map[row][col].occupancy = 1.0;
+
+		// set the given cell as an obstacle
+		voronoi.SetObstacle(row, col);
+
+	}
 
 }
 
 // clear a given cell
 void InternalGridMap::ClearCell(int row, int col) {
 
-	// clear the given cell
-	grid_map[row][col].occupancy = 0.0;
+	if (0.0 != grid_map[row][col].occupancy) {
 
-	// clear the given obstacle
-	voronoi.RemoveObstacle(row, col);
+		// clear the given cell
+		grid_map[row][col].occupancy = 0.0;
+
+		// clear the given obstacle
+		voronoi.RemoveObstacle(row, col);
+
+	}
 
 }
 
@@ -125,5 +141,12 @@ void InternalGridMap::ClearCell(int row, int col) {
 void InternalGridMap::UpdateGridMap() {
 
 	voronoi.Update();
+
+}
+
+// get the current grid map
+astar::GVDLau* InternalGridMap::GetGVD() {
+
+	return &voronoi;
 
 }

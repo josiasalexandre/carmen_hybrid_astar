@@ -1,6 +1,8 @@
 #ifndef CAR_BODY_CIRCLES_HPP
 #define CAR_BODY_CIRCLES_HPP
 
+#include <vector>
+
 #include "Vector2D.hpp"
 
 namespace astar {
@@ -23,6 +25,20 @@ class Circle {
 
 };
 
+// define the general circle references and pointers
+typedef Circle* CirclePtr;
+typedef Circle& CircleRef;
+
+class CircleArray {
+
+	public:
+
+		// the circle list
+		std::vector<Circle> circles;
+
+};
+
+typedef CircleArray* CircleArrayPtr;
 
 }
 

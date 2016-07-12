@@ -4,6 +4,7 @@
 #include "../Entities/Pose2D.hpp"
 #include "../ReedsShepp/ReedsSheppAction.hpp"
 #include "../HybridAstar/HybridAstarNode.hpp"
+#include "../Entities/Circle.hpp"
 
 namespace astar {
 
@@ -46,7 +47,10 @@ class VehicleModel {
         double length;
 
         // the car width dimension
-        double width;
+        double width, width_2;
+
+        // the car safety facor
+        double safety_factor;
 
         // the axle distance
         double axledist;
@@ -109,6 +113,9 @@ class VehicleModel {
 
 		// get the car center position
 		astar::Pose2D GetCenterPosition(const astar::Pose2D&) const;
+
+		// get the list of circles that represents the safe area
+		std::vector<astar::Circle> GetVehicleBodyCircles(const astar::Pose2D&);
 
 		// get the desired wheel angle that connects two states
 		double GetDesiredWheelAngle(const astar::Pose2D&, const astar::Pose2D&) const;

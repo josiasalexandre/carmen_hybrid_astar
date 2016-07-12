@@ -1,7 +1,7 @@
 include ../Makefile.conf
 
 # Module name and description
-MODULE_NAME = Hybrid Aster Motion Planner
+MODULE_NAME = Hybrid Aster Path Finder
 MODULE_COMMENT = Hybrid A* with path optimization
 
 
@@ -16,7 +16,7 @@ LFLAGS += -lparam_interface -lipc -lglobal -lgrid_mapping_interface -lmap_server
 CFLAGS += -Wall
 
 # Source code files (.c, .cpp)
-SOURCES = hybrid_astar_main.cpp
+SOURCES = hybrid_astar_path_finder.cpp
 
 # Public headers, linked to 'carmen/include/carmen/'.
 #PUBLIC_INCLUDES =

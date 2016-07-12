@@ -156,6 +156,18 @@ Pose2D VehicleModel::GetCenterPosition(const astar::Pose2D &pose) const {
 
 }
 
+// get the list of circles that represents the safe area
+std::vector<Circle> VehicleModel::GetVehicleBodyCircles(const astar::Pose2D &p) {
+
+	// the output array
+	std::vector<Circle> body;
+
+	// append the circle at the rear axle
+	body.push_back(Circle(p.position, width_2));
+
+	return body;
+}
+
 // get the desired wheel angle that connects two states
 double VehicleModel::GetDesiredWheelAngle(const Pose2D &a, const Pose2D &b) const {
 

@@ -8,31 +8,31 @@ namespace astar {
 template<typename T, unsigned int D>
 class KDTreeNode {
 
-private:
+	private:
 
-public:
+	public:
 
-    // public members
+		// public members
 
-    // the point stored
-    astar::Point<T, D> point;
+		// the point stored
+		astar::Point<T, D> point;
 
-    // the left pointer
-    KDTreeNode *left;
+		// the left pointer
+		KDTreeNode *left;
 
-    // the left pointer
-    KDTreeNode *right;
+		// the left pointer
+		KDTreeNode *right;
 
-    // basic construtor
-    KDTreeNode (const astar::Point<T, D>& p) : point(p), left(nullptr), right(nullptr) {}
+		// basic construtor
+		KDTreeNode (const astar::Point<T, D>& p) : point(p), left(nullptr), right(nullptr) {}
 
-    // basic destructor
-    ~KDTreeNode() {
+		// basic destructor
+		~KDTreeNode() {
 
-        // update the pointers
-        left = right = nullptr;
+			// update the pointers
+			left = right = nullptr;
 
-    }
+		}
 
 };
 

@@ -29,12 +29,12 @@
 #include <list>
 
 #include "../../PriorityQueue/PriorityQueue.hpp"
-#include "HybridAstarNode.hpp"
 #include "../Pose2D.hpp"
 #include "../GridMap/InternalGridMap.hpp"
-#include "Heuristic.hpp"
 #include "../ReedsShepp/ReedsSheppModel.hpp"
 #include "../VehicleModel/VehicleModel.hpp"
+#include "HybridAstarNode.hpp"
+#include "Heuristic.hpp"
 
 namespace astar {
 

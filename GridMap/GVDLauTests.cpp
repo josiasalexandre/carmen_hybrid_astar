@@ -122,7 +122,20 @@ int main (int argc, char **argv) {
 	gvd.Visualize(filename);
 	std::cout << "Done\n";
 
+	// delete the allocated map
+	if (nullptr != map) {
 
-	std::cout << "\nHello, world!\n";
+		for (int r = 0; r < height; ++r) {
+
+			// remove the current row
+			delete [] map[r];
+
+		}
+
+		// remove the map pointer
+		delete [] map;
+
+	}
+
 	return 0;
 }

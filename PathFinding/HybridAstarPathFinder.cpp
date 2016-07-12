@@ -10,6 +10,13 @@ HybridAstarPathFinder::HybridAstarPathFinder(int argc, char **argv) :
 {
     // read all parameters
     get_parameters(argc, argv);
+
+    // set the safety factor
+    vehicle_model.safety_factor = 1.0;
+
+    // set the half width
+    vehicle_model.width_2 = vehicle_model.width * 0.5;
+
 }
 
 // PRIVATE METHODS
@@ -26,7 +33,7 @@ HybridAstarPathFinder::get_parameters(int argc, char **argv)
         {(char *)"robot",   (char *)"max_steering_angle",                           CARMEN_PARAM_DOUBLE, &vehicle_model.max_wheel_deflection,                           1, NULL},
         {(char *)"robot",   (char *)"desired_steering_command_rate",                CARMEN_PARAM_DOUBLE, &vehicle_model.steering_command_rate,                          1, NULL},
         {(char *)"robot",   (char *)"understeer_coeficient",                        CARMEN_PARAM_DOUBLE, &vehicle_model.understeer,                                     1, NULL},
-        {(char *)"robot",   (char *)"robot_maximum_capable_curvature",              CARMEN_PARAM_DOUBLE, &vehicle_model.max_turn_radius,                                1, NULL},
+        {(char *)"robot",   (char *)"robot_maximum_capable_curvature",              CARMEN_PARAM_DOUBLE, &vehicle_model.min_turn_radius,                                1, NULL},
         {(char *)"robot",   (char *)"default_speed",                                CARMEN_PARAM_DOUBLE, &vehicle_model.default_speed,                                  1, NULL},
         {(char *)"robot",   (char *)"maximum_speed_forward",                        CARMEN_PARAM_DOUBLE, &vehicle_model.max_forward_speed,                              1, NULL},
         {(char *)"robot",   (char *)"maximum_speed_reverse",                        CARMEN_PARAM_DOUBLE, &vehicle_model.max_backward_speed,                             1, NULL},
@@ -82,7 +89,7 @@ HybridAstarPathFinder::replan() {
 void
 HybridAstarPathFinder::set_goal_state(const State2D &goal_state) {
 
-    if (grid.isSafePlace(goal_state)) {
+    if (grid.isSafePlace(vehicle_model.GetVehicleBodyCircles(goal_state), vehicle_model.safety_factor)) {
 
         goal = goal_state;
         valid_goal = true;

@@ -25,7 +25,7 @@
 #ifndef REEDS_SHEPP_MODEL_HPP
 #define REEDS_SHEPP_MODEL_HPP
 
-#include "../../Entities/State2D.hpp"
+#include "../Entities/State2D.hpp"
 #include "ReedsSheppActionSet.hpp"
 
 namespace astar {
