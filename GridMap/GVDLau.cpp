@@ -584,11 +584,6 @@ void GVDLau::SetObstacle(int row, int col) {
 	// get the current DataCell
 	GVDLau::DataCellRef c(data[row][col]);
 
-	// build the grid index
-	GridCellIndex index(row, col);
-
-	if (isOccupied(index, c)) return;
-
 	// update the current cell values
 	c.dist = 0.0;
 	c.sqdist = 0;
@@ -597,7 +592,7 @@ void GVDLau::SetObstacle(int row, int col) {
 	c.to_process = true;
 
 	// add to the open prio queue
-	open.Push(0, index);
+	open.Push(0, GridCellIndex (row, col));
 
 }
 
@@ -607,11 +602,6 @@ void GVDLau::RemoveObstacle(int row, int col) {
 	// get the current DataCell
 	GVDLau::DataCellRef c(data[row][col]);
 
-	// build the grid cell index
-	GridCellIndex index(row, col);
-
-	if (!isOccupied(index, c)) return;
-
 	// update the current cell values
 	c.dist = max_double;
 	c.sqdist = INT_MAX;
@@ -620,7 +610,7 @@ void GVDLau::RemoveObstacle(int row, int col) {
 	c.to_process = true;
 
 	// add to the open prio queue
-	open.Push(INT_MAX, index);
+	open.Push(INT_MAX, GridCellIndex (row, col));
 
 }
 
