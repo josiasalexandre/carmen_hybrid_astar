@@ -40,12 +40,15 @@ class GVDLau {
 		DataCell **data;
 
 		// the diagram parameters
-		unsigned int height, heightminus1;
-		unsigned int width, widthminus1;
+		int height, heightminus1;
+		int width, widthminus1;
 
 		// the general parameters
 		double alpha;
 		double max_dist, max_sqdist;
+
+		// double max value
+		double max_double;
 
 		//queues
 		astar::BucketPrioQueue<astar::GridCellIndex> open;
@@ -63,11 +66,11 @@ class GVDLau {
 		int DistanceSquared(const astar::GridCellIndexRef, const astar::GridCellIndexRef);
 
 		// verify if a given cell is occupied, wich means that the nearest obstacle is the given cell
-		bool isOccupied(const astar::GridCellIndexRef);
+		inline bool isOccupied(const astar::GridCellIndexRef);
 
 		// verify if a given cell is occupied, wich means that the nearest obstacle is the given cell
 		// overloaded version
-		bool isOccupied(const astar::GridCellIndexRef, const DataCellRef);
+		inline bool isOccupied(const astar::GridCellIndexRef, const DataCellRef);
 
 		// verify if a given is voro occupied, wich means that the nearest voro is the give cell
 		bool isVoroOccupied(const astar::GridCellIndexRef, const DataCellRef);
@@ -99,25 +102,25 @@ class GVDLau {
 		~GVDLau();
 
 		// Initialize the GVD
-		void InitializeEmpty(unsigned int h, unsigned int w);
+		void InitializeEmpty(int h, int w);
 
 		// initialize the GVD with a given map
-		void InitializeMap(unsigned int h, unsigned int w, bool **map);
+		void InitializeMap(int h, int w, bool **map);
 
 		// set a given cell as an obstacle
-		void SetObstacle(unsigned int row, unsigned int col);
+		void SetObstacle(int row, int col);
 
 		// set a given cell as a free space
-		void RemoveObstacle(unsigned int row, unsigned int col);
+		void RemoveObstacle(int row, int col);
 
 		// update the entire GVD
 		void Update();
 
 		// get the nearest obstacle distance
-		double GetObstacleDistance(unsigned int row, unsigned int col);
+		double GetObstacleDistance(int row, int col);
 
 		// get the nearest voronoi edge distance
-		double GetVoronoiDistance(unsigned int row, unsigned int col);
+		double GetVoronoiDistance(int row, int col);
 
 		// save the voronoi field map to an external file
 		void Visualize(std::string);

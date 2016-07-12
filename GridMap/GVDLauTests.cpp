@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <ctime>
 #include "GVDLau.hpp"
 
 // load the PGM file
@@ -89,10 +90,14 @@ int main (int argc, char **argv) {
 	gvd.InitializeMap(height, width, map);
 	std::cout << "Done!\n";
 
+
 	// update
 	std::cout << "\nUpdating the voronoi map ...\n";
+	int t1 = std::clock();
 	gvd.Update();
-	std::cout << "Done!\n";
+	int t2 = std::clock();
+	float diff = ((float)(t2 - t1) / 1000000.0 ) * 1000;
+	std::cout << "Done! Time: " << diff << "\n";
 
 	// test the nearest obstacle query
 	std::cout << "\nNearest obstacle distance query for (500, 167), it should be: inf! ...\n";
@@ -116,7 +121,6 @@ int main (int argc, char **argv) {
 	std::cout << "\nSaving the voronoi field map to the output file ...\n";
 	gvd.Visualize(filename);
 	std::cout << "Done\n";
-
 
 
 	std::cout << "\nHello, world!\n";

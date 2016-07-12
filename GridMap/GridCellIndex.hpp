@@ -14,7 +14,6 @@ class GridCellIndex {
         // basic constructors
         GridCellIndex() : row(0), col(0) {}
         GridCellIndex(int _r, int _c) : row(_r), col(_c) {}
-        GridCellIndex(const GridCellIndex &gci) : row(gci.row), col(gci.col) {}
 
 };
 
