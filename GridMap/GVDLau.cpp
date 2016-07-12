@@ -218,9 +218,7 @@ void GVDLau::UpdateDistanceMap() {
 						open.Push(nc.sqdist, GridCellIndex(nrow, ncol));
 
 					}
-
 				}
-
 			}
 
 			// unset the raise flag
@@ -563,7 +561,7 @@ void GVDLau::InitializeMap(int h, int w, bool **map) {
 							// update the grid cell values
 							s.dist = 0.0;
 							s.sqdist = 0;
-							s.voro = true;
+							s.voro = false;
 							s.to_raise = false;
 							s.to_process = false;
 							s.voro_to_raise = false;
@@ -649,7 +647,6 @@ double GVDLau::GetVoronoiDistance(int row, int col) {
 		return data[row][col].voro_dist;
 	else
 		return max_double;
-
 }
 
 // save the voronoi field map to an external file
