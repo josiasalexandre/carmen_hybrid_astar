@@ -11,12 +11,12 @@
 #include <assert.h>
 #include <map>
 
-#include "../Entities/IntPoint2D.hpp"
+#include "GridCellIndex.hpp"
 
 namespace astar {
 
 template <typename T>
-class BucketedQueue {
+class BucketPrioQueue {
 
     private:
 
@@ -41,7 +41,7 @@ class BucketedQueue {
         // PUBLIC METHODS
 
         // basic constructor
-        BucketedQueue() {
+        BucketPrioQueue() {
             Clear();
         }
 

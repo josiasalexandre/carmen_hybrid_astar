@@ -1,7 +1,7 @@
 #ifndef KINEMATIC_VEHICLE_MODEL_HPP
 #define KINEMATIC_VEHICLE_MODEL_HPP
 
-#include "../../Entities/Pose2D.hpp"
+#include "../Entities/Pose2D.hpp"
 #include "../ReedsShepp/ReedsSheppAction.hpp"
 #include "../HybridAstar/HybridAstarNode.hpp"
 
@@ -106,6 +106,9 @@ class VehicleModel {
 
 		// get the fake front axle state with respect to the rear axle pose
 		astar::State2D GetFakeFrontAxleState(const astar::State2D&) const;
+
+		// get the car center position
+		astar::Pose2D GetCenterPosition(const astar::Pose2D&) const;
 
 		// get the desired wheel angle that connects two states
 		double GetDesiredWheelAngle(const astar::Pose2D&, const astar::Pose2D&) const;

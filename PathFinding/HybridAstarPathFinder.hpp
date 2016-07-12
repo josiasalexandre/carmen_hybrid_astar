@@ -8,8 +8,7 @@
 #include "GridMap/InternalGridMap.hpp"
 #include "HybridAstar/HybridAstar.hpp"
 #include "Smoother/CGSmoother.hpp"
-#include "VehicleModel/VehicleModel.hpp"
-#include "../PathFollower/StanleyController.hpp"
+#include "../VehicleModel/VehicleModel.hpp"
 
 namespace astar {
 

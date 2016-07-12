@@ -118,68 +118,39 @@ void HybridAstarPathFinder::set_goal_list(astar::StateArrayPtr goals) {
 void
 HybridAstarPathFinder::update_map(carmen_map_server_compact_cost_map_message *msg) {
 
-    if (nullptr != msg) {
+	if (nullptr != msg) {
 
-        // get the msg dimensions
-        unsigned int w = msg->config.x_size;
-        unsigned int h = msg->config.y_size;
+		double x_origin = msg->config.x_origin;
+		double y_origin = msg->config.y_origin;
+		double resolution = msg->config.resolution;
+		double inverse_resolution = 1.0/resolution;
 
-        unsigned int map_size = width*height;
-        unsigned int msg_size = msg->size;
+		grid.InitializeGridMap(msg->config.y_size, msg->config.x_size, resolution, Vector2D<double>(x_origin, y_origin));
 
-        double res = msg->config.resolution;
+		int *x_coord = msg->coord_x;
+		int *y_coord = msg->coord_y;
+		int c, r;
+		double *val = msg->value;
+		int size = msg->size;
 
-        int *x_coord = msg->coord_x;
-        int *y_coord = msg->coord_y;
+		for (unsigned int i = 0; i < size; i++) {
 
-        double *val = msg->value;
-        double v;
+			r = std::floor((y_coord[i] - y_origin) * inverse_resolution);
+			c = std::floor((x_coord[i] - x_origin) * inverse_resolution);
 
-        if (grid.isEmpty()) {
+			if (0.5 < val[i]) {
+				grid.OccupyCell(r, c);
+			} else {
+				grid.ClearCell(r, c);
+			}
 
-            // create a new grid map
-            GridMapCellPtr grid_map = new GridMapCell[map_size];
+		}
 
-            for (unsigned int i = 0; i < map_size; ++i)
-                grid_map[i] = -1;
+		// update the entire grid map
+		grid.UpdateGridMap();
 
-            // get the map values
-            for (unsigned int i = 0; i < msg_size; ++i) {
+	}
 
-                if (0.5 < val[i]) {
-
-                    grid_map[GRID_MAP_INDEX(x_coord[i], y_coord[i])] = 1;
-
-                } else {
-
-                    grid_map[GRID_MAP_INDEX(x_coord[i], y_coord[i])] = 0;
-
-                }
-
-            }
-
-            // initialize the grid map
-            grid.InitializeGridMap(grid_map, w, h, res, astar::Vector2D<double>(msg->config.x_origin, msg->config.y_origin), 0.0);
-
-        }else {
-
-            // update the map values
-            for (unsigned int i = 0; i < msg_size; ++i) {
-
-                if (0.5 > val[i]) {
-                    grid.ClearCell(x_coord[i], y_coord[i]);
-                } else {
-                    grid.OccupyCell(x_coord[i], y_coord[i]);
-                }
-
-            }
-
-            // update the grid map
-            grid.Update();
-
-        }
-
-    }
 }
 
 // update the odometry value

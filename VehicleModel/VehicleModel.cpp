@@ -76,7 +76,7 @@ Pose2D VehicleModel::NextPose(const astar::Pose2D &current, double vel, double p
     if (0.0 != phi) {
 
         // get the turn radius
-        double turn_radius = distance_between_front_and_rear_axles /
+        double turn_radius = axledist /
                         std::tan(phi/(1.0 + vel*vel*understeer));
 
         angle = length/turn_radius;
@@ -127,8 +127,8 @@ astar::State2D VehicleModel::NextState(const astar::State2D &current) {
 // get the front axle pose with respect to the rear axle pose
 State2D VehicleModel::GetFrontAxleState(const astar::State2D &s) const {
 
-    double x = s.position.x + std::cos(s.orientation) * distance_between_front_and_rear_axles;
-    double y = s.position.y + std::sin(s.orientation) * distance_between_front_and_rear_axles;
+    double x = s.position.x + std::cos(s.orientation) * axledist;
+    double y = s.position.y + std::sin(s.orientation) * axledist;
 
     return State2D(x, y, s.orientation, s.phi, s.v, s.gear, s.t, s.coming_to_stop, s.last_cusp_dist);
 
@@ -137,10 +137,22 @@ State2D VehicleModel::GetFrontAxleState(const astar::State2D &s) const {
 // get the front axle pose with respect to the rear axle pose
 State2D VehicleModel::GetFakeFrontAxleState(const astar::State2D &s) const {
 
-    double x = s.position.x - std::cos(s.orientation) * distance_between_front_and_rear_axles;
-    double y = s.position.y - std::sin(s.orientation) * distance_between_front_and_rear_axles;
+    double x = s.position.x - std::cos(s.orientation) * axledist;
+    double y = s.position.y - std::sin(s.orientation) * axledist;
 
     return State2D(x, y, s.orientation, s.phi, s.v, s.gear, s.t, s.coming_to_stop, s.last_cusp_dist);
+
+}
+
+// get the car center position
+Pose2D VehicleModel::GetCenterPosition(const astar::Pose2D &pose) const {
+
+	Pose2D front;
+
+	front.position.x = pose.position.x + std::cos(pose.orientation) * axledist * 0.5;
+	front.position.y = pose.position.y + std::sin(pose.orientation) * axledist * 0.5;
+
+	return front;
 
 }
 
@@ -157,7 +169,7 @@ double VehicleModel::GetDesiredWheelAngle(const Pose2D &a, const Pose2D &b) cons
     double turnRadius = std::min((goal.x*goal.x + goal.y*goal.y)/(2.0*goal.y), min_turn_radius);
 
     // get the desired wheel angle
-    return std::atan(distance_between_front_and_rear_axles/turnRadius);
+    return std::atan(axledist/turnRadius);
 
 }
 

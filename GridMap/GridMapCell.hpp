@@ -30,12 +30,6 @@ enum CellStatus {UnknownNode, OpenedNode, ExploredNode};
 
 class GridMapCell {
 
-    private:
-
-        // PRIVATE ATTRIBUTES
-
-        // PRIVATE METHODS
-
     public:
 
         // PUBLIC ATTRIBUTES
@@ -59,6 +53,8 @@ typedef GridMapCell* GridMapCellPtr;
 
 // define a reference
 typedef GridMapCell& GridMapCellRef;
+
+typedef GridMapCell** GridMap;
 
 }
 

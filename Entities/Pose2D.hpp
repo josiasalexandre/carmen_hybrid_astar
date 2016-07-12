@@ -4,7 +4,7 @@
 #include <vector>
 #include <list>
 
-#include "../PathFinding/ReedsShepp/ReedsSheppDefinitions.hpp"
+#include "../ReedsShepp/ReedsSheppDefinitions.hpp"
 #include "Vector2D.hpp"
 
 namespace astar {
@@ -31,13 +31,13 @@ class Pose2D {
         // explicit constructor
         Pose2D(double, double, double);
 
-        // assignement operator overloading
+        // assignment operator overloading
         void operator=(const Pose2D&);
 
         // equals to operator overloading
         bool operator==(const Pose2D&);
 
-        // differet operator overloading
+        // different operator overloading
         bool operator!=(const Pose2D&);
 
 };
