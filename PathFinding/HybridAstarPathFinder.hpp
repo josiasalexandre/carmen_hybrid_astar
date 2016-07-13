@@ -5,10 +5,11 @@
 #include <carmen/map_server_messages.h>
 
 #include "../Entities/State2D.hpp"
-#include "GridMap/InternalGridMap.hpp"
+#include "../GridMap/InternalGridMap.hpp"
+#include "../VehicleModel/VehicleModel.hpp"
+
 #include "HybridAstar/HybridAstar.hpp"
 #include "Smoother/CGSmoother.hpp"
-#include "../VehicleModel/VehicleModel.hpp"
 
 namespace astar {
 
@@ -54,9 +55,6 @@ class HybridAstarPathFinder {
         // flag to set obstacle avoider usage
         bool use_obstacle_avoider;
 
-        // flag to register the simulation mode
-        bool simulation_mode;
-
         // PRIVATE METHODS
 
         // get all the necessary parameters
@@ -97,9 +95,13 @@ class HybridAstarPathFinder {
         // convert the current path to the desired output format (carmen_ackerman_motion_command_t)
         astar::StateArrayPtr get_path();
 
-        // PUBLIC ATTRIBUTE
+        // PUBLIC ATTRIBUTES
         // flag to activate the motion planner
         bool activated;
+
+        // flag to register the simulation mode
+        bool simulation_mode;
+
 };
 
 }

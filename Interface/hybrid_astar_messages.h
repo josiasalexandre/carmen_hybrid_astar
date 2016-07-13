@@ -17,4 +17,8 @@ typedef struct {
 #define CARMEN_HYBRID_ASTAR_PATH_NAME "carmen_hybrid_astar_path_name"
 #define CARMEN_HYBRID_ASTAR_PATH_FMT "{<{double, double, double, double, double, double}:2>,int,double,string}"
 
+#ifdef __cplusplus
+}
+#endif
+
 #endif

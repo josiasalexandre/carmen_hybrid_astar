@@ -6,7 +6,7 @@ using namespace astar;
 
 // get the next pose with Pose, Steer, Gear, length and turn radius
 astar::Pose2D VehicleModel::NextPose(
-    const astar::Pose2D &current_pose, Steer steer, Gear gear, double length, double t_radius = min_turn_radius) const
+    const astar::Pose2D &current_pose, Steer steer, Gear gear, double length, double t_radius) const
 {
     // auxiliary variables
     double x, y, angle;
