@@ -5,8 +5,9 @@ using namespace astar;
 // basic constructor
 HybridAstarPathFinder::HybridAstarPathFinder(int argc, char **argv) :
     vehicle_model(), grid(), initialized_grid_map(false), path_finder(vehicle_model), odometry_speed(0.0),
-    odometry_steering_angle(0.0), robot(), goal(), valid_goal(false), goal_list(nullptr), path(),
-    activated(false), use_obstacle_avoider(true), simulation_mode(false)
+    odometry_steering_angle(0.0), robot(), goal(), valid_goal(false), goal_list(nullptr),
+    use_obstacle_avoider(true), activated(false), simulation_mode(false)
+
 {
     // read all parameters
     get_parameters(argc, argv);
@@ -54,6 +55,9 @@ HybridAstarPathFinder::get_parameters(int argc, char **argv)
     };
 
     carmen_param_allow_unfound_variables(1);
+    carmen_param_install_params(argc, argv, planner_params_list, 21);
+
+    carmen_param_allow_unfound_variables(1);
     carmen_param_install_params(argc, argv, vehicle_params_list, 21);
 
 }
@@ -89,16 +93,16 @@ HybridAstarPathFinder::replan() {
 void
 HybridAstarPathFinder::set_goal_state(const State2D &goal_state) {
 
-    if (grid.isSafePlace(vehicle_model.GetVehicleBodyCircles(goal_state), vehicle_model.safety_factor)) {
+	valid_goal = grid.isSafePlace(vehicle_model.GetVehicleBodyCircles(goal_state), vehicle_model.safety_factor);
 
+	if (valid_goal) {
         goal = goal_state;
-        valid_goal = true;
     }
 }
 
 // set the the new goal
 void
-HybridAstarPathFinder::set_goal_state(double x, double y, double theta, double vel = 0.0) {
+HybridAstarPathFinder::set_goal_state(double x, double y, double theta, double vel) {
 
     goal.position.x = x;
     goal.position.y = y;
@@ -138,7 +142,7 @@ HybridAstarPathFinder::update_map(carmen_map_server_compact_cost_map_message *ms
 		int *y_coord = msg->coord_y;
 		int c, r;
 		double *val = msg->value;
-		int size = msg->size;
+		unsigned int size = msg->size;
 
 		for (unsigned int i = 0; i < size; i++) {
 
@@ -200,7 +204,7 @@ astar::State2D HybridAstarPathFinder::get_robot_state() {
 
 astar::StateArrayPtr HybridAstarPathFinder::get_path() {
 
-    return path;
+    return nullptr;
 
 }
 

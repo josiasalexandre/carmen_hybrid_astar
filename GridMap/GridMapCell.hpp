@@ -21,7 +21,8 @@
 #ifndef INTERNAL_GRID_MAP_CELL_HPP
 #define INTERNAL_GRID_MAP_CELL_HPP
 
-#include "../HybridAstar/HybridAstarNode.hpp"
+#include "GridMapCell.fwd.hpp"
+#include "../PathFinding/HybridAstar/HybridAstarNode.fwd.hpp"
 
 namespace astar {
 
@@ -47,14 +48,6 @@ class GridMapCell {
         GridMapCell() : occupancy(-1), status(astar::UnknownNode), node(nullptr) {}
 
 };
-
-// define a reference pointer
-typedef GridMapCell* GridMapCellPtr;
-
-// define a reference
-typedef GridMapCell& GridMapCellRef;
-
-typedef GridMapCell** GridMap;
 
 }
 

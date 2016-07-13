@@ -5,9 +5,8 @@
 #include <carmen/simulator_ackerman_interface.h>
 #include <carmen/navigator_ackerman_interface.h>
 #include <carmen/robot_ackerman_interface.h>
-
+#include "Interface/hybrid_astar_interface.h"
 #include "PathFinding/HybridAstarPathFinder.hpp"
-#include "Interface/HybridAstarInterface.hpp"
 
 // ugly global pointer
 astar::HybridAstarPathFinder *g_hybrid_astar;
@@ -20,9 +19,6 @@ astar::HybridAstarPathFinder *g_hybrid_astar;
 void
 publish_hybrid_astar_path(astar::StateArrayPtr path)
 {
-
-    static bool first_time = true;
-
     if (nullptr != path)
     {
         std::vector<astar::State2D> &states(path->states);
@@ -32,23 +28,22 @@ publish_hybrid_astar_path(astar::StateArrayPtr path)
         // build a new message
         carmen_hybrid_astar_path_message_t msg;
 
-        // get the direct access
-        carmen_ackerman_path_point_p path = msg.path;
 
         // build the path message
         msg.path = new carmen_ackerman_path_point_t[p_size];
         msg.path_length = p_size;
 
-        // some helpers
-        carmen_ackerman_path_point_t &current;
-        astar::State2D &state;
+        // get the direct access
+        carmen_ackerman_path_point_p path = msg.path;
 
-        if (msg && 0 < p_size)
+        if (0 < p_size)
         {
             for (unsigned int i = 0;  i < p_size; i++)
             {
-                current = path[i];
-                state = states[i];
+				// some helpers
+				carmen_ackerman_path_point_t &current(path[i]);
+
+				astar::State2D &state(states[i]);
 
                 // copy all the values
                 current.x = state.position.x;
@@ -193,6 +188,7 @@ map_server_compact_cost_map_message_handler(carmen_map_server_compact_cost_map_m
 static void
 map_server_compact_lane_map_message_handler(carmen_map_server_compact_lane_map_message *message)
 {
+	(void) message;
     return;
 }
 
@@ -208,7 +204,7 @@ navigator_astar_stop_message_handler()
     g_hybrid_astar->activated = false;
 }
 
-int
+static void
 signal_handler(int sig)
 {
     std::cout << std::endl << "Signal " << sig << "received, exiting program ..." << std::endl;
@@ -285,7 +281,8 @@ register_handlers()
 int
 main(int argc, char **argv)
 {
-    // build the HybridAstarMotionPlanner
+
+	// build the HybridAstarMotionPlanner
     g_hybrid_astar = new astar::HybridAstarPathFinder(argc, argv);
 
     carmen_ipc_initialize(argc, argv);

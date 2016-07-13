@@ -1,7 +1,7 @@
 #ifndef HYBRID_ASTAR_INTERFACE_HPP
 #define HYBRID_ASTAR_INTERFACE_HPP
 
-#include "HybridAstarMessage.hpp"
+#include "hybrid_astar_messages.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -14,5 +14,10 @@ void carmen_hybrid_astar_subscribe_path_message(carmen_hybrid_astar_path_message
                                                 carmen_subscribe_t subscribe_how);
 
 void carmen_hybrid_astar_publish_path_message(carmen_hybrid_astar_path_message_p message);
+
+#ifdef __cplusplus
+}
+
+#endif
 
 #endif

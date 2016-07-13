@@ -1,4 +1,4 @@
-#include "HybridAstarInterface.hpp"
+#include "hybrid_astar_interface.h"
 
 
 void carmen_hybrid_astar_define_path_message()
@@ -14,7 +14,9 @@ void carmen_hybrid_astar_subscribe_path_message(
         carmen_handler_t                 handler,
         carmen_subscribe_t               subscribe_how)
 {
-    carmen_subscribe_message((char *)CARMEN_HYBRID_ASTAR_PATH_NAME, (char *)CARMEN_HYBRID_ASTAR_PATH_FMT,
+	carmen_hybrid_astar_define_path_message();
+
+	carmen_subscribe_message((char *)CARMEN_HYBRID_ASTAR_PATH_NAME, (char *)CARMEN_HYBRID_ASTAR_PATH_FMT,
                              message, sizeof(carmen_hybrid_astar_path_message_t),
                              handler, subscribe_how);
 }
@@ -22,7 +24,6 @@ void carmen_hybrid_astar_subscribe_path_message(
 void carmen_hybrid_astar_publish_path_message(carmen_hybrid_astar_path_message_p message) {
 
     IPC_RETURN_TYPE err;
-    static int first_time = 1;
 
     message->timestamp = carmen_get_time();
     message->host = carmen_get_host();

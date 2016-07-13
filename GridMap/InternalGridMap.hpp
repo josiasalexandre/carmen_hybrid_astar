@@ -59,10 +59,10 @@ class InternalGridMap {
         bool isSafePlace(const std::vector<astar::Circle> &body, double safety_factor);
 
         // occupy a given cell
-        void inline OccupyCell(int row, int col);
+        void OccupyCell(int row, int col);
 
         // clear a given cell
-        void inline ClearCell(int row, int col);
+        void ClearCell(int row, int col);
 
         // update the internal grid map
         void UpdateGridMap();

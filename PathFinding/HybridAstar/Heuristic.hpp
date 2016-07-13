@@ -1,8 +1,8 @@
 #ifndef COMBINED_HEURISTIC_HPP
 #define COMBINED_HEURISTIC_HPP
 
-#include "../Pose2D.hpp"
-#include "../GridMap/InternalGridMap.hpp"
+#include "../../Entities/Pose2D.hpp"
+#include "../../GridMap/InternalGridMap.hpp"
 
 namespace astar {
 

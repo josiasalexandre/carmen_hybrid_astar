@@ -29,10 +29,10 @@
 #include <list>
 
 #include "../../PriorityQueue/PriorityQueue.hpp"
-#include "../Pose2D.hpp"
-#include "../GridMap/InternalGridMap.hpp"
-#include "../ReedsShepp/ReedsSheppModel.hpp"
-#include "../VehicleModel/VehicleModel.hpp"
+#include "../../Entities/Pose2D.hpp"
+#include "../../GridMap/InternalGridMap.hpp"
+#include "../../ReedsShepp/ReedsSheppModel.hpp"
+#include "../../VehicleModel/VehicleModel.hpp"
 #include "HybridAstarNode.hpp"
 #include "Heuristic.hpp"
 

@@ -182,7 +182,8 @@ private:
 public:
 
     // empty constructor
-    KDTree() : root(nullptr), min_Distance(0.005) {}
+    KDTree() : root(nullptr), mi
+	n_Distance(0.005) {}
 
     // basic constructor
     KDTree(std::vector<astar::Point<T, D>>& input) : min_Distance(0.0005)

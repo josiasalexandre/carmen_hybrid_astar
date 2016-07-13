@@ -3,7 +3,7 @@
 
 #include "../Entities/Pose2D.hpp"
 #include "../ReedsShepp/ReedsSheppAction.hpp"
-#include "../HybridAstar/HybridAstarNode.hpp"
+#include "../PathFinding/HybridAstar/HybridAstarNode.hpp"
 #include "../Entities/Circle.hpp"
 
 namespace astar {
@@ -97,7 +97,7 @@ class VehicleModel {
         // PUBLIC METHODS
 
         // get the next pose with Pose, Steer, Gear, length and custom turn radius
-        astar::Pose2D NextPose(const astar::Pose2D&, astar::Steer, astar::Gear, double length, double radius = min_turn_radius) const;
+        astar::Pose2D NextPose(const astar::Pose2D&, astar::Steer, astar::Gear, double length, double radius) const;
 
         // get the next pose
         astar::Pose2D NextPose(const astar::Pose2D&, double vel, double phi, double time) const;

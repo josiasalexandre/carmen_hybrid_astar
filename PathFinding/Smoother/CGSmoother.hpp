@@ -1,8 +1,8 @@
 #ifndef CONJUGATE_GRADIENT_PATH_SMOOTHER_HPP
 #define CONJUGATE_GRADIENT_PATH_SMOOTHER_HPP
 
-#include "InternalGridMap.hpp"
-#include "../State2D.hpp"
+#include "../../GridMap/InternalGridMap.hpp"
+#include "../../Entities/State2D.hpp"
 
 namespace astar {
 
