@@ -34,6 +34,9 @@ class HybridAstarPathFinder {
         // the path smoother
         astar::CGSmoother path_smoother;
 
+        // the current path
+        astar::StateArrayPtr path;
+
         // the current odometry speed
         double odometry_speed;
 
@@ -93,7 +96,7 @@ class HybridAstarPathFinder {
         void update_map(carmen_map_server_compact_cost_map_message *msg);
 
         // convert the current path to the desired output format (carmen_ackerman_motion_command_t)
-        astar::StateArrayPtr get_path();
+        astar::StateArray get_path();
 
         // PUBLIC ATTRIBUTES
         // flag to activate the motion planner

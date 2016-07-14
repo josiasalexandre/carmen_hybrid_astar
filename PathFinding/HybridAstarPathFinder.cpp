@@ -4,7 +4,7 @@ using namespace astar;
 
 // basic constructor
 HybridAstarPathFinder::HybridAstarPathFinder(int argc, char **argv) :
-    vehicle_model(), grid(), initialized_grid_map(false), path_finder(vehicle_model), odometry_speed(0.0),
+    vehicle_model(), grid(), initialized_grid_map(false), path_finder(vehicle_model, grid), path(nullptr), odometry_speed(0.0),
     odometry_steering_angle(0.0), robot(), goal(), valid_goal(false), goal_list(nullptr),
     use_obstacle_avoider(true), activated(false), simulation_mode(false)
 
@@ -67,26 +67,29 @@ HybridAstarPathFinder::get_parameters(int argc, char **argv)
 StateArrayPtr
 HybridAstarPathFinder::replan() {
 
-    if (valid_goal) {
+	if (valid_goal) {
 
+		if (nullptr != path) {
+			delete path;
+		}
         // find the path to the goal
-        StateArrayPtr path = path_finder.FindPath(grid, robot, goal);
+        StateArrayPtr raw_path = path_finder.FindPath(grid, robot, goal);
 
-        if (3 < path->states.size()) {
+        if (3 < raw_path->states.size()) {
 
-            // the actual path smoothing process
-            path_smoother.Smooth(grid, path);
-
-            // return the smothed path
-            return path;
-
+        	// smoothing proccess
+        	path = path_smoother.Smooth(grid, raw_path);
         }
 
-        // delete the raw path
-        delete(path);
-    }
+        // remove the raw path
+		delete raw_path;
 
-    return nullptr;
+		return path;
+
+	}
+
+	return nullptr;
+
 }
 
 // set the the new goal
@@ -202,9 +205,9 @@ astar::State2D HybridAstarPathFinder::get_robot_state() {
 
 }
 
-astar::StateArrayPtr HybridAstarPathFinder::get_path() {
+astar::StateArray HybridAstarPathFinder::get_path() {
 
-    return nullptr;
+    return StateArray();
 
 }
 

@@ -23,11 +23,13 @@ void carmen_hybrid_astar_subscribe_path_message(
 
 void carmen_hybrid_astar_publish_path_message(carmen_hybrid_astar_path_message_p message) {
 
-    IPC_RETURN_TYPE err;
+	if (message) {
+		IPC_RETURN_TYPE err;
 
-    message->timestamp = carmen_get_time();
-    message->host = carmen_get_host();
+		message->timestamp = carmen_get_time();
+		message->host = carmen_get_host();
 
-    err = IPC_publishData(CARMEN_HYBRID_ASTAR_PATH_NAME, message);
-    carmen_test_ipc(err, "Could not publish", CARMEN_HYBRID_ASTAR_PATH_NAME);
+		err = IPC_publishData(CARMEN_HYBRID_ASTAR_PATH_NAME, message);
+		carmen_test_ipc(err, "Could not publish", CARMEN_HYBRID_ASTAR_PATH_NAME);
+	}
 }

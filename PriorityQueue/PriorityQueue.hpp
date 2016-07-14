@@ -22,6 +22,9 @@ class PriorityQueue {
         // how many nodes?
         unsigned int N;
 
+        // the null value
+        T null_value;
+
         // PRIVATE METHODS
 
         // get the heap max degree
@@ -369,7 +372,7 @@ class PriorityQueue {
         // PUBLIC ATTRIBUTES
 
         // basic constructor
-        PriorityQueue() : min(nullptr), N(0) {}
+        PriorityQueue(T _null) : min(nullptr), N(0), null_value(_null) {}
 
         // basic destructor
         ~PriorityQueue() {
@@ -399,11 +402,13 @@ class PriorityQueue {
 
         }
 
+        // set the null value
+
         // get the min element
         T Min() {
 
             // build an element
-            T element;
+            T element = null_value;
 
             if (nullptr != min) {
 
@@ -420,7 +425,7 @@ class PriorityQueue {
         T DeleteMin() {
 
             // build the element to return
-            T element;
+            T element = null_value;
 
             if (nullptr != min) {
 

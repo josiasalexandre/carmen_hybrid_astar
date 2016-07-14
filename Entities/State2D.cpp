@@ -70,12 +70,12 @@ void State2D::operator=(const Pose2D &p) {
 // == operator overloading
 bool State2D::operator==(const State2D &s)
 {
-    return (0.0001 > std::fabs(position.Distance2(position)) && 0.001 > std::fabs(orientation - orientation));
+    return (0.0001 > std::fabs(s.position.Distance2(position)) && 0.001 > std::fabs(s.orientation - orientation));
 }
 
 // != operator overloading
 bool State2D::operator!=(const State2D &s)
 {
-    return (0.0001 < std::fabs(position.Distance2(position)) || 0.001 < std::fabs(orientation - orientation));
+    return (0.0001 < std::fabs(s.position.Distance2(position)) || 0.001 < std::fabs(s.orientation - orientation));
 }
 

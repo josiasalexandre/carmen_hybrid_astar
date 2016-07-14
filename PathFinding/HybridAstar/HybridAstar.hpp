@@ -95,7 +95,7 @@ public:
     // PUBLIC METHODS
 
     // basic constructor
-    HybridAstar(astar::VehicleModel &vehicle_);
+    HybridAstar(astar::VehicleModel &vehicle_, astar::InternalGridMapRef);
 
     // find a path to the goal
     astar::StateArrayPtr FindPath(astar::InternalGridMap&, const astar::State2D&, const astar::State2D&);

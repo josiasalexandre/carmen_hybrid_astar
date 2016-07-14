@@ -19,7 +19,7 @@ class CGSmoother {
         // PUBLIC METHODS
 
         // smooth a given path
-        void Smooth(astar::InternalGridMap&, astar::StateArrayPtr);
+        astar::StateArrayPtr Smooth(astar::InternalGridMap&, astar::StateArrayPtr);
 
 };
 

@@ -23,15 +23,11 @@
 */
 
 #include "HybridAstar.hpp"
-#include "../VehicleModel/VehicleModel.hpp"
 
 using namespace astar;
 
-HybridAstar::HybridAstar(VehicleModel &vehicle_) : vehicle(vehicle_), grid(nullptr), reverse_factor(4), gear_switch_cost(8)
-{
-}
-
-// PRIVATE METHODS
+HybridAstar::HybridAstar(VehicleModel &vehicle_, InternalGridMapRef map) : reverse_factor(4), gear_switch_cost(8), rs(),
+	vehicle(vehicle_), grid(map), heuristic(), open(nullptr), discovered(), invalid() {}
 
 // remove all nodes
 void HybridAstar::RemoveAllNodes() {
@@ -84,8 +80,6 @@ StateArrayPtr HybridAstar::RebuildPath(HybridAstarNodePtr n, const State2D &goal
     std::list<State2D> &states(nodes->states);
 
     // a helper node pointer
-    HybridAstarNodePtr tmp = nullptr;
-
     // counter
     unsigned int subpathSize = 0;
 
@@ -114,7 +108,7 @@ StateArrayPtr HybridAstar::RebuildPath(HybridAstarNodePtr n, const State2D &goal
             subpathSize = subpath->states.size();
 
             // prepend the resulting subpath to the current path
-            for (unsigned int i = subpathSize - 1; i >= 0; i--) {
+            for (int i = subpathSize - 1; i >= 0; i--) {
 
                 // save the current state to the list
                 states.push_front(subpath->states[i]);
@@ -138,13 +132,16 @@ StateArrayPtr HybridAstar::RebuildPath(HybridAstarNodePtr n, const State2D &goal
     // and append the current
     if (1 < states.size()) {
 
+    	// the auxiliary iterators
+        std::list<State2D>::iterator prev, next;
+
         // get the first iterator
-        std::list<State2D>::iterator prev = states.begin();
+        prev = next = states.begin();
 
-        // get the next iterator
-        std::list<State2D>::iterator next = std::advance(prev, 1);
+        // update the next pointer
+        ++next;
 
-        // get the end iterator
+        // get the end pointer
         std::list<State2D>::iterator end = states.end();
 
         while (next != end) {
@@ -187,15 +184,18 @@ HybridAstarNodePtr HybridAstar::GetReedsSheppChild(const Pose2D &start, const Po
         bool safe = true;
 
         // get the states in the Reeds-Shepp curve
-        PoseArrayPtr path = rs.Discretize(start, action_set, vehicle.min_turn_radius, grid.inverse_resolution);
+        StateArrayPtr path = rs.Discretize(start, action_set, vehicle.min_turn_radius, grid.inverse_resolution);
 
         // a reference helper, just in case
-        std::vector<Pose2D>& states(path->poses);
+        std::vector<State2D>& states(path->states);
+
+        // get the states end pointer
+        std::vector<State2D>::iterator end = states.end();
 
         // iterate over the state list
-        for (std::vector<Pose2D>::iterator it = states.begin(); it < states.end(); ++it) {
+        for (std::vector<State2D>::iterator it = states.begin(); it < end; ++it) {
 
-            if (!grid.isValidPoint(it->position) || !grid.isSafePlace(*it)) {
+            if (!grid.isValidPoint(it->position) || !grid.isSafePlace(vehicle.GetVehicleBodyCircles(*it), vehicle.safety_factor)) {
 
                 // not a good state
                 safe = false;
@@ -241,7 +241,7 @@ HybridAstarNodeArrayPtr HybridAstar::GetChidlren(const Pose2D &start, const Pose
         child_pose = vehicle.NextPose(start, steer, gear, length, vehicle.min_turn_radius);
 
         // verify the safety condition and the grid boundary
-        if (grid.isValidPoint(child_pose.position) && grid.isSafePlace(child_pose)) {
+        if (grid.isValidPoint(child_pose.position) && grid.isSafePlace(vehicle.GetVehicleBodyCircles(child_pose), vehicle.safety_factor)) {
 
             // append to the children list
             nodes.push_back(new HybridAstarNode(child_pose, new ReedsSheppAction(steer, gear, length)));
@@ -286,8 +286,8 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMap &grid_map, const State2D &st
 
     // syntactic sugar
     // ge the reference to the base class
-    Pose2D &goal_pose(goal);
-    Pose2D &start_pose(start);
+    Pose2D goal_pose(goal.position, goal.orientation);
+    Pose2D start_pose(start.position, start.orientation);
 
     // update the heuristic to the new goal
     heuristic.UpdateGoal(grid_map, goal_pose);
@@ -339,7 +339,7 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMap &grid_map, const State2D &st
         if (goal_pose == n->pose) {
 
             // rebuild the entire path
-            StateListPtr resulting_path = RebuildPath(n, goal);
+            StateArrayPtr resulting_path = RebuildPath(n, goal);
 
             // clear all opened and expanded nodes
             RemoveAllNodes();
@@ -471,5 +471,15 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMap &grid_map, const State2D &st
     RemoveAllNodes();
 
     return new StateArray();
+
+}
+
+// get the path cost
+double HybridAstar::PathCost(const astar::Pose2D& start, const astar::Pose2D& goal, double length, bool reverse_gear) {
+
+	if (reverse_gear)
+		return start.position.x + goal.orientation * length;
+	else
+		return std::numeric_limits<double>::max();
 
 }

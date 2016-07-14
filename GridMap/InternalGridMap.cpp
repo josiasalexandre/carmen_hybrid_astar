@@ -6,12 +6,11 @@ InternalGridMap::InternalGridMap() :
 	width(0), width_2(0),
 	height(0), height_2(0),
 	size(0),
-	resolution(0), inverse_resolution(0), diagonal_resolution(0),
+	diagonal_resolution(0),
 	origin(),
 	grid_map(nullptr),
-	voronoi()
+	voronoi(), resolution(0.0), inverse_resolution(0.0)
 {
-
 }
 
 // basic destructor
@@ -40,7 +39,7 @@ void InternalGridMap::RemoveGridMap() {
 // get the map parameters and allocate the grid map in the memmory
 void InternalGridMap::InitializeGridMap(unsigned int h, unsigned int w, double res, const astar::Vector2D<double> &_origin) {
 
-	if (w != width || h != height || res != resolution || _origin != origin) {
+	if (w != width || h != height || res != resolution ||  origin != _origin) {
 
 		// Remove the current grid map
 		RemoveGridMap();
@@ -71,26 +70,34 @@ void InternalGridMap::InitializeGridMap(unsigned int h, unsigned int w, double r
 
 }
 
+// is a valid cell?
+bool InternalGridMap::isValidPoint(const astar::Vector2D<double> &position) {
+
+	unsigned int row = std::floor((position.y - origin.y) * inverse_resolution);
+	unsigned int col = std::floor((position.x - origin.x) * inverse_resolution);
+
+	return (height > row && width > col);
+
+}
+
 // verify if a given pose is a valid one
 bool InternalGridMap::isSafePlace(const std::vector<astar::Circle> &body, double safety_factor) {
 
 	// the row and column index
-	int c, r;
-
-	// the current circle
-	astar::Circle &circle;
+	unsigned int c, r;
 
 	// the obstacle distance
 	double obstacle_distance;
 
 	for (unsigned int i = 0; i < body.size(); ++i) {
 
-		circle = body[i];
+		// the current circle
+		const astar::Circle &circle(body[i]);
 
 		c = std::floor((circle.position.x - origin.x) * inverse_resolution);
 		r = std::floor((circle.position.y - origin.y) * inverse_resolution);
 
-		if (0 > r || height <= r || 0 > c || width <= c) {
+		if (height <= r || width <= c) {
 			return false;
 		}
 
@@ -104,6 +111,19 @@ bool InternalGridMap::isSafePlace(const std::vector<astar::Circle> &body, double
 	}
 
 	return true;
+
+}
+
+// return a cell given a pose
+GridMapCellPtr InternalGridMap::PoseToCell(const astar::Pose2D &p) {
+
+	unsigned int row = std::floor((p.position.y - origin.y) * inverse_resolution);
+	unsigned int col = std::floor((p.position.x - origin.x) * inverse_resolution);
+
+	if (height > row && width > col)
+		return &grid_map[row][col];
+	else
+		return nullptr;
 
 }
 
@@ -149,4 +169,22 @@ astar::GVDLau* InternalGridMap::GetGVD() {
 
 	return &voronoi;
 
+}
+
+// indirect obstacle distance
+double InternalGridMap::GetObstacleDistance(const astar::Vector2D<double> &position) {
+
+	unsigned int row = std::floor((position.y - origin.y) * inverse_resolution);
+	unsigned int col = std::floor((position.x - origin.x) * inverse_resolution);
+
+	return voronoi.GetObstacleDistance(row, col);
+}
+
+// indirect voronoi edge distance
+double InternalGridMap::GetVoronoiDistance(const astar::Vector2D<double> &position) {
+
+	unsigned int row = std::floor((position.y - origin.y) * inverse_resolution);
+	unsigned int col = std::floor((position.x - origin.x) * inverse_resolution);
+
+	return voronoi.GetVoronoiDistance(row, col);
 }

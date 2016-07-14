@@ -1,7 +1,7 @@
 #ifndef KINEMATIC_VEHICLE_MODEL_HPP
 #define KINEMATIC_VEHICLE_MODEL_HPP
 
-#include "../Entities/Pose2D.hpp"
+#include "../Entities/State2D.hpp"
 #include "../ReedsShepp/ReedsSheppAction.hpp"
 #include "../PathFinding/HybridAstar/HybridAstarNode.hpp"
 #include "../Entities/Circle.hpp"

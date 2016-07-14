@@ -1,4 +1,5 @@
 #include "HybridAstarNode.hpp"
+#include "../../GridMap/GridMapCell.hpp"
 
 using namespace astar;
 
@@ -6,10 +7,10 @@ using namespace astar;
 HybridAstarNode::HybridAstarNode(
         const Pose2D &p,
         ReedsSheppActionPtr rsAction,
-        const GridMapCellPtr c = nullptr,
-        double cost = 0.0,
-        double heuristicCost = 0.0,
-        HybridAstarNode *n = nullptr
+        const GridMapCellPtr c,
+        double cost,
+        double heuristicCost,
+        HybridAstarNode *n
     ) : pose(p), action(rsAction), action_set(0), g(cost), f(heuristicCost), parent(n), cell(c), handle(nullptr)
 {}
 
@@ -17,7 +18,7 @@ HybridAstarNode::HybridAstarNode(
 HybridAstarNode::HybridAstarNode(
     const Pose2D &p,
     ReedsSheppActionSetPtr rsActionSet,
-    GridMapCellPtr c = nullptr,
+    GridMapCellPtr c,
     double cost,
     double heuristicCost,
     HybridAstarNodePtr n
@@ -30,7 +31,8 @@ HybridAstarNode::~HybridAstarNode() {
     // update the cell status
 
     // the cell should not point to any HybridAstarNode
-    cell->node = nullptr;
+	if (nullptr != cell)
+		cell->node = nullptr;
 
     // delete the action
     if (nullptr != action) {
