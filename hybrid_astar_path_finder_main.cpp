@@ -186,7 +186,9 @@ behavior_selector_state_message_handler(carmen_behavior_selector_state_message *
 static void
 map_server_compact_cost_map_message_handler(carmen_map_server_compact_cost_map_message *msg)
 {
+	std::cout << "Antes\n";
     g_hybrid_astar->update_map(msg);
+	std::cout << "Depois\n";
 }
 
 static void
@@ -224,6 +226,7 @@ signal_handler(int sig)
 void
 register_handlers_specific()
 {
+	/*
     carmen_subscribe_message(
             (char *)CARMEN_NAVIGATOR_ACKERMAN_GO_NAME,
             (char *)CARMEN_DEFAULT_MESSAGE_FMT,
@@ -238,11 +241,13 @@ register_handlers_specific()
             (carmen_handler_t)navigator_astar_stop_message_handler,
             CARMEN_SUBSCRIBE_LATEST);
 
+	 */
     carmen_map_server_subscribe_compact_cost_map(
             NULL,
             (carmen_handler_t) map_server_compact_cost_map_message_handler,
             CARMEN_SUBSCRIBE_LATEST);
 
+    /*
     carmen_map_server_subscribe_compact_lane_map(
             NULL, (carmen_handler_t) map_server_compact_lane_map_message_handler,
             CARMEN_SUBSCRIBE_LATEST);
@@ -253,6 +258,7 @@ register_handlers_specific()
             NULL, sizeof(carmen_navigator_ackerman_set_goal_message),
             (carmen_handler_t)navigator_ackerman_set_goal_message_handler,
             CARMEN_SUBSCRIBE_LATEST);
+	 */
 }
 
 
@@ -261,6 +267,7 @@ register_handlers()
 {
     signal(SIGINT, signal_handler);
 
+    /*
     if (g_hybrid_astar->simulation_mode)
         carmen_simulator_ackerman_subscribe_truepos_message(NULL, (carmen_handler_t) simulator_ackerman_truepos_message_handler, CARMEN_SUBSCRIBE_LATEST);
     else
@@ -273,7 +280,7 @@ register_handlers()
     carmen_behavior_selector_subscribe_goal_list_message(NULL, (carmen_handler_t) behaviour_selector_goal_list_message_handler, CARMEN_SUBSCRIBE_LATEST);
 
     // carmen_rddf_subscribe_road_profile_message(&goal_list_message, (carmen_handler_t) rddf_message_handler, CARMEN_SUBSCRIBE_LATEST);
-
+     */
     register_handlers_specific();
 }
 
@@ -281,25 +288,24 @@ register_handlers()
 int
 main(int argc, char **argv)
 {
- /*
-	// build the HybridAstarMotionPlanner
-    g_hybrid_astar = new astar::HybridAstarPathFinder(argc, argv);
-*/
 
     carmen_ipc_initialize(argc, argv);
     carmen_param_check_version(argv[0]);
 
-    // register all the current handlers
-    register_handlers();
+    // build the main planner object
+    g_hybrid_astar = new astar::HybridAstarPathFinder(argc, argv);
 
     // define the hybrid astar message
     carmen_hybrid_astar_define_path_message();
 
+    // register all the current handlers
+    register_handlers();
+
     // the main IPC loop
     carmen_ipc_dispatch();
-/*
+
     // delete the global pointer
     delete(g_hybrid_astar);
-*/
+
     return 0;
 }

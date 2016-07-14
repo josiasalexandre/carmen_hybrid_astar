@@ -1,5 +1,6 @@
 #include "GVDLau.hpp"
 
+#include <ctime>
 #include <limits>
 #include <climits>
 #include <cmath>
@@ -17,7 +18,7 @@ GVDLau::GVDLau() :
 	widthminus1(0),
 	alpha(20.0),
 	max_dist(30.0),
-	max_sqdist(900), max_double(std::numeric_limits<double>::max()) {}
+	max_sqdist(900), max_double(std::numeric_limits<double>::max()), allocated(false) {}
 
 // basic destructor
 GVDLau::~GVDLau() {
@@ -40,9 +41,9 @@ void GVDLau::RemoveDiagram() {
 }
 
 // verify a given index against the map dimensions
-bool GVDLau::isValidIndex(const astar::GridCellIndexRef index) {
+bool GVDLau::isValidIndex(const astar::GridCellIndexRef index) const {
 
-	return (0 < index.row && heightminus1 > index.row && 0 < index.col && widthminus1 > index.col);
+	return (0 <= index.row && height > index.row && 0 <= index.col && width > index.col);
 }
 
 // get the squared distance between two cells
@@ -57,10 +58,16 @@ int GVDLau::DistanceSquared(const astar::GridCellIndexRef a, const astar::GridCe
 // verify if a given cell is occupied, wich means that the nearest obstacle is the given cell
 bool GVDLau::isOccupied(const astar::GridCellIndexRef index) {
 
-	// get the cell reference
-	GVDLau::DataCellRef c(data[index.row][index.col]);
+	if (isValidIndex(index)) {
 
-	return (index.col == c.nearest_obstacle.col  && index.row == c.nearest_obstacle.row);
+		// get the cell reference
+		GVDLau::DataCellRef c(data[index.row][index.col]);
+
+		return (index.col == c.nearest_obstacle.col  && index.row == c.nearest_obstacle.row);
+
+	}
+
+	return false;
 }
 
 // verify if a given cell is occupied, wich means that the nearest obstacle is the given cell
@@ -71,11 +78,26 @@ bool GVDLau::isOccupied(const astar::GridCellIndexRef index, const DataCellRef c
 
 }
 
-// verify if a given is voro occupied, wich means that the nearest voro is the give cell
-// overloaded version
-bool GVDLau::isVoroOccupied(const GridCellIndexRef s, const DataCellRef c) {
+// verify if a given cell is voro occupied, which means that the neares voro is the given cell
+bool GVDLau::isVoroOccupied(const GridCellIndexRef index) {
 
-	return (c.nearest_voro.row == s.row && c.nearest_voro.col == s.col);
+	if (isValidIndex(index)) {
+
+		// get the cell reference
+		GVDLau::DataCellRef c(data[index.row][index.col]);
+
+		return (c.nearest_voro.row == index.row && c.nearest_voro.col == index.col);
+	}
+
+	return false;
+
+}
+
+// verify if a given cell is voro occupied, wich means that the nearest voro is the given cell
+// overloaded version
+bool GVDLau::isVoroOccupied(const GridCellIndexRef index, const DataCellRef c) {
+
+	return (c.nearest_voro.row == index.row && c.nearest_voro.col == index.col);
 
 }
 
@@ -362,7 +384,7 @@ void GVDLau::UpdateVoronoiMap() {
 				// update the voro to raise flag
 				s.voro_to_raise = false;
 
-			} else if (isVoroOccupied(s.nearest_voro, data[s.nearest_voro.row][s.nearest_voro.col])) {
+			} else if (isVoroOccupied(s.nearest_voro)) {
 
 				// reset the voro_to_process flag
 				s.voro_to_process = false;
@@ -584,6 +606,10 @@ void GVDLau::SetObstacle(int row, int col) {
 	// get the current DataCell
 	GVDLau::DataCellRef c(data[row][col]);
 
+	if (c.nearest_obstacle.row == row && c.nearest_obstacle.col == col) {
+		return;
+	}
+
 	// update the current cell values
 	c.dist = 0.0;
 	c.sqdist = 0;
@@ -601,6 +627,10 @@ void GVDLau::RemoveObstacle(int row, int col) {
 
 	// get the current DataCell
 	GVDLau::DataCellRef c(data[row][col]);
+
+	if (c.nearest_obstacle.row != row || c.nearest_obstacle.col != col) {
+		return;
+	}
 
 	// update the current cell values
 	c.dist = max_double;
