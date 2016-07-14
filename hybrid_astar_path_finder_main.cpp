@@ -5,6 +5,10 @@
 #include <carmen/simulator_ackerman_interface.h>
 #include <carmen/navigator_ackerman_interface.h>
 #include <carmen/robot_ackerman_interface.h>
+#include <carmen/fused_odometry_interface.h>
+#include <carmen/map_server_interface.h>
+
+#include "Entities/State2D.hpp"
 #include "Interface/hybrid_astar_interface.h"
 #include "PathFinding/HybridAstarPathFinder.hpp"
 
@@ -207,7 +211,7 @@ navigator_astar_stop_message_handler()
 static void
 signal_handler(int sig)
 {
-    std::cout << std::endl << "Signal " << sig << "received, exiting program ..." << std::endl;
+    std::cout << "\nSignal " << sig << "received, exiting program ...\n";
 
     // remove the global pointer
     delete(g_hybrid_astar);
@@ -251,11 +255,6 @@ register_handlers_specific()
             CARMEN_SUBSCRIBE_LATEST);
 }
 
-void
-rddf_message_handler(/*carmen_rddf_road_profile_message *message*/)
-{
-    // TODO
-}
 
 void
 register_handlers()
@@ -278,12 +277,14 @@ register_handlers()
     register_handlers_specific();
 }
 
+
 int
 main(int argc, char **argv)
 {
-
+ /*
 	// build the HybridAstarMotionPlanner
     g_hybrid_astar = new astar::HybridAstarPathFinder(argc, argv);
+*/
 
     carmen_ipc_initialize(argc, argv);
     carmen_param_check_version(argv[0]);
@@ -296,9 +297,9 @@ main(int argc, char **argv)
 
     // the main IPC loop
     carmen_ipc_dispatch();
-
+/*
     // delete the global pointer
     delete(g_hybrid_astar);
-
+*/
     return 0;
 }

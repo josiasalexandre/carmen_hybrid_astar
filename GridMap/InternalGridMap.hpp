@@ -24,7 +24,7 @@ class InternalGridMap {
         unsigned int size;
 
         // the grid map resolution
-        double resolution, inverse_resolution, diagonal_resolution;
+        double diagonal_resolution;
 
         // the grid map origin
         astar::Vector2D<double> origin;
@@ -43,8 +43,9 @@ class InternalGridMap {
     public:
 
         // PUBLIC ATTRIBUTES
+        double resolution, inverse_resolution;
 
-        // PUBLIC METHODS
+		// PUBLIC METHODS
 
         // basic constructor
         InternalGridMap();
@@ -55,8 +56,14 @@ class InternalGridMap {
         // initialize the grid map given the map dimensions
         void InitializeGridMap(unsigned int w, unsigned int h, double res, const astar::Vector2D<double> &_origin);
 
+        // is a valid cell?
+        bool isValidPoint(const astar::Vector2D<double>&);
+
         // verify if a given pose is a valid one
         bool isSafePlace(const std::vector<astar::Circle> &body, double safety_factor);
+
+        // return a cell given a pose
+        GridMapCellPtr PoseToCell(const astar::Pose2D&);
 
         // occupy a given cell
         void OccupyCell(int row, int col);
@@ -67,11 +74,16 @@ class InternalGridMap {
         // update the internal grid map
         void UpdateGridMap();
 
-        // return a cell given a pose
-        GridMapCellPtr PoseToCell(const astar::Pose2D&);
-
         // get the current grid map
         astar::GVDLau* GetGVD();
+
+        // indirect obstacle distance
+        double GetObstacleDistance(const astar::Vector2D<double>&);
+
+        // indirect voronoi edge distance
+        double GetVoronoiDistance(const astar::Vector2D<double>&);
+
+
 
 };
 

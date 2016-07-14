@@ -120,8 +120,11 @@ StateArrayPtr ReedsSheppModel::Discretize(
 
     if (0 < a_size) {
 
+    	// get the end pointer
+    	std::vector<ReedsSheppAction>::iterator end = action_set->actions.end();
+
         // get the iterator
-        for (std::vector<ReedsSheppAction>::iterator it = action_set->actions.begin();  it < action_set->actions.end(); ++it) {
+        for (std::vector<ReedsSheppAction>::iterator it = action_set->actions.begin();  it < end; ++it) {
 
             // subdivide the entire arc length by the grid resolution
             unsigned int n = ceil(it->length * radcurv * inverse_resolution);
