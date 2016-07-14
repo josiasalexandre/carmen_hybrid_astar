@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include "HybridAstarPathFinder.hpp"
 
 using namespace astar;
@@ -24,18 +26,22 @@ HybridAstarPathFinder::HybridAstarPathFinder(int argc, char **argv) :
 void
 HybridAstarPathFinder::get_parameters(int argc, char **argv)
 {
+	// hard setup
+	simulation_mode = true;
+
 	carmen_param_t planner_params_list[] = {
-	// get the motion planner parameters
-		{(char *)"astar",   (char *)"simulation_mode",                           	CARMEN_PARAM_ONOFF, &simulation_mode,                    		                    1, NULL},
+		//get the motion planner parameters
+		{(char *)"astar",   (char *)"simulation_mode",                           	CARMEN_PARAM_ONOFF, &this->simulation_mode,                    		                    1, NULL},
 	};
 
+
     // vehicle parameters
-    carmen_param_t vehicle_params_list[21] = {
+    carmen_param_t vehicle_params_list[] = {
         {(char *)"robot",   (char *)"max_steering_angle",                           CARMEN_PARAM_DOUBLE, &vehicle_model.max_wheel_deflection,                           1, NULL},
         {(char *)"robot",   (char *)"desired_steering_command_rate",                CARMEN_PARAM_DOUBLE, &vehicle_model.steering_command_rate,                          1, NULL},
         {(char *)"robot",   (char *)"understeer_coeficient",                        CARMEN_PARAM_DOUBLE, &vehicle_model.understeer,                                     1, NULL},
-        {(char *)"robot",   (char *)"robot_maximum_capable_curvature",              CARMEN_PARAM_DOUBLE, &vehicle_model.min_turn_radius,                                1, NULL},
-        {(char *)"robot",   (char *)"default_speed",                                CARMEN_PARAM_DOUBLE, &vehicle_model.default_speed,                                  1, NULL},
+        {(char *)"robot",   (char *)"maximum_capable_curvature",              		CARMEN_PARAM_DOUBLE, &vehicle_model.min_turn_radius,                                1, NULL},
+        {(char *)"robot",   (char *)"max_velocity",                                	CARMEN_PARAM_DOUBLE, &vehicle_model.max_velocity,                                  1, NULL},
         {(char *)"robot",   (char *)"maximum_speed_forward",                        CARMEN_PARAM_DOUBLE, &vehicle_model.max_forward_speed,                              1, NULL},
         {(char *)"robot",   (char *)"maximum_speed_reverse",                        CARMEN_PARAM_DOUBLE, &vehicle_model.max_backward_speed,                             1, NULL},
         {(char *)"robot",   (char *)"length",                                       CARMEN_PARAM_DOUBLE, &vehicle_model.length,                                         1, NULL},
@@ -50,15 +56,14 @@ HybridAstarPathFinder::get_parameters(int argc, char **argv)
         {(char *)"robot",   (char *)"maximum_deceleration_reverse",                 CARMEN_PARAM_DOUBLE, &vehicle_model.max_backward_deceleration,                      1, NULL},
         {(char *)"robot",   (char *)"desired_acceleration",                         CARMEN_PARAM_DOUBLE, &vehicle_model.desired_forward_acceleration,                   1, NULL},
         {(char *)"robot",   (char *)"desired_decelaration_forward",                 CARMEN_PARAM_DOUBLE, &vehicle_model.desired_forward_deceleration,                   1, NULL},
-        {(char *)"robot",   (char *)"desired_accelaration_reverse",                 CARMEN_PARAM_DOUBLE, &vehicle_model.desired_backward_acceleration,                  1, NULL},
+        {(char *)"robot",   (char *)"maximum_acceleration_reverse",                 CARMEN_PARAM_DOUBLE, &vehicle_model.desired_backward_acceleration,                  1, NULL},
         {(char *)"robot",   (char *)"desired_decelaration_reverse",                 CARMEN_PARAM_DOUBLE, &vehicle_model.desired_backward_deceleration,                  1, NULL}
     };
 
-    carmen_param_allow_unfound_variables(1);
-    carmen_param_install_params(argc, argv, planner_params_list, 21);
+    carmen_param_install_params(argc, argv, vehicle_params_list, sizeof(vehicle_params_list) / sizeof(vehicle_params_list[0]));
 
     carmen_param_allow_unfound_variables(1);
-    carmen_param_install_params(argc, argv, vehicle_params_list, 21);
+    carmen_param_install_params(argc, argv, planner_params_list, sizeof(planner_params_list) / sizeof(planner_params_list[0]));
 
 }
 
@@ -143,19 +148,15 @@ HybridAstarPathFinder::update_map(carmen_map_server_compact_cost_map_message *ms
 
 		int *x_coord = msg->coord_x;
 		int *y_coord = msg->coord_y;
-		int c, r;
 		double *val = msg->value;
 		unsigned int size = msg->size;
 
 		for (unsigned int i = 0; i < size; i++) {
 
-			r = std::floor((y_coord[i] - y_origin) * inverse_resolution);
-			c = std::floor((x_coord[i] - x_origin) * inverse_resolution);
-
 			if (0.5 < val[i]) {
-				grid.OccupyCell(r, c);
+				grid.OccupyCell(y_coord[i], x_coord[i]);
 			} else {
-				grid.ClearCell(r, c);
+				grid.ClearCell(y_coord[i], x_coord[i]);
 			}
 
 		}

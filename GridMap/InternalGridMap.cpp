@@ -1,5 +1,8 @@
-#include "InternalGridMap.hpp"
+#include <iostream>
 #include <cmath>
+
+#include "InternalGridMap.hpp"
+
 using namespace astar;
 
 InternalGridMap::InternalGridMap() :

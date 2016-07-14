@@ -34,8 +34,8 @@ class VehicleModel {
         // default turn radius, it
         double min_turn_radius;
 
-        // default speed to simulation purpose
-        double default_speed;
+        // the max velocity
+        double max_velocity;
 
         // max allowed forward speed
         double max_forward_speed;

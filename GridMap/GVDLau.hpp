@@ -50,6 +50,9 @@ class GVDLau {
 		// double max value
 		double max_double;
 
+		// is it allocated?
+		bool allocated;
+
 		//queues
 		astar::BucketPrioQueue<astar::GridCellIndex> open;
 		astar::BucketPrioQueue<astar::GridCellIndex> voro_open;
@@ -60,7 +63,7 @@ class GVDLau {
 		void RemoveDiagram();
 
 		// verify a given index against the map dimensions
-		bool isValidIndex(const astar::GridCellIndexRef);
+		bool isValidIndex(const astar::GridCellIndexRef) const;
 
 		// get the squared distance between two cells
 		int DistanceSquared(const astar::GridCellIndexRef, const astar::GridCellIndexRef);
@@ -71,6 +74,9 @@ class GVDLau {
 		// verify if a given cell is occupied, wich means that the nearest obstacle is the given cell
 		// overloaded version
 		inline bool isOccupied(const astar::GridCellIndexRef, const DataCellRef);
+
+		// verify if a given is voro occupied, wich means that the nearest voro is the give cell
+		bool isVoroOccupied(const astar::GridCellIndexRef);
 
 		// verify if a given is voro occupied, wich means that the nearest voro is the give cell
 		bool isVoroOccupied(const astar::GridCellIndexRef, const DataCellRef);

@@ -193,7 +193,7 @@ HybridAstarNodePtr HybridAstar::GetReedsSheppChild(const Pose2D &start, const Po
         std::vector<State2D>::iterator end = states.end();
 
         // iterate over the state list
-        for (std::vector<State2D>::iterator it = states.begin(); it < end; ++it) {
+        for (std::vector<State2D>::iterator it = states.begin(); it != end; ++it) {
 
             if (!grid.isValidPoint(it->position) || !grid.isSafePlace(vehicle.GetVehicleBodyCircles(*it), vehicle.safety_factor)) {
 
@@ -478,7 +478,7 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMap &grid_map, const State2D &st
 double HybridAstar::PathCost(const astar::Pose2D& start, const astar::Pose2D& goal, double length, bool reverse_gear) {
 
 	if (reverse_gear)
-		return start.position.x + goal.orientation * length;
+		return (start.position.x + goal.orientation * length)*0.0;
 	else
 		return std::numeric_limits<double>::max();
 
