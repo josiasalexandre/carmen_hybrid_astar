@@ -1,7 +1,7 @@
 #ifndef KD_TREE_NODE_TEMPLATE_HPP
 #define KD_TREE_NODE_TEMPLATE_HPP
 
-#include "../Entities/Point.hpp"
+#include "../Entities/PointT.hpp"
 
 namespace astar {
 
@@ -15,7 +15,7 @@ class KDTreeNode {
 		// public members
 
 		// the point stored
-		astar::Point<T, D> point;
+		astar::PointT<T, D> point;
 
 		// the left pointer
 		KDTreeNode *left;
@@ -24,7 +24,7 @@ class KDTreeNode {
 		KDTreeNode *right;
 
 		// basic construtor
-		KDTreeNode (const astar::Point<T, D>& p) : point(p), left(nullptr), right(nullptr) {}
+		KDTreeNode (const astar::PointT<T, D>& p) : point(p), left(nullptr), right(nullptr) {}
 
 		// basic destructor
 		~KDTreeNode() {

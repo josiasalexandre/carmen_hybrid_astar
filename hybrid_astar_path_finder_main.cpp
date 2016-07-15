@@ -76,35 +76,44 @@ publish_hybrid_astar_path(astar::StateArrayPtr path)
 static void
 localize_ackerman_globalpos_message_handler(carmen_localize_ackerman_globalpos_message *msg)
 {
-    if (g_hybrid_astar->activated)
-    {
-        // get the start pose
-        g_hybrid_astar->set_initial_state(
-                msg->globalpos.x, msg->globalpos.y, msg->globalpos.theta, carmen_get_time() - msg->timestamp);
+	if (nullptr != msg) {
 
-        // get the resulting path
-        astar::StateArrayPtr path = g_hybrid_astar->replan();
+		// get the start pose
+		g_hybrid_astar->set_initial_state(
+				msg->globalpos.x, msg->globalpos.y, msg->globalpos.theta, carmen_get_time() - msg->timestamp);
 
-        if (nullptr != path)
-            publish_hybrid_astar_path(path);
-    }
+		if (g_hybrid_astar->activated)
+		{
+			// get the resulting path
+			astar::StateArrayPtr path = g_hybrid_astar->replan();
+
+			if (nullptr != path)
+				publish_hybrid_astar_path(path);
+		}
+	}
 }
 
 static void
 simulator_ackerman_truepos_message_handler(carmen_simulator_ackerman_truepos_message *msg)
 {
-    if (g_hybrid_astar->activated)
-    {
+
+	if (nullptr != msg) {
+
         // the current message is incomplete
         g_hybrid_astar->set_initial_state(
                 msg->truepose.x, msg->truepose.y, msg->truepose.theta, carmen_get_time() - msg->timestamp);
 
-        // get the resulting path
-        astar::StateArrayPtr path = g_hybrid_astar->replan();
+		if (g_hybrid_astar->activated) {
 
-        if (nullptr != path)
-            publish_hybrid_astar_path(path);
-    }
+			// get the resulting path
+			astar::StateArrayPtr path = g_hybrid_astar->replan();
+
+			if (nullptr != path)
+				publish_hybrid_astar_path(path);
+
+		}
+	}
+
 }
 
 static void
@@ -186,9 +195,7 @@ behavior_selector_state_message_handler(carmen_behavior_selector_state_message *
 static void
 map_server_compact_cost_map_message_handler(carmen_map_server_compact_cost_map_message *msg)
 {
-	std::cout << "Antes\n";
-    g_hybrid_astar->update_map(msg);
-	std::cout << "Depois\n";
+	g_hybrid_astar->update_map(msg);
 }
 
 static void
@@ -208,6 +215,7 @@ static void
 navigator_astar_stop_message_handler()
 {
     g_hybrid_astar->activated = false;
+
 }
 
 static void
@@ -234,6 +242,7 @@ register_handlers_specific()
             (carmen_handler_t)navigator_astar_go_message_handler,
             CARMEN_SUBSCRIBE_LATEST);
 
+	 */
     carmen_subscribe_message(
             (char *)CARMEN_NAVIGATOR_ACKERMAN_STOP_NAME,
             (char *)CARMEN_DEFAULT_MESSAGE_FMT,
@@ -241,7 +250,6 @@ register_handlers_specific()
             (carmen_handler_t)navigator_astar_stop_message_handler,
             CARMEN_SUBSCRIBE_LATEST);
 
-	 */
     carmen_map_server_subscribe_compact_cost_map(
             NULL,
             (carmen_handler_t) map_server_compact_cost_map_message_handler,
@@ -267,6 +275,7 @@ register_handlers()
 {
     signal(SIGINT, signal_handler);
 
+	carmen_simulator_ackerman_subscribe_truepos_message(NULL, (carmen_handler_t) simulator_ackerman_truepos_message_handler, CARMEN_SUBSCRIBE_LATEST);
     /*
     if (g_hybrid_astar->simulation_mode)
         carmen_simulator_ackerman_subscribe_truepos_message(NULL, (carmen_handler_t) simulator_ackerman_truepos_message_handler, CARMEN_SUBSCRIBE_LATEST);
@@ -283,6 +292,9 @@ register_handlers()
      */
     register_handlers_specific();
 }
+
+
+
 
 
 int

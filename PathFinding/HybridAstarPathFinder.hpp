@@ -1,6 +1,9 @@
 #ifndef HYBRID_ASTAR_PATH_FINDER_HPP
 #define HYBRID_ASTAR_PATH_FINDER_HPP
 
+#include <thread>
+#include <mutex>
+
 #include <carmen/carmen.h>
 #include <carmen/map_server_messages.h>
 
@@ -22,11 +25,14 @@ class HybridAstarPathFinder {
         // the robot configuration
         astar::VehicleModel vehicle_model;
 
-        // the internal map
+        // the internal map represetation
         astar::InternalGridMap grid;
 
         // flag to indicate the grid map status
         bool initialized_grid_map;
+
+        // the current grid map mutex
+        std::mutex gm_mutex;
 
         // the hybrid astar search algorithm
         astar::HybridAstar path_finder;
@@ -62,6 +68,9 @@ class HybridAstarPathFinder {
 
         // get all the necessary parameters
         void get_parameters(int argc, char **argv);
+
+        // voronoi thread update
+        void voronoi_update(carmen_map_server_compact_cost_map_message *msg);
 
     public:
 

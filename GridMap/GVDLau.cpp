@@ -18,7 +18,10 @@ GVDLau::GVDLau() :
 	widthminus1(0),
 	alpha(20.0),
 	max_dist(30.0),
-	max_sqdist(900), max_double(std::numeric_limits<double>::max()), allocated(false) {}
+	max_sqdist(900),
+	max_double(std::numeric_limits<double>::max()),
+	initialized(false)
+{}
 
 // basic destructor
 GVDLau::~GVDLau() {
@@ -38,6 +41,7 @@ void GVDLau::RemoveDiagram() {
 
 		delete [] data;
 	}
+
 }
 
 // verify a given index against the map dimensions
@@ -165,12 +169,14 @@ void GVDLau::CheckVoro(GridCellIndexRef indexS, GridCellIndexRef indexN) {
             if (sStability <= nStability)
             {
             	s.voro = true;
-                SetVoro(indexS);
+
+            	SetVoro(indexS);
             }
             if (nStability <= sStability)
             {
             	n.voro = true;
-                SetVoro(indexN);
+
+            	SetVoro(indexN);
             }
 		}
 	}
@@ -438,6 +444,7 @@ void GVDLau::UpdateVoronoiMap() {
 			}
 		}
 	}
+
 }
 
 // update the path cost map
@@ -479,10 +486,9 @@ void GVDLau::InitializeEmpty(int h, int w) {
 			data = new GVDLau::DataCellPtr[height];
 
 			for (int i = 0; i < height; ++i) {
-
 				data[i] = new GVDLau::DataCell[width];
-
 			}
+
 		}
 
 		// clear the entire diagram
@@ -513,7 +519,6 @@ void GVDLau::InitializeMap(int h, int w, bool **map) {
 
 		if (height != h || width != w) {
 
-
 			// remove the old diagram
 			RemoveDiagram();
 
@@ -530,7 +535,6 @@ void GVDLau::InitializeMap(int h, int w, bool **map) {
 				data[i] = new GVDLau::DataCell[width];
 			}
 		}
-
 
 		// copy the given map
 		for (int r = 0; r < h; ++r) {
@@ -628,7 +632,7 @@ void GVDLau::RemoveObstacle(int row, int col) {
 	// get the current DataCell
 	GVDLau::DataCellRef c(data[row][col]);
 
-	if (c.nearest_obstacle.row != row || c.nearest_obstacle.col != col) {
+	if (-1 == c.nearest_obstacle.row || -1 == c.nearest_obstacle.col) {
 		return;
 	}
 
@@ -647,10 +651,16 @@ void GVDLau::RemoveObstacle(int row, int col) {
 // update the entire GVD
 void GVDLau::Update() {
 
+	int t1 = std::clock();
 	UpdateDistanceMap();
 	UpdateVoronoiMap();
 	UpdatePathCostMap();
+	int t2 = std::clock();
+	float diff = ((float)(t2 - t1) / 1000000.0 ) * 1000;
+	std::cout << "Done! Time: " << diff << "\n";
 
+	// swap the pointers
+	//std::swap(this->data, this->next_data);
 }
 
 // get the nearest obstacle distance
@@ -663,10 +673,11 @@ double GVDLau::GetObstacleDistance(int row, int col) {
 
 // get the nearest voronoi edge distance
 double GVDLau::GetVoronoiDistance(int row, int col) {
-	if (0 < row && height > row && 0 < col && width > col)
+	if (0 < row && height > row && 0 < col && width > col) {
 		return data[row][col].voro_dist;
-	else
-		return max_double;
+	}
+
+	return max_double;
 }
 
 // save the voronoi field map to an external file

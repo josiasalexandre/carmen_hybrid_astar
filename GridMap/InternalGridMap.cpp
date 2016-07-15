@@ -11,10 +11,9 @@ InternalGridMap::InternalGridMap() :
 	size(0),
 	diagonal_resolution(0),
 	origin(),
-	grid_map(nullptr),
+	grid_map(nullptr), map(nullptr),
 	voronoi(), resolution(0.0), inverse_resolution(0.0)
-{
-}
+{}
 
 // basic destructor
 InternalGridMap::~InternalGridMap() {
@@ -27,6 +26,7 @@ InternalGridMap::~InternalGridMap() {
 // remove the current grid map
 void InternalGridMap::RemoveGridMap() {
 
+	// the complex GridMapCell map
 	if (nullptr != grid_map) {
 
 		for (unsigned int i = 0; i < height; ++i) {
@@ -36,6 +36,19 @@ void InternalGridMap::RemoveGridMap() {
 		delete [] grid_map;
 
 	}
+
+	// the simple binary/boolean map
+	if (nullptr != map) {
+
+		for (unsigned int i = 0; i < height; ++i) {
+			delete [] map[i];
+		}
+
+		delete [] map;
+
+	}
+
+
 
 }
 
@@ -61,9 +74,13 @@ void InternalGridMap::InitializeGridMap(unsigned int h, unsigned int w, double r
 		// allocate the row pointers
 		grid_map = new GridMapCellPtr[height];
 		for (unsigned int i = 0; i < height; ++i) {
-
 			grid_map[i] = new GridMapCell[width];
+		}
 
+		// allocate the row pointers
+		map = new bool*[height];
+		for (unsigned int i = 0; i < height; ++i) {
+			map[i] = new bool[width];
 		}
 
 		// restart the voronoi diagram
@@ -138,7 +155,7 @@ void InternalGridMap::OccupyCell(int row, int col) {
 		// occupy the given cell
 		grid_map[row][col].occupancy = 1.0;
 
-		// set the given cell as an obstacle
+		// set the obstacle in the voronoi diagram
 		voronoi.SetObstacle(row, col);
 
 	}
@@ -153,7 +170,7 @@ void InternalGridMap::ClearCell(int row, int col) {
 		// clear the given cell
 		grid_map[row][col].occupancy = 0.0;
 
-		// clear the given obstacle
+		// remove the obstacle in the voronoi diagram
 		voronoi.RemoveObstacle(row, col);
 
 	}
@@ -163,6 +180,7 @@ void InternalGridMap::ClearCell(int row, int col) {
 // update the internal grid map
 void InternalGridMap::UpdateGridMap() {
 
+	// update the GVD
 	voronoi.Update();
 
 }
