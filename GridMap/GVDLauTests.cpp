@@ -90,6 +90,7 @@ int main (int argc, char **argv) {
 	//gvd.InitializeMap(height, width, map);
 	//std::cout << "Done!\n";
 
+
 	// hard update
 	for (unsigned int h = 0; h < height; ++h) {
 
@@ -97,21 +98,25 @@ int main (int argc, char **argv) {
 
 			if (map[h][c]) {
 				gvd.SetObstacle(h, c);
-			} else {
-				gvd.RemoveObstacle(h, c);
 			}
 		}
 
 	}
-
 	// update
 	std::cout << "\nUpdating the voronoi map ...\n";
 	//int t1 = std::clock();
 	gvd.Update();
 	std::cout << "Done!\n";
-	//int t2 = std::clock();
-	//float diff = ((float)(t2 - t1) / 1000000.0 ) * 1000;
-	//std::cout << "Done! Time: " << diff << "\n";
+
+	// initialize the map
+	/*std::cout << "\n------------->Re Initializing a " << width << "x" << height << " map\n";
+	gvd.InitializeMap(height, width, map);
+	std::cout << "Done!\n";
+
+	// update
+	std::cout << "\n------------>Updating the voronoi map again ...\n";
+	gvd.Update();
+	std::cout << "Done!\n";*/
 
 	// test the nearest obstacle query
 	std::cout << "\nNearest obstacle distance query for (500, 167), it should be: inf! ...\n";
@@ -127,7 +132,7 @@ int main (int argc, char **argv) {
 	double voro_dist = gvd.GetVoronoiDistance(500, 167);
 	std::cout << "Done! Result voro_dist(500, 167): " << voro_dist << "\n";
 
-	std::cout << "\nNearest obstacle distance query for (167, 500), it should not be: inf! ...\n";
+	std::cout << "\nNearest voronoi edge distance query for (167, 500), it should not be: inf! ...\n";
 	voro_dist = gvd.GetVoronoiDistance(167, 500);
 	std::cout << "Done! Result voro_dist(167, 500): " << voro_dist << "\n";
 

@@ -1,8 +1,7 @@
 #include <iostream>
 
-#include "Point.hpp"
-
 #include "Circle.hpp"
+#include "PointT.hpp"
 
 int main() {
 

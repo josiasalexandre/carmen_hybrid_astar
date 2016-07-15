@@ -1,8 +1,11 @@
 #ifndef GENERAL_VORONOI_DIAGRAM_HPP
 #define GENERAL_VORONOI_DIAGRAM_HPP
 
-#include "BucketedQueue.hpp"
 #include <string>
+#include <vector>
+#include <array>
+
+#include "BucketedQueue.hpp"
 
 namespace astar {
 
@@ -51,7 +54,7 @@ class GVDLau {
 		double max_double;
 
 		// is it allocated?
-		bool allocated;
+		bool initialized;
 
 		//queues
 		astar::BucketPrioQueue<astar::GridCellIndex> open;

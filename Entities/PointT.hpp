@@ -6,7 +6,7 @@
 namespace astar {
 
 template<typename T, unsigned int D>
-using Point = std::array<T, D>;
+using PointT = std::array<T, D>;
 
 }
 

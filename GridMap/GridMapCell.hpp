@@ -45,7 +45,7 @@ class GridMapCell {
         astar::HybridAstarNodePtr node;
 
         // PUBLIC METHODS
-        GridMapCell() : occupancy(-1), status(astar::UnknownNode), node(nullptr) {}
+        GridMapCell() : occupancy(0), status(astar::UnknownNode), node(nullptr) {}
 
 };
 

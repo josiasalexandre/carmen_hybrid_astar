@@ -6,7 +6,8 @@ MODULE_COMMENT = Hybrid A* with path optimization
 
 
 LINK = g++
-CXXFLAGS = -std=c++0x -O3 
+CXXFLAGS = -std=c++0x -O3
+CFLAGS += -O3
 
 # Application specific include directories.
 #IFLAGS +=
@@ -22,7 +23,7 @@ SOURCES = hybrid_astar_path_finder_main.cpp Interface/hybrid_astar_interface.cpp
 PUBLIC_BINARIES = path_finder
 PUBLIC_LIBRARIES = libhybrid_astar_interface.a
 
-TARGETS = path_finder libhybrid_astar_interface.a
+#TARGETS = path_finder libhybrid_astar_interface.a
 
 # Public headers, linked to 'carmen/include/carmen/'
 #PUBLIC_INCLUDES =

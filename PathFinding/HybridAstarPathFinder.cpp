@@ -6,11 +6,12 @@ using namespace astar;
 
 // basic constructor
 HybridAstarPathFinder::HybridAstarPathFinder(int argc, char **argv) :
-    vehicle_model(), grid(), initialized_grid_map(false), path_finder(vehicle_model, grid), path(nullptr), odometry_speed(0.0),
+    vehicle_model(), grid(), initialized_grid_map(false), gm_mutex(), path_finder(vehicle_model, grid), path(nullptr), odometry_speed(0.0),
     odometry_steering_angle(0.0), robot(), goal(), valid_goal(false), goal_list(nullptr),
     use_obstacle_avoider(true), activated(false), simulation_mode(false)
 
 {
+
     // read all parameters
     get_parameters(argc, argv);
 
@@ -133,39 +134,60 @@ void HybridAstarPathFinder::set_goal_list(astar::StateArrayPtr goals) {
     }
 }
 
+// voronoi thread update
+void HybridAstarPathFinder::voronoi_update(carmen_map_server_compact_cost_map_message *msg) {
+
+	double x_origin = msg->config.x_origin;
+	double y_origin = msg->config.y_origin;
+	double resolution = msg->config.resolution;
+	double inverse_resolution = 1.0/resolution;
+
+	grid.InitializeGridMap(msg->config.y_size, msg->config.x_size, resolution, Vector2D<double>(x_origin, y_origin));
+
+	int *x_coord = msg->coord_x;
+	int *y_coord = msg->coord_y;
+	double *val = msg->value;
+	unsigned int size = msg->size;
+
+
+	for (unsigned int i = 0; i < size; i++) {
+
+		int r = std::abs(std::floor(robot.position.y - (y_origin + y_coord[i] * resolution)));
+		int c = std::abs(std::floor(robot.position.x - (x_origin + x_coord[i] * resolution)));
+
+		if (0.5 < val[i]) {
+			grid.OccupyCell(y_coord[i], x_coord[i]);
+		} else {
+			grid.ClearCell(y_coord[i], x_coord[i]);
+		}
+
+	}
+
+	// update the entire grid map
+	grid.UpdateGridMap();
+
+
+	// unlock the given mutex
+	gm_mutex.unlock();
+
+}
+
 // get the carmen compact cost map and rebuild our internal grid map representation
 void
 HybridAstarPathFinder::update_map(carmen_map_server_compact_cost_map_message *msg) {
 
 	if (nullptr != msg) {
 
-		double x_origin = msg->config.x_origin;
-		double y_origin = msg->config.y_origin;
-		double resolution = msg->config.resolution;
-		double inverse_resolution = 1.0/resolution;
+		// try to lock the mutex
+		if (gm_mutex.try_lock()) {
 
-		grid.InitializeGridMap(msg->config.y_size, msg->config.x_size, resolution, Vector2D<double>(x_origin, y_origin));
+			// spaw a new thread to update the voronoi map
+			std::thread gvd_update(&HybridAstarPathFinder::voronoi_update, this, msg);
 
-		int *x_coord = msg->coord_x;
-		int *y_coord = msg->coord_y;
-		double *val = msg->value;
-		unsigned int size = msg->size;
-
-		for (unsigned int i = 0; i < size; i++) {
-
-			if (0.5 < val[i]) {
-				grid.OccupyCell(y_coord[i], x_coord[i]);
-			} else {
-				grid.ClearCell(y_coord[i], x_coord[i]);
-			}
-
+			// detach from the current thread
+			gvd_update.detach();
 		}
-
-		// update the entire grid map
-		grid.UpdateGridMap();
-
 	}
-
 }
 
 // update the odometry value
