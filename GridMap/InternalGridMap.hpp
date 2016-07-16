@@ -32,18 +32,14 @@ class InternalGridMap {
         // the current grid map
         astar::GridMap grid_map;
 
-        // the bynary map
-        bool **map;
-
-        // the Voronoi field  map
-        astar::GVDLau voronoi;
-
         // PRIVATE METHODS
 
         // remove the current grid map
         void RemoveGridMap();
 
     public:
+        // the Voronoi field  map
+        astar::GVDLau voronoi;
 
         // PUBLIC ATTRIBUTES
         double resolution, inverse_resolution;
@@ -85,8 +81,6 @@ class InternalGridMap {
 
         // indirect voronoi edge distance
         double GetVoronoiDistance(const astar::Vector2D<double>&);
-
-
 
 };
 

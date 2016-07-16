@@ -35,6 +35,6 @@ libhybrid_astar_interface.a : Interface/hybrid_astar_interface.o
 path_finder: hybrid_astar_path_finder_main.o libhybrid_astar_interface.a Entities/Circle.o Entities/State2D.o Entities/Pose2D.o PathFinding/HybridAstarPathFinder.o GridMap/GVDLau.o GridMap/InternalGridMap.o VehicleModel/VehicleModel.o PathFinding/HybridAstar/HybridAstarNode.o  PathFinding/HybridAstar/HybridAstar.o PathFinding/HybridAstar/Heuristic.o PathFinding/Smoother/CGSmoother.o ReedsShepp/ReedsSheppActionSet.o ReedsShepp/ReedsSheppModel.o
 
 pf_clear :
-	rm */*.o */*/*.o
+	rm */*.o */*/*.o path_finder
 
 include ../Makefile.rules

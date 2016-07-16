@@ -45,8 +45,10 @@ class GVDLau {
 		DataCell **data, **next_data;
 
 		// the diagram parameters
-		int height, heightminus1;
-		int width, widthminus1;
+		unsigned int height;
+		int heightminus1;
+		unsigned int width;
+		int widthminus1;
 
 		// the general parameters
 		double alpha;
@@ -119,25 +121,25 @@ class GVDLau {
 		~GVDLau();
 
 		// Initialize the GVD
-		void InitializeEmpty(int h, int w);
+		void InitializeEmpty(unsigned int h, unsigned int w);
 
 		// initialize the GVD with a given map
-		void InitializeMap(int h, int w, bool **map);
+		void InitializeMap(unsigned int h, unsigned int w, bool **map);
 
 		// set a given cell as an obstacle
-		void SetObstacle(int row, int col);
+		void SetObstacle(unsigned int row, unsigned int col);
 
 		// set a given cell as a free space
-		void RemoveObstacle(int row, int col);
+		void RemoveObstacle(unsigned int row, unsigned int col);
 
 		// update the entire GVD
 		void Update();
 
 		// get the nearest obstacle distance
-		double GetObstacleDistance(int row, int col);
+		double GetObstacleDistance(unsigned int row, unsigned int col);
 
 		// get the nearest voronoi edge distance
-		double GetVoronoiDistance(int row, int col);
+		double GetVoronoiDistance(unsigned int row, unsigned int col);
 
 		// get the nearest voronoi edge distance given a valid
 		// unsigned int overloaded, KDTree usage

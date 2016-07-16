@@ -25,9 +25,6 @@ class HybridAstarPathFinder {
         // the robot configuration
         astar::VehicleModel vehicle_model;
 
-        // the internal map represetation
-        astar::InternalGridMap grid;
-
         // flag to indicate the grid map status
         bool initialized_grid_map;
 
@@ -72,7 +69,12 @@ class HybridAstarPathFinder {
         // voronoi thread update
         void voronoi_update(carmen_map_server_compact_cost_map_message *msg);
 
+        // voronoi thread update
+        void voronoi_update_2(carmen_grid_mapping_message *msg);
+
     public:
+        // the internal map represetation
+        astar::InternalGridMap grid;
 
         // basic constructor
         HybridAstarPathFinder(int argc, char **argv);
@@ -103,6 +105,9 @@ class HybridAstarPathFinder {
 
         // update the map
         void update_map(carmen_map_server_compact_cost_map_message *msg);
+
+        // update the map
+        void update_map(carmen_grid_mapping_message *msg);
 
         // convert the current path to the desired output format (carmen_ackerman_motion_command_t)
         astar::StateArray get_path();

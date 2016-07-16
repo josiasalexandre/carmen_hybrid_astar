@@ -162,8 +162,25 @@ std::vector<Circle> VehicleModel::GetVehicleBodyCircles(const astar::Pose2D &p) 
 	// the output array
 	std::vector<Circle> body;
 
-	// append the circle at the rear axle
-	body.push_back(Circle(p.position, width_2));
+	// TODO move to the class and get the values in a dynamic manner
+	double circle_radius = 1.205;
+	double x_position[4] = {-0.546, 0.659, 1.864, 3.069};
+
+	for (unsigned int i = 0; i < 4; ++i) {
+
+		// set the current position
+		astar::Vector2D<double> position(x_position[i], 0);
+
+		// rotate the current position, follow the car heading
+		position.RotateZ(p.orientation);
+
+		// move the current position to the car frame
+		position.Add(p.position);
+
+		// append the the circle to the body vector
+		body.push_back(astar::Circle(position, circle_radius));
+
+	}
 
 	return body;
 }
