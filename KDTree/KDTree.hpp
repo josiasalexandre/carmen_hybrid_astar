@@ -21,6 +21,9 @@ private:
     // the min distance
     double min_distance;
 
+    // the infinity value, just a null value
+    astar::PointT<T, D> null_value;
+
     // private methods
     // quick select approach
     unsigned int QuickSelect(std::vector<astar::PointT<T, D>>& input, unsigned int start, unsigned int end, unsigned int nth, unsigned int axis)
@@ -64,7 +67,9 @@ private:
         if (start < end)
         {
             unsigned int mid = QuickSelect(input, start, end, (start + end)/2, axis);
+
             astar::KDTreeNode<T, D>* n = new astar::KDTreeNode<T, D>(input[mid]);
+
             axis += 1;
             if (D <= axis)
                 axis = 0;
@@ -77,6 +82,8 @@ private:
 
             // return the valid node
             return n;
+
+
         }
 
         return nullptr;
@@ -124,34 +131,39 @@ private:
     }
 
     // distance betee two points
-    inline double Distance(const astar::PointT<T, D>& a, const astar::PointT<T, D>& b)
+    inline double Distance(const astar::PointT<T, D> &a, const astar::PointT<T, D> &b)
     {
         double t, d = 0.0;
 
         for (unsigned int axis = 0; axis < D; axis++)
         {
-            t = a[axis] - b[axis];
+            t = (double) a[axis] - (double) b[axis];
             d += t*t;
         }
 
         return d;
     }
 
-    int k;
-
     // find the nearest point inside the kdtree
-    astar::KDTreeNode<T, D>* GetNearest(astar::KDTreeNode<T, D>* n, const astar::PointT<T, D>& p, unsigned int axis, astar::KDTreeNode<T, D>* best_node, double& best_dist)
+    astar::KDTreeNode<T, D>* GetNearest(
+    		astar::KDTreeNode<T, D>* n, const astar::PointT<T, D>& p,
+			unsigned int axis, astar::KDTreeNode<T, D>* best_node, double &best_dist)
     {
         double dist, deltaAxis, deltaAxis2;
 
         dist = Distance(n->point, p);
-        if (min_distance > dist)
-            return n;
+        if (min_distance > dist) {
 
-        deltaAxis = n->point[axis] - p[axis];
+        	best_dist = dist;
+        	best_node = n;
+            return n;
+        }
+
+        deltaAxis = (double) n->point[axis] - (double) p[axis];
         deltaAxis2 = deltaAxis*deltaAxis;
+
         // is the current distance closer than the current bestDist?
-        if (dist < best_dist || nullptr == best_node)
+        if (nullptr == best_node || dist < std::fabs(best_dist))
         {
             best_dist = dist;
             best_node = n;
@@ -162,7 +174,8 @@ private:
             axis = 0;
 
         // should we search the left or right subtree?
-        if (0 < dist && nullptr != n->left)
+        // should we search the left or right subtree?
+        if (0 < deltaAxis && nullptr != n->left)
             best_node = GetNearest(n->left, p, axis, best_node, best_dist);
         else if (nullptr != n->right)
             best_node = GetNearest(n->right, p, axis, best_node, best_dist);
@@ -172,39 +185,47 @@ private:
             return best_node;
 
         // search the other side
-        if (0 < dist && nullptr != n->right)
+        if (0 < deltaAxis && nullptr != n->right)
             best_node = GetNearest(n->right, p, axis, best_node, best_dist);
-
         else if (nullptr != n->left)
             best_node = GetNearest(n->left, p, axis, best_node, best_dist);
 
+        // std::cout << "==============================Min: " << dist << "\n";
         return best_node;
     }
 
 public:
 
     // empty constructor
-    KDTree() : root(nullptr), min_distance(0.0005), k(0) {}
+    KDTree(T _null) : root(nullptr), min_distance(0.005), null_value() {
+
+    	for (unsigned int i = 0; i < D; ++i) {
+			null_value[i] = _null;
+		}
+    }
 
     // basic constructor
-    KDTree(std::vector<astar::PointT<T, D>> &input) : root(nullptr), min_distance(0.0005), k(0)
+    KDTree(std::vector<astar::PointT<T, D>> &input, T _null) : root(nullptr), min_distance(0.005), null_value()
     {
         // build a KDTree from the a given array
         root = BuildKDTree(input, 0, input.size(), 0);
+
+        for (unsigned int i = 0; i < D; ++i) {
+        	null_value[i] = _null;
+        }
     }
 
     // basic destructor
-    ~KDTree() {
-
+    ~KDTree()
+    {
         if (nullptr != root)
             RemoveSubTree(root);
     }
 
     // is the current KDTree empty?
-    bool isEmpty() {
-
+    bool isEmpty()
+    {
     	return nullptr == root;
-
     }
 
     // add a point to the kdtree
@@ -215,7 +236,7 @@ public:
             astar::KDTreeNode<T, D> *tmp = root;
             unsigned int axis = 0;
 
-            while(nullptr != tmp)
+            while (nullptr != tmp)
             {
                 if (tmp->point[axis] > p[axis])
                 {
@@ -224,7 +245,6 @@ public:
                     {
                         // update the tmp pointer
                         tmp = tmp->left;
-
                     }
                     else
                     {
@@ -236,7 +256,8 @@ public:
 
                     }
 
-                } else if (tmp->point[axis] < p[axis] || DiffPoints(tmp->point, p))
+                }
+                else if (tmp->point[axis] < p[axis] || DiffPoints(tmp->point, p))
                 {
                     // verify if there is a right subtree
                     if (nullptr != tmp->right)
@@ -309,17 +330,16 @@ public:
         // is it a valid kdtree?
         if (nullptr != root)
         {
-            double best_dist = std::numeric_limits<double>::max();
+            double best_dist = -std::numeric_limits<double>::max();
 
-            std::cout << "ok\n";
-            astar::KDTreeNode<T, D>* best_node = GetNearest(root, p, 0, nullptr, best_dist);
+            astar::KDTreeNode<T, D> *best_node = GetNearest(root, p, 0, nullptr, best_dist);
 
             // return the point
             return best_node->point;
 
         }
-        else
-            throw std::exception();
+
+        return null_value;
     }
 
     // remove a point from the kdtree

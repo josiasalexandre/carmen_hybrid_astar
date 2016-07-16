@@ -2,6 +2,8 @@
 #include <fstream>
 #include <string>
 #include <ctime>
+#include <cmath>
+#include "../Entities/Pose2D.cpp"
 #include "GVDLau.hpp"
 
 // load the PGM file
@@ -92,9 +94,9 @@ int main (int argc, char **argv) {
 
 
 	// hard update
-	for (unsigned int h = 0; h < height; ++h) {
+	for (int h = 0; h < height; ++h) {
 
-		for (unsigned int c = 0; c < width; ++c) {
+		for (int c = 0; c < width; ++c) {
 
 			if (map[h][c]) {
 				gvd.SetObstacle(h, c);
@@ -135,6 +137,19 @@ int main (int argc, char **argv) {
 	std::cout << "\nNearest voronoi edge distance query for (167, 500), it should not be: inf! ...\n";
 	voro_dist = gvd.GetVoronoiDistance(167, 500);
 	std::cout << "Done! Result voro_dist(167, 500): " << voro_dist << "\n";
+
+	std::cout << "........................................\n";
+	std::cout << "........................................\n";
+
+	// test the nearest voro edge query
+	std::cout << "\nKDtree based Nearest voronoi edge distance query for (167, 500), it should not be: inf! ...\n";
+	astar::GridCellIndex index_c(gvd.GetVoronoiIndex(167, 500));
+	std::cout << "Done! Result voro_dist(167, 500): (" << index_c.row << ", " << index_c.col << ")" << "\n";
+
+	int dr = 167 - index_c.row;
+	int dc = 500 - index_c.col;
+
+	std:: cout << "\n The euclidian distance: " << std::sqrt(dr*dr + dc*dc);
 
 	// save the voronoi map to the output file
 	std::cout << "\nSaving the voronoi field map to the output file ...\n";

@@ -84,7 +84,9 @@ void InternalGridMap::InitializeGridMap(unsigned int h, unsigned int w, double r
 		}
 
 		// restart the voronoi diagram
+		std::cout << "A\n";
 		voronoi.InitializeEmpty(height, width);
+		std::cout << "B	\n";
 
 	}
 
@@ -207,5 +209,17 @@ double InternalGridMap::GetVoronoiDistance(const astar::Vector2D<double> &positi
 	unsigned int row = std::floor((position.y - origin.y) * inverse_resolution);
 	unsigned int col = std::floor((position.x - origin.x) * inverse_resolution);
 
-	return voronoi.GetVoronoiDistance(row, col);
+	if (height > row && width > col) {
+
+		// get the voronoi cell index
+		GridCellIndex voro(voronoi.GetVoronoiIndex(row, col));
+
+		// get the current displacement
+		double dr = position.y - (double) voro.row;
+		double dc = position.x - (double) voro.col;
+
+		return std::sqrt(dr*dr + dc*dc);
+	}
+
+	return std::numeric_limits<double>::max();
 }

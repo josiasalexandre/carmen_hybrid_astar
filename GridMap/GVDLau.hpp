@@ -6,6 +6,8 @@
 #include <array>
 
 #include "BucketedQueue.hpp"
+#include "../Entities/Pose2D.hpp"
+#include "../KDTree/KDTree.hpp"
 
 namespace astar {
 
@@ -40,7 +42,7 @@ class GVDLau {
 		typedef DataCell& DataCellRef;
 
 		// the diagram
-		DataCell **data;
+		DataCell **data, **next_data;
 
 		// the diagram parameters
 		int height, heightminus1;
@@ -59,6 +61,12 @@ class GVDLau {
 		//queues
 		astar::BucketPrioQueue<astar::GridCellIndex> open;
 		astar::BucketPrioQueue<astar::GridCellIndex> voro_open;
+
+		// the voro edges kdtre
+		astar::KDTree<unsigned int, 2> edges;
+
+		// the voro add list
+		std::vector<astar::PointT<unsigned int, 2>> add_list;
 
 		// PRIVATE METHODS
 
@@ -130,6 +138,10 @@ class GVDLau {
 
 		// get the nearest voronoi edge distance
 		double GetVoronoiDistance(int row, int col);
+
+		// get the nearest voronoi edge distance given a valid
+		// unsigned int overloaded, KDTree usage
+		GridCellIndex GetVoronoiIndex(unsigned int row, unsigned int col);
 
 		// save the voronoi field map to an external file
 		void Visualize(std::string);

@@ -269,7 +269,6 @@ register_handlers_specific()
 	 */
 }
 
-
 void
 register_handlers()
 {
@@ -292,10 +291,6 @@ register_handlers()
      */
     register_handlers_specific();
 }
-
-
-
-
 
 int
 main(int argc, char **argv)
