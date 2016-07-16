@@ -73,7 +73,7 @@ HybridAstarPathFinder::get_parameters(int argc, char **argv)
 StateArrayPtr
 HybridAstarPathFinder::replan() {
 
-	if (valid_goal) {
+	if (valid_goal && goal) {
 
 		if (nullptr != path) {
 			delete path;
@@ -91,8 +91,9 @@ HybridAstarPathFinder::replan() {
 		delete raw_path;
 
 		return path;
-
 	}
+
+	std::cout << "replaning\n";
 
 	return nullptr;
 
