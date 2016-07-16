@@ -120,34 +120,36 @@ int main (int argc, char **argv) {
 	gvd.Update();
 	std::cout << "Done!\n";*/
 
+	unsigned int r = 167;
+	unsigned int c = 500;
 	// test the nearest obstacle query
-	std::cout << "\nNearest obstacle distance query for (500, 167), it should be: inf! ...\n";
-	double dist = gvd.GetObstacleDistance(500, 167);
-	std::cout << "Done! Result dist(500, 167): " << dist << "\n";
+	std::cout << "\nNearest obstacle distance query for (" << c << ", " << r << "), it should be: inf! ...\n";
+	double dist = gvd.GetObstacleDistance(c, r);
+	std::cout << "Done! Result dist(" << c << ", " << r << "): " << dist << "\n";
 
-	std::cout << "\nNearest obstacle distance query for (167, 500), it should not be: inf! ...\n";
-	dist = gvd.GetObstacleDistance(167, 500);
-	std::cout << "Done! Result dist(167, 500): " << dist << "\n";
+	std::cout << "\nNearest obstacle distance query for (" << r << ", " << c << "), it should not be: inf! ...\n";
+	dist = gvd.GetObstacleDistance(r, c);
+	std::cout << "Done! Result dist(" << r << ", " << c << "): " << dist << "\n";
 
 	// test the nearest voro edge query
-	std::cout << "\nNearest voronoi edge distance query for (500, 167), it should be: inf! ...\n";
-	double voro_dist = gvd.GetVoronoiDistance(500, 167);
-	std::cout << "Done! Result voro_dist(500, 167): " << voro_dist << "\n";
+	std::cout << "\nNearest voronoi edge distance query for (" << c << ", " << r << "), it should be: inf! ...\n";
+	double voro_dist = gvd.GetVoronoiDistance(c, r);
+	std::cout << "Done! Result voro_dist(" << c << ", " << r << "): " << voro_dist << "\n";
 
-	std::cout << "\nNearest voronoi edge distance query for (167, 500), it should not be: inf! ...\n";
-	voro_dist = gvd.GetVoronoiDistance(167, 500);
-	std::cout << "Done! Result voro_dist(167, 500): " << voro_dist << "\n";
+	std::cout << "\nNearest voronoi edge distance query for (" << r << ", " << c << "), it should not be: inf! ...\n";
+	voro_dist = gvd.GetVoronoiDistance(r, c);
+	std::cout << "Done! Result voro_dist(" << r << ", " << c << "): " << voro_dist << "\n";
 
 	std::cout << "........................................\n";
 	std::cout << "........................................\n";
 
 	// test the nearest voro edge query
-	std::cout << "\nKDtree based Nearest voronoi edge distance query for (167, 500), it should not be: inf! ...\n";
-	astar::GridCellIndex index_c(gvd.GetVoronoiIndex(167, 500));
-	std::cout << "Done! Result voro_dist(167, 500): (" << index_c.row << ", " << index_c.col << ")" << "\n";
+	std::cout << "\nKDtree based Nearest voronoi edge distance query for (" << r << ", " << c << "), it should not be: inf! ...\n";
+	astar::GridCellIndex index_c(gvd.GetVoronoiIndex(r, c));
+	std::cout << "Done! Result voro_dist(" << r << ", " << c << "): (" << index_c.row << ", " << index_c.col << ")" << "\n";
 
-	int dr = 167 - index_c.row;
-	int dc = 500 - index_c.col;
+	int dr = r - index_c.row;
+	int dc = c - index_c.col;
 
 	std:: cout << "\n The euclidian distance: " << std::sqrt(dr*dr + dc*dc);
 

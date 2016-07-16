@@ -11,7 +11,7 @@ InternalGridMap::InternalGridMap() :
 	size(0),
 	diagonal_resolution(0),
 	origin(),
-	grid_map(nullptr), map(nullptr),
+	grid_map(nullptr),
 	voronoi(), resolution(0.0), inverse_resolution(0.0)
 {}
 
@@ -37,19 +37,6 @@ void InternalGridMap::RemoveGridMap() {
 
 	}
 
-	// the simple binary/boolean map
-	if (nullptr != map) {
-
-		for (unsigned int i = 0; i < height; ++i) {
-			delete [] map[i];
-		}
-
-		delete [] map;
-
-	}
-
-
-
 }
 
 // get the map parameters and allocate the grid map in the memmory
@@ -61,10 +48,10 @@ void InternalGridMap::InitializeGridMap(unsigned int h, unsigned int w, double r
 		RemoveGridMap();
 
 		// copy the new parameters
-		width = w;
-		width_2 = w*0.5;
 		height = h;
 		height_2 = h*0.5;
+		width = w;
+		width_2 = w*0.5;
 		size = h*w;
 		resolution = res;
 		inverse_resolution = 1.0/res;
@@ -77,16 +64,8 @@ void InternalGridMap::InitializeGridMap(unsigned int h, unsigned int w, double r
 			grid_map[i] = new GridMapCell[width];
 		}
 
-		// allocate the row pointers
-		map = new bool*[height];
-		for (unsigned int i = 0; i < height; ++i) {
-			map[i] = new bool[width];
-		}
-
 		// restart the voronoi diagram
-		std::cout << "A\n";
 		voronoi.InitializeEmpty(height, width);
-		std::cout << "B	\n";
 
 	}
 
@@ -95,8 +74,8 @@ void InternalGridMap::InitializeGridMap(unsigned int h, unsigned int w, double r
 // is a valid cell?
 bool InternalGridMap::isValidPoint(const astar::Vector2D<double> &position) {
 
-	unsigned int row = std::floor((position.y - origin.y) * inverse_resolution);
-	unsigned int col = std::floor((position.x - origin.x) * inverse_resolution);
+	unsigned int row = std::floor((position.y - origin.y) * inverse_resolution) + height_2;
+	unsigned int col = std::floor((position.x - origin.x) * inverse_resolution) + width_2;
 
 	return (height > row && width > col);
 
@@ -116,15 +95,11 @@ bool InternalGridMap::isSafePlace(const std::vector<astar::Circle> &body, double
 		// the current circle
 		const astar::Circle &circle(body[i]);
 
-		c = std::floor((circle.position.x - origin.x) * inverse_resolution);
-		r = std::floor((circle.position.y - origin.y) * inverse_resolution);
-
-		if (height <= r || width <= c) {
-			return false;
-		}
+		r = std::floor((circle.position.y - origin.y) * inverse_resolution + 0.5);
+		c = std::floor((circle.position.x - origin.x) * inverse_resolution + 0.5);
 
 		// get the closest obstacle from the voronoi distance map
-		obstacle_distance = voronoi.GetObstacleDistance(c, r);
+		obstacle_distance = voronoi.GetObstacleDistance(r, c);
 
 		if (obstacle_distance < circle.r * safety_factor) {
 			return false;
@@ -139,8 +114,8 @@ bool InternalGridMap::isSafePlace(const std::vector<astar::Circle> &body, double
 // return a cell given a pose
 GridMapCellPtr InternalGridMap::PoseToCell(const astar::Pose2D &p) {
 
-	unsigned int row = std::floor((p.position.y - origin.y) * inverse_resolution);
-	unsigned int col = std::floor((p.position.x - origin.x) * inverse_resolution);
+	unsigned int row = std::floor((p.position.y - origin.y) * inverse_resolution) + height_2;
+	unsigned int col = std::floor((p.position.x - origin.x) * inverse_resolution) + width_2;
 
 	if (height > row && width > col)
 		return &grid_map[row][col];
@@ -197,8 +172,8 @@ astar::GVDLau* InternalGridMap::GetGVD() {
 // indirect obstacle distance
 double InternalGridMap::GetObstacleDistance(const astar::Vector2D<double> &position) {
 
-	unsigned int row = std::floor((position.y - origin.y) * inverse_resolution);
-	unsigned int col = std::floor((position.x - origin.x) * inverse_resolution);
+	unsigned int row = std::floor((position.y - origin.y) * inverse_resolution) + height_2;
+	unsigned int col = std::floor((position.x - origin.x) * inverse_resolution) + width_2;
 
 	return voronoi.GetObstacleDistance(row, col);
 }
@@ -206,8 +181,8 @@ double InternalGridMap::GetObstacleDistance(const astar::Vector2D<double> &posit
 // indirect voronoi edge distance
 double InternalGridMap::GetVoronoiDistance(const astar::Vector2D<double> &position) {
 
-	unsigned int row = std::floor((position.y - origin.y) * inverse_resolution);
-	unsigned int col = std::floor((position.x - origin.x) * inverse_resolution);
+	unsigned int row = std::floor((position.y - origin.y) * inverse_resolution) + height_2;
+	unsigned int col = std::floor((position.x - origin.x) * inverse_resolution) + width_2;
 
 	if (height > row && width > col) {
 

@@ -102,11 +102,18 @@ HybridAstarPathFinder::replan() {
 void
 HybridAstarPathFinder::set_goal_state(const State2D &goal_state) {
 
-	valid_goal = grid.isSafePlace(vehicle_model.GetVehicleBodyCircles(goal_state), vehicle_model.safety_factor);
+	// copy the goal
+	goal = goal_state;
 
-	if (valid_goal) {
-        goal = goal_state;
-    }
+	if (initialized_grid_map) {
+
+		// verify the safety
+		valid_goal = grid.isSafePlace(vehicle_model.GetVehicleBodyCircles(goal_state), vehicle_model.safety_factor);
+
+		return;
+	}
+
+	valid_goal = false;
 }
 
 // set the the new goal
@@ -118,6 +125,15 @@ HybridAstarPathFinder::set_goal_state(double x, double y, double theta, double v
     goal.orientation = theta;
     goal.v = vel;
 
+	if (initialized_grid_map) {
+
+		// verify the safety
+		valid_goal = grid.isSafePlace(vehicle_model.GetVehicleBodyCircles(goal), vehicle_model.safety_factor);
+
+		return;
+	}
+
+	valid_goal = false;
 }
 
 // set the goal list
@@ -152,9 +168,6 @@ void HybridAstarPathFinder::voronoi_update(carmen_map_server_compact_cost_map_me
 
 	for (unsigned int i = 0; i < size; i++) {
 
-		int r = std::abs(std::floor(robot.position.y - (y_origin + y_coord[i] * resolution)));
-		int c = std::abs(std::floor(robot.position.x - (x_origin + x_coord[i] * resolution)));
-
 		if (0.5 < val[i]) {
 			grid.OccupyCell(y_coord[i], x_coord[i]);
 		} else {
@@ -166,6 +179,44 @@ void HybridAstarPathFinder::voronoi_update(carmen_map_server_compact_cost_map_me
 	// update the entire grid map
 	grid.UpdateGridMap();
 
+	// unlock the given mutex
+	gm_mutex.unlock();
+
+}
+
+// voronoi thread update
+void HybridAstarPathFinder::voronoi_update_2(carmen_grid_mapping_message *msg) {
+
+	double x_origin = msg->config.x_origin;
+	double y_origin = msg->config.y_origin;
+	double resolution = msg->config.resolution;
+	double inverse_resolution = 1.0/resolution;
+	double *val = msg->complete_map;
+
+	unsigned int width = msg->config.x_size;
+	unsigned int height = msg->config.y_size;
+	unsigned int size = msg->size;
+
+	int r, c;
+	grid.InitializeGridMap(msg->config.y_size, msg->config.x_size, resolution, Vector2D<double>(x_origin, y_origin));
+
+	for (unsigned int i = 0; i < size; i++) {
+
+		r = i % width;
+		c = i / width;
+
+		// let's see the row and col
+		if (val[i] > 0.4) {
+			grid.OccupyCell(r, c);
+		} else {
+			grid.ClearCell(r, c);
+		}
+	}
+
+	// update the current grid map
+	grid.UpdateGridMap();
+
+	initialized_grid_map = true;
 
 	// unlock the given mutex
 	gm_mutex.unlock();
@@ -183,6 +234,25 @@ HybridAstarPathFinder::update_map(carmen_map_server_compact_cost_map_message *ms
 
 			// spaw a new thread to update the voronoi map
 			std::thread gvd_update(&HybridAstarPathFinder::voronoi_update, this, msg);
+
+			// detach from the current thread
+			gvd_update.detach();
+		}
+	}
+}
+
+// get the general map and save it
+void
+HybridAstarPathFinder::update_map(carmen_grid_mapping_message *msg) {
+
+
+	if (nullptr != msg) {
+
+		// try to lock the mutex
+		if (gm_mutex.try_lock()) {
+
+			// spaw a new thread to update the voronoi map
+			std::thread gvd_update(&HybridAstarPathFinder::voronoi_update_2, this, msg);
 
 			// detach from the current thread
 			gvd_update.detach();

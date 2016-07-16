@@ -35,14 +35,14 @@ GVDLau::~GVDLau() {
 void GVDLau::RemoveDiagram() {
 
 	if (nullptr != data) {
-		for (int i = 0; i < height; ++i) {
+		for (unsigned int i = 0; i < height; ++i) {
 			delete [] data[i];
 		}
 		delete [] data;
 	}
 
 	if (nullptr != next_data) {
-		for (int i = 0; i < height; ++i) {
+		for (unsigned int i = 0; i < height; ++i) {
 			delete [] next_data[i];
 		}
 		delete [] next_data;
@@ -53,7 +53,7 @@ void GVDLau::RemoveDiagram() {
 // verify a given index against the map dimensions
 bool GVDLau::isValidIndex(const astar::GridCellIndexRef index) const {
 
-	return (0 <= index.row && height > index.row && 0 <= index.col && width > index.col);
+	return (height > index.row && width > index.col);
 }
 
 // get the squared distance between two cells
@@ -137,7 +137,7 @@ void GVDLau::UnsetVoro(const GridCellIndexRef index) {
 	// update the cell values
 	s.voro_dist = max_double;
 	s.voro_sqdist = INT_MAX;
-	s.nearest_voro.row = s.nearest_voro.col = -1;
+	s.nearest_voro.row = s.nearest_voro.col = UINT_MAX;
 	s.voro_to_raise = true;
 	s.voro_to_process = true;
 
@@ -161,7 +161,7 @@ void GVDLau::CheckVoro(GridCellIndexRef indexS, GridCellIndexRef indexN) {
 
 	if ((1 < s.sqdist || 1 < n.sqdist)) {
 
-		if (1 < std::abs(noS.row - noN.row) || 1 < std::abs(noS.col - noN.col)) {
+		if (1 < std::abs((int) noS.row - (int) noN.row) || 1 < std::abs((int) noS.col - (int) noN.col)) {
 
 			int sObstN = DistanceSquared(indexS, noN);
 			int nObstS = DistanceSquared(indexN, noS);
@@ -176,13 +176,13 @@ void GVDLau::CheckVoro(GridCellIndexRef indexS, GridCellIndexRef indexN) {
             {
             	s.voro = true;
 
-            	SetVoro(indexS);
+            	// SetVoro(indexS);
             }
             if (nStability <= sStability)
             {
             	n.voro = true;
 
-            	SetVoro(indexN);
+            	// SetVoro(indexN);
             }
 		}
 	}
@@ -233,14 +233,14 @@ void GVDLau::UpdateDistanceMap() {
 					// get the current neighbor
 					GVDLau::DataCellRef nc(next_data[nrow][ncol]);
 
-					if (-1 != nc.nearest_obstacle.col && !nc.to_raise) {
+					if (UINT_MAX != nc.nearest_obstacle.col && !nc.to_raise) {
 
 						if (!isOccupied(nc.nearest_obstacle, next_data[nc.nearest_obstacle.row][nc.nearest_obstacle.col])) {
 
 							// update the neighbor values
 							nc.sqdist = INT_MAX;
 							nc.dist = max_double;
-							nc.nearest_obstacle.row = nc.nearest_obstacle.col = -1;
+							nc.nearest_obstacle.row = nc.nearest_obstacle.col = UINT_MAX;
 							nc.to_raise = true;
 
 						}
@@ -369,7 +369,7 @@ void GVDLau::UpdateVoronoiMap() {
 						// get the actual cell
 						GVDLau::DataCellRef nc(next_data[nrow][ncol]);
 
-						if (-1 != nc.nearest_voro.col && !nc.voro_to_raise) {
+						if (UINT_MAX != nc.nearest_voro.col && !nc.voro_to_raise) {
 
 							if (!isVoroOccupied(nc.nearest_voro, next_data[nc.nearest_voro.row][nc.nearest_voro.col])) {
 
@@ -456,9 +456,9 @@ void GVDLau::UpdateVoronoiMap() {
 // update the path cost map
 void GVDLau::UpdatePathCostMap() {
 
-	for (int r = 0; r < height; ++r) {
+	for (unsigned int r = 0; r < height; ++r) {
 
-		for (int c = 0; c < width; ++c) {
+		for (unsigned int c = 0; c < width; ++c) {
 
 			// get the current data cell
 			GVDLau::DataCellRef s(next_data[r][c]);
@@ -473,58 +473,55 @@ void GVDLau::UpdatePathCostMap() {
 }
 
 // Initialize the GVD
-void GVDLau::InitializeEmpty(int h, int w) {
+void GVDLau::InitializeEmpty(unsigned int h, unsigned int w) {
 
-	if (0 < h && 0 < w) {
+	if (height != h || width != w) {
 
-		if (height != h || width != w) {
+		// remove the old diagram
+		RemoveDiagram();
 
-			// remove the old diagram
-			RemoveDiagram();
+		// update the dimension parameters
+		height = h;
+		heightminus1 = ((int) h) - 1;
+		width = w;
+		widthminus1 = ((int) w) - 1;
 
-			// update the dimension parameters
-			height = h;
-			heightminus1 = h - 1;
-			width = w;
-			widthminus1 = w - 1;
+		// allocate a new diagram
+		data = new GVDLau::DataCellPtr[height];
 
-			// allocate a new diagram
-			data = new GVDLau::DataCellPtr[height];
-
-			for (int i = 0; i < height; ++i) {
-				data[i] = new GVDLau::DataCell[width];
-			}
-
-			next_data = new GVDLau::DataCellPtr[height];
-			for (int i = 0; i < height; ++i) {
-				next_data[i] = new GVDLau::DataCell[width];
-			}
+		for (unsigned int i = 0; i < height; ++i) {
+			data[i] = new GVDLau::DataCell[width];
 		}
 
-		// clear the entire diagram
-		GVDLau::DataCell c;
-		c.sqdist = INT_MAX;
-		c.dist = max_double;
-		c.nearest_obstacle.row = c.nearest_obstacle.col = -1;
-		c.to_raise = c.to_process = false;
-		c.voro = true;
-		c.voro_sqdist = INT_MAX;
-		c.voro_dist = max_double;
-		c.nearest_voro.row = c.nearest_voro.col = -1;
-		c.voro_to_raise = c.voro_to_process = false;
-		c.path_cost = 0;
+		next_data = new GVDLau::DataCellPtr[height];
+		for (unsigned int j = 0; j < height; ++j) {
+			next_data[j] = new GVDLau::DataCell[width];
+		}
+	}
 
-		for (int i = 0; i < height; ++i) {
-			for (int j = 0; j < width; ++j) {
-				data[i][j] = c;
-				next_data[i][j] = c;
-			}
+	// clear the entire diagram
+	GVDLau::DataCell c;
+	c.sqdist = INT_MAX;
+	c.dist = max_double;
+	c.nearest_obstacle.row = c.nearest_obstacle.col = UINT_MAX;
+	c.to_raise = c.to_process = false;
+	c.voro = true;
+	c.voro_sqdist = INT_MAX;
+	c.voro_dist = max_double;
+	c.nearest_voro.row = c.nearest_voro.col = UINT_MAX;
+	c.voro_to_raise = c.voro_to_process = false;
+	c.path_cost = 0;
+
+	for (unsigned int i = 0; i < height; ++i) {
+		for (unsigned int j = 0; j < width; ++j) {
+			data[i][j] = c;
+			next_data[i][j] = c;
 		}
 	}
 }
 
 // initialize the GVD with a given map
-void GVDLau::InitializeMap(int h, int w, bool **map) {
+void GVDLau::InitializeMap(unsigned int h, unsigned int w, bool **map) {
 
 	if (nullptr != map) {
 
@@ -535,27 +532,27 @@ void GVDLau::InitializeMap(int h, int w, bool **map) {
 
 			// copy the new parameters
 			height = h;
-			heightminus1 = h - 1;
+			heightminus1 = ((int) h) - 1;
 			width = w;
-			widthminus1 = w - 1;
+			widthminus1 = ((int) w) - 1;
 
 			// allocate a new diagram
 			data = new GVDLau::DataCellPtr[height];
 
-			for (int i = 0; i < height; ++i) {
+			for (unsigned int i = 0; i < height; ++i) {
 				data[i] = new GVDLau::DataCell[width];
 			}
 
 			next_data = new GVDLau::DataCellPtr[height];
-			for (int i = 0; i < height; ++i) {
+			for (unsigned int i = 0; i < height; ++i) {
 				next_data[i] = new GVDLau::DataCell[width];
 			}
 		}
 
 		// copy the given map
-		for (int r = 0; r < h; ++r) {
+		for (unsigned int r = 0; r < h; ++r) {
 
-			for (int c = 0; c < w; ++c) {
+			for (unsigned int c = 0; c < w; ++c) {
 
 				if (map[r][c]) {
 
@@ -621,7 +618,7 @@ void GVDLau::InitializeMap(int h, int w, bool **map) {
 }
 
 // set a given cell as an obstacle
-void GVDLau::SetObstacle(int row, int col) {
+void GVDLau::SetObstacle(unsigned int row, unsigned int col) {
 
 	// get the current DataCell
 	GVDLau::DataCellRef c(next_data[row][col]);
@@ -643,19 +640,19 @@ void GVDLau::SetObstacle(int row, int col) {
 }
 
 // set a given cell as a free space
-void GVDLau::RemoveObstacle(int row, int col) {
+void GVDLau::RemoveObstacle(unsigned int row, unsigned int col) {
 
 	// get the current DataCell
 	GVDLau::DataCellRef c(next_data[row][col]);
 
-	if (-1 == c.nearest_obstacle.row || -1 == c.nearest_obstacle.col) {
+	if (UINT_MAX == c.nearest_obstacle.row || UINT_MAX == c.nearest_obstacle.col) {
 		return;
 	}
 
 	// update the current cell values
 	c.dist = max_double;
 	c.sqdist = INT_MAX;
-	c.nearest_obstacle.row = c.nearest_obstacle.col = -1;
+	c.nearest_obstacle.row = c.nearest_obstacle.col = UINT_MAX;
 	c.to_raise = true;
 	c.to_process = true;
 
@@ -669,14 +666,12 @@ void GVDLau::Update() {
 
 	if (!open.Empty()) {
 
+		int t = clock();
 		// the main distance map
 		UpdateDistanceMap();
 
 		// slow voronoi map, let's use the KDTree instead
 		//UpdateVoronoiMap();
-
-		// update the entire path cost map
-		UpdatePathCostMap();
 
 		// swap the pointers
 		//std::swap(this->data, this->next_data);
@@ -686,8 +681,6 @@ void GVDLau::Update() {
 
 		// clear the old add list vector
 		add_list.clear();
-
-		t1 = std::clock();
 
 		unsigned int u_height = (unsigned int) height;
 		unsigned int u_width = (unsigned int) width;
@@ -712,20 +705,27 @@ void GVDLau::Update() {
 		// rebuild the entire kdtre
 		edges.RebuildKDTree(add_list);
 
+		t = clock() - t;
+
+		std::cout << "\nDone: " << ((double) t) / CLOCKS_PER_SEC << "\n";
+
+		// update the entire path cost map
+		// UpdatePathCostMap();
 	}
 
 }
 
 // get the nearest obstacle distance
-double GVDLau::GetObstacleDistance(int row, int col) {
+double GVDLau::GetObstacleDistance(unsigned int row, unsigned int col) {
 	if (0 < row && height > row && 0 < col && width > col)
 		return data[row][col].dist;
 	else
-		return max_double;
+		return 0.0;
 }
 
 // get the nearest voronoi edge distance
-double GVDLau::GetVoronoiDistance(int row, int col) {
+double GVDLau::GetVoronoiDistance(unsigned int row, unsigned int col) {
+
 	if (0 < row && height > row && 0 < col && width > col) {
 		return data[row][col].voro_dist;
 	}
@@ -747,6 +747,7 @@ GridCellIndex GVDLau::GetVoronoiIndex(unsigned int row, unsigned int col) {
 	return GridCellIndex(found[0], found[1]);
 
 }
+
 // save the voronoi field map to an external file
 void GVDLau::Visualize(std::string filename) {
 
@@ -763,7 +764,7 @@ void GVDLau::Visualize(std::string filename) {
 		fprintf(F, "%d %d\n255\n", width, height);
 
 		for(int r = heightminus1; r >= 0; --r){
-			for(int c = 0; c < width; ++c){
+			for(unsigned int c = 0; c < width; ++c){
 
 				unsigned char ch = 0;
 

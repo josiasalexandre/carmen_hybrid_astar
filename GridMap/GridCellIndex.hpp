@@ -9,11 +9,11 @@ class GridCellIndex {
     public:
 
         // public attributes
-        int row, col;
+        unsigned int row, col;
 
         // basic constructors
         GridCellIndex() : row(0), col(0) {}
-        GridCellIndex(int _r, int _c) : row(_r), col(_c) {}
+        GridCellIndex(unsigned int _r, unsigned int _c) : row(_r), col(_c) {}
 
 };
 

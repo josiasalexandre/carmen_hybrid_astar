@@ -15,6 +15,7 @@ class VehicleModel {
     private:
 
         // PRIVATE ATTRIBUTES
+		double circle_radius;
 
         // PRIVATE METHODS
 
