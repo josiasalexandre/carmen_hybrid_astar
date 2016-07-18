@@ -163,8 +163,8 @@ std::vector<Circle> VehicleModel::GetVehicleBodyCircles(const astar::Pose2D &p) 
 	std::vector<Circle> body;
 
 	// TODO move to the class and get the values in a dynamic manner
-	double circle_radius = 1.205;
-	double x_position[4] = {-0.546, 0.659, 1.864, 3.069};
+	double circle_radius = 1.225;
+	double x_position[4] = {-0.36, 0.760, 1.880, 3.00};
 
 	for (unsigned int i = 0; i < 4; ++i) {
 

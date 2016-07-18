@@ -109,9 +109,6 @@ class HybridAstarPathFinder {
         // update the map
         void update_map(carmen_grid_mapping_message *msg);
 
-        // convert the current path to the desired output format (carmen_ackerman_motion_command_t)
-        astar::StateArray get_path();
-
         // PUBLIC ATTRIBUTES
         // flag to activate the motion planner
         bool activated;

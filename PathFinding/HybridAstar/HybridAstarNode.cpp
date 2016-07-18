@@ -12,7 +12,18 @@ HybridAstarNode::HybridAstarNode(
         double heuristicCost,
         HybridAstarNode *n
     ) : pose(p), action(rsAction), action_set(0), g(cost), f(heuristicCost), parent(n), cell(c), handle(nullptr)
-{}
+{
+	// update the cell values
+	if (nullptr != cell) {
+
+		// set the current node
+		cell->node = this;
+
+		// set the cell status to opened
+		cell->status = astar::OpenedNode;
+
+	}
+}
 
 // the basic constructor with a given action set
 HybridAstarNode::HybridAstarNode(
@@ -23,7 +34,18 @@ HybridAstarNode::HybridAstarNode(
     double heuristicCost,
     HybridAstarNodePtr n
     ) : pose(p), action(nullptr), action_set(rsActionSet), g(cost), f(heuristicCost), parent(n), cell(c), handle(nullptr)
-{}
+{
+	// update the cell values
+	if (nullptr != cell) {
+
+		// set the current node
+		cell->node = this;
+
+		// set the cell status to opened
+		cell->status = astar::OpenedNode;
+
+	}
+}
 
 // basic destructor
 HybridAstarNode::~HybridAstarNode() {
@@ -31,8 +53,14 @@ HybridAstarNode::~HybridAstarNode() {
     // update the cell status
 
     // the cell should not point to any HybridAstarNode
-	if (nullptr != cell)
+	if (nullptr != cell) {
+
+		// update the cell's node pointer
 		cell->node = nullptr;
+
+		// set to unknown node status
+		cell->status = astar::UnknownNode;
+	}
 
     // delete the action
     if (nullptr != action) {

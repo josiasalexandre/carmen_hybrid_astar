@@ -50,6 +50,9 @@ private:
     // the gear switch cost penalty
     double gear_switch_cost;
 
+    // the voronoi field factor
+    double voronoi_field_factor;
+
     // the ReedsSheppModel
     ReedsSheppModel rs;
 
@@ -86,7 +89,12 @@ private:
     HybridAstarNodeArrayPtr GetChidlren(const astar::Pose2D&, const astar::Pose2D&, astar::Gear, double);
 
     // get the path cost
-    double PathCost(const astar::Pose2D& start, const astar::Pose2D& goal, double length, bool reverse_gear);
+    double PathCost(
+		const astar::Pose2D& start,
+		astar::Gear start_gear,
+		const astar::Pose2D& goal,
+		astar::Gear next_gear,
+		double length);
 
 public:
 

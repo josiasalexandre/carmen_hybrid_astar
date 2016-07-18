@@ -23,6 +23,18 @@ InternalGridMap::~InternalGridMap() {
 
 }
 
+// get the grid cell index from any position
+astar::GridCellIndex InternalGridMap::PoseToIndex(const astar::Vector2D<double> &position) {
+
+	//
+	GridCellIndex index(
+		std::floor((position.y - origin.y) * inverse_resolution + 0.5),
+		std::floor((position.x - origin.x) * inverse_resolution) + 0.5);
+
+	return index;
+
+}
+
 // remove the current grid map
 void InternalGridMap::RemoveGridMap() {
 
@@ -74,10 +86,10 @@ void InternalGridMap::InitializeGridMap(unsigned int h, unsigned int w, double r
 // is a valid cell?
 bool InternalGridMap::isValidPoint(const astar::Vector2D<double> &position) {
 
-	unsigned int row = std::floor((position.y - origin.y) * inverse_resolution) + height_2;
-	unsigned int col = std::floor((position.x - origin.x) * inverse_resolution) + width_2;
+	// get the grid cell
+	GridCellIndex index(PoseToIndex(position));
 
-	return (height > row && width > col);
+	return (height > index.row && width > index.col);
 
 }
 
@@ -95,11 +107,10 @@ bool InternalGridMap::isSafePlace(const std::vector<astar::Circle> &body, double
 		// the current circle
 		const astar::Circle &circle(body[i]);
 
-		r = std::floor((circle.position.y - origin.y) * inverse_resolution + 0.5);
-		c = std::floor((circle.position.x - origin.x) * inverse_resolution + 0.5);
+		GridCellIndex index(PoseToIndex(circle.position));
 
 		// get the closest obstacle from the voronoi distance map
-		obstacle_distance = voronoi.GetObstacleDistance(r, c);
+		obstacle_distance = voronoi.GetObstacleDistance(index.row, index.col);
 
 		if (obstacle_distance < circle.r * safety_factor) {
 			return false;
@@ -114,11 +125,11 @@ bool InternalGridMap::isSafePlace(const std::vector<astar::Circle> &body, double
 // return a cell given a pose
 GridMapCellPtr InternalGridMap::PoseToCell(const astar::Pose2D &p) {
 
-	unsigned int row = std::floor((p.position.y - origin.y) * inverse_resolution) + height_2;
-	unsigned int col = std::floor((p.position.x - origin.x) * inverse_resolution) + width_2;
+	// get the grid Cell
+	GridCellIndex index(PoseToIndex(p.position));
 
-	if (height > row && width > col)
-		return &grid_map[row][col];
+	if (height > index.row && width > index.col)
+		return &grid_map[index.row][index.col];
 	else
 		return nullptr;
 
@@ -172,29 +183,57 @@ astar::GVDLau* InternalGridMap::GetGVD() {
 // indirect obstacle distance
 double InternalGridMap::GetObstacleDistance(const astar::Vector2D<double> &position) {
 
-	unsigned int row = std::floor((position.y - origin.y) * inverse_resolution) + height_2;
-	unsigned int col = std::floor((position.x - origin.x) * inverse_resolution) + width_2;
+	// get the grid cell index
+	GridCellIndex index(PoseToIndex(position));
 
-	return voronoi.GetObstacleDistance(row, col);
+	if (height > index.row && width > index.col) {
+
+		// get the nearest obstacle index
+		GridCellIndex obstacle(voronoi.GetObstacleIndex(index.row, index.col));
+
+		// get the displacement
+		double dx = position.x - (origin.x + ((double) obstacle.col) * resolution);
+		double dy = position.y - (origin.y + ((double) obstacle.row) * resolution);
+
+		return std::sqrt(dx*dx + dy*dy);
+	}
+
+	return 0.0;
 }
 
 // indirect voronoi edge distance
 double InternalGridMap::GetVoronoiDistance(const astar::Vector2D<double> &position) {
 
-	unsigned int row = std::floor((position.y - origin.y) * inverse_resolution) + height_2;
-	unsigned int col = std::floor((position.x - origin.x) * inverse_resolution) + width_2;
+	// get the grid cell index
+	GridCellIndex index(PoseToIndex(position));
 
-	if (height > row && width > col) {
+	if (height > index.row && width > index.col) {
 
 		// get the voronoi cell index
-		GridCellIndex voro(voronoi.GetVoronoiIndex(row, col));
+		GridCellIndex voro(voronoi.GetVoronoiIndex(index.row, index.col));
 
 		// get the current displacement
-		double dr = position.y - (double) voro.row;
-		double dc = position.x - (double) voro.col;
+		double dx = position.x - (origin.x + ((double) voro.col)*resolution);
+		double dy = position.y - (origin.y + ((double) voro.row)*resolution);
 
-		return std::sqrt(dr*dr + dc*dc);
+		return std::sqrt(dx*dx + dy*dy);
 	}
 
 	return std::numeric_limits<double>::max();
+}
+
+// compute the current path cost
+double InternalGridMap::GetPathCost(const astar::Vector2D<double> &position) {
+
+	// get the grid cell index
+	GridCellIndex index(PoseToIndex(position));
+
+	if (height > index.row && width > index.col) {
+
+		// get the current path cost
+		return voronoi.GetPathCost(index.row, index.col);
+
+	}
+
+	return 0;
 }
