@@ -16,8 +16,17 @@ class PriorityQueue {
 
         // PRIVATE ATTRIBUTES
 
-        // the internal fibonacci heap pointer
-        astar::PriorityQueueNode<T> *min;
+		// the main root pointer
+		astar::PriorityQueueNodePtr<T> root;
+
+        // the internal fibonacci min heap pointer
+        astar::PriorityQueueNodePtr<T> min;
+
+        // for reorganizing purpose
+        std::vector<astar::PriorityQueueNodePtr<T>> A;
+
+        // the max degree log
+        int D;
 
         // how many nodes?
         unsigned int N;
@@ -28,34 +37,192 @@ class PriorityQueue {
         // PRIVATE METHODS
 
         // get the heap max degree
-        unsigned int GetMaxDegree() {
+        int GetMaxDegree() {
 
             return(ceil(1.44 * log(N) / log(2.0) + 1.0));
 
         }
 
+        // make sure we have enough memmory to reorganize the heap
+        void CheckCons() {
+
+        	int degree = GetMaxDegree();
+
+        	if (-1 == D || N > ( 1 << D)) {
+
+        		// update the degree value
+        		D = std::max(degree, 8);
+
+        		if (A.size() != D) {
+
+        			// clear the old vector
+        			A.clear();
+
+        			// resize it
+        			A.resize(D, nullptr);
+
+        			return;
+        		}
+        	}
+
+        	for (unsigned int i = 0; i < A.size(); ++i) {
+
+        		A[i] = nullptr;
+
+        	}
+
+        }
+
+        // insert a node 'b' after node 'a'
+        void InsertNodeAfter(astar::PriorityQueueNodePtr<T> a, astar::PriorityQueueNodePtr<T> b) {
+
+        	if (a != a->right) {
+
+        		b->right = a->right;
+        		a->right->left = b;
+        		a->right = b;
+        		b->left = a;
+
+        	} else {
+
+        		a->right = b;
+        		a->left = b;
+        		b->right = a;
+        		b->left = a;
+
+        	}
+
+        }
+
+        // insert a node 'b' before node 'a'
+        void InsertNodeBefore(astar::PriorityQueueNodePtr<T> a, astar::PriorityQueueNodePtr<T> b) {
+
+        	// tricky
+        	InsertNodeAfter(a->left, b);
+
+        }
+
         // insert a given node to the heap
-        void InsertNode(astar::PriorityQueueNode<T> *node) {
+        void InsertRootList(astar::PriorityQueueNodePtr<T> x) {
 
-            if (nullptr != min) {
+            if (nullptr != root) {
 
-                // update the fibonacci heap pointers
-                // place the current node between the min and the left one
-                min->left->right = node;
-                node->left = min->left;
-                node->right = min;
-                min->left = node;
+            	InsertNodeAfter(root, x);
 
+            	return;
             }
 
-            if (nullptr == min || node->Key <= min->Key) {
+            // set the current root node
+            x->left = x;
+            x->right = x;
+            root = x;
 
-                // set the root node
-                min = node;
+        }
 
-            }
+        // Remove a node from the list and returns the left one, if exists
+        astar::PriorityQueueNodePtr<T> RemoveNode(astar::PriorityQueueNodePtr<T> x) {
 
-            return;
+        	// the return value
+        	astar::PriorityQueueNodePtr<T> ret = (x->left != x) ? x->left : nullptr;
+
+        	// fix the parent pointer
+			if (nullptr != x->parent && x->parent->child == x) {
+
+				x->parent->child = ret;
+
+			}
+
+			// change the connections
+			x->right->left = x->left;
+			x->left->right = x->right;
+
+			// clear out the hanging pointers
+			x->parent = nullptr;
+			x->left = x->right = x;
+
+        	return ret;
+
+        }
+
+        // Remove a node from the root list
+        void RemoveNodeFromRootList(astar::PriorityQueueNodePtr<T> node) {
+
+        	if (node->left == node) {
+
+        		// we are empty
+        		root = nullptr;
+
+        	} else {
+
+        		root = RemoveNode(node);
+
+        	}
+
+        }
+
+        // set the null value
+        T ExtractMin() {
+
+        	// get the min node
+        	astar::PriorityQueueNodePtr<T> z = min;
+
+        	// get the min child
+        	astar::PriorityQueueNodePtr<T> x = z->child;
+
+        	// another auxiliary node
+        	astar::PriorityQueueNodePtr<T> y;
+
+        	// remove all the children and move to the root list
+        	if (nullptr != x) {
+
+        		// set the child pointer to null
+        		z->child = nullptr;
+
+        		while(nullptr != x->parent) {
+
+        			// get the right element
+        			y = x->right;
+
+        			// disconnect the current node from the parent
+        			x->parent = nullptr;
+
+        			// insert the current x node to the root list
+        			InsertRootList(x);
+
+        			// move the current pointer to the right
+        			x = y;
+
+        		}
+
+        	}
+
+        	// remove the min from the root list
+        	RemoveNodeFromRootList(z);
+
+        	// decrement the node counter
+        	N -= 1;
+
+        	if (0 == N) {
+
+        		min = nullptr;
+
+        	} else {
+
+        		min = z->right;
+
+        		// we are not empty
+        		Consolidate();
+
+        	}
+
+        	// get the min value
+        	T element = z->element;
+
+        	// remove the z node
+        	delete(z);
+
+        	// return the min value
+        	return element;
 
         }
 
@@ -74,193 +241,95 @@ class PriorityQueue {
         }
 
         // link nodes
-        void LinkNodes(astar::PriorityQueueNode<T> *child, astar::PriorityQueueNode<T> *parent) {
+        void LinkNodes(astar::PriorityQueueNode<T> *y, astar::PriorityQueueNode<T> *x) {
 
-            // disconect the current child from the left and right nodes
-            child->left->right = child->right;
-            child->right->left = child->left;
+        	// make y a child of x
+        	if (nullptr == x->child) {
 
-            // disconect the child node from it's parent
-            child->parent = parent;
+        		// the x node has no child, direct assignement
+        		x->child = y;
 
-            // update the parent's child
-            if (nullptr != parent->child) {
+        	} else {
 
-                // place the child between the parent's child right and the parent's child
-                child->right = parent->child->right;
-                parent->child->right->left = child;
-                parent->child->right = child;
-                child->left = parent->child;
+        		// insert the y node to x->child left
+        		InsertNodeBefore(x->child, y);
 
-            } else {
+        	}
 
-                // there's no children here, so let's place the new child
-                child->left = child;
-                child->right = child;
-                parent->child = child;
+        	// make x the parent of y
+        	y->parent = x;
 
-            }
-
-            // the child's marks is reseted here
-            child->mark = false;
-
-            // increase the parent degree
-            parent->degree += 1;
-
-            return;
+        	// update the node x values
+        	y->mark = false;
+        	x->degree += 1;
 
         }
 
-        // remove a node from the heap
-        void RemoveNode(astar::PriorityQueueNode<T> *n) {
-
-            if (nullptr != n) {
-
-                // build a new node
-                astar::PriorityQueueNode<T> *subs = nullptr;
-
-                // update the subs pointer
-                if (n == n->left) {
-
-                    subs = n->left;
-
-                }
-
-                if (nullptr != subs) {
-
-                    // update the node pointers
-                    n->left->right = n->right;
-                    n->right->left= n->left;
-
-                }
-
-                if (nullptr != n->parent && (n->parent->child == n)) {
-
-                    // update the parent child relationship, now the parent gets the subs as the new child
-                    n->parent->child = subs;
-
-                    // decrease the parent degree
-                    n->parent->degree -= 1;
-
-                }
-
-                // if the removed node is the min node we need to assign the min node to another node, in this case the subs node
-                if (n == min) {
-
-                    // the subs node is the new root
-                    min = subs;
-
-                }
-
-                // remove the links around this node
-                n->parent = nullptr;
-                n->right = n;
-                n->left = n;
-
-            }
-
-            return;
-
-        }
-
-        // remove a given node from the root list
-        void RemoveNodeFromRootList(astar::PriorityQueueNode<T> *n) {
-
-            if (min != min->right) {
-
-                min = min->right;
-
-            } else {
-
-                // set the min as a nullptr
-                min = nullptr;
-
-            }
-
-            // remove the node from the root list
-            n->left->right = n->right;
-            n->right->left = n->left;
-
-            // reset the left and right pointers
-            n->left = n->right = n;
-
-            return;
-
-        }
-
-        void Cut(astar::PriorityQueueNode<T>* node) {
+        // cut the nodes
+        void Cut(astar::PriorityQueueNodePtr<T> x, astar::PriorityQueueNodePtr<T> y) {
 
             // remove the node from the heap
-            RemoveNode(node);
+            RemoveNode(x);
+
+            // the node y lost a child
+            y->degree -= 1;
 
             // add it again
-            InsertNode(node);
+            InsertRootList(x);
 
-            // update the mark
-            node->mark = false;
-
-            return;
+            // update values
+            x->mark = false;
+            x->parent = nullptr;
 
         }
 
-        void CascadingCut(astar::PriorityQueueNode<T> *p) {
+        // cascading cut
+        void CascadingCut(astar::PriorityQueueNodePtr<T> y) {
 
-            // a helper
-            astar::PriorityQueueNode<T> *aux = p->parent;
+			// a helper
+			astar::PriorityQueueNodePtr<T> z;
 
-            if (nullptr != aux) {
+			while ((nullptr != (z = y->parent))) {
 
-                if (p->mark) {
+				if (y->mark) {
 
-                    // cut the p node
-                    Cut(p);
+					// cut the node
+					Cut(y, z);
 
-                    // cascading cut the aux parent node
-                    CascadingCut(aux);
+					// update the y node
+					y = z;
 
+				} else {
 
-                } else {
+					y->mark = true;
 
-                    p->mark = true;
+					return;
+				}
 
-                }
-
-            }
-
-            return;
+			}
 
         }
 
         // consolidate the heap after some min removal
         void Consolidate() {
 
-            // get the max degree value
-            unsigned int degree = GetMaxDegree();
-
-            // build a new node array
-            astar::PriorityQueueNode<T> **A = new astar::PriorityQueueNode<T>*[degree];
-
-            // clear the array
-            for (unsigned int i = 0; i < degree; i++) {
-
-                A[i] = nullptr;
-
-            }
+        	// verify the current max degree and resize the A vector
+        	CheckCons();
 
             // a helper node to iterate over the root list
-            astar::PriorityQueueNodePtr<T> w;
+            astar::PriorityQueueNodePtr<T> w = nullptr;
 
             // pointer to the last root node
-            astar::PriorityQueueNodePtr<T> x;
+            astar::PriorityQueueNodePtr<T> x = nullptr;
 
             // pointer to the node
-            astar::PriorityQueueNodePtr<T> y;
+            astar::PriorityQueueNodePtr<T> y = nullptr;
 
             // get the
             unsigned int d;
 
             // iterate over the entire root list
-            while(nullptr != (w = min)) {
+            while(nullptr != (w = root)) {
 
                 // save the current node
                 x = w;
@@ -305,65 +374,63 @@ class PriorityQueue {
             min = nullptr;
 
             // move the array to the root list
-            for (unsigned int i = 0; i < degree; i++) {
+            for (unsigned int i = 0; i < D; i++) {
 
                 if (nullptr != A[i]) {
 
-                    // insert the current node to the list
-                    InsertNode(A[i]);
+                	// insert the node to the root list
+                	InsertRootList(A[i]);
+
+                	if (nullptr == min || A[i]->Key < min->Key) {
+
+                		min = A[i];
+
+                	}
 
                 }
 
             }
 
-            // remove the node array
-            delete [] A;
-
         }
 
         // delete a given child node
-        void DestroyTree(astar::PriorityQueueNode<T> *root) {
+        void DestroySubTree(astar::PriorityQueueNodePtr<T> x) {
 
-            // some helpers
-            astar::PriorityQueueNodePtr<T> tmp = root;
+			// some helpers
+			astar::PriorityQueueNodePtr<T> tmp = x->right;
 
-            while(tmp != tmp->right) {
+			while(tmp != x) {
 
-                // get the next node
-                root = tmp->right;
+				// disconect the tmp from the list
+				tmp->left->right = tmp->right;
+				tmp->right->left = tmp->left;
 
-                // disconect the tmp from the list
-                tmp->left->right = tmp->right;
-                tmp->right->left = tmp->left;
+				// reset the left and right pointers
+				tmp->left = tmp->right = tmp;
 
-                // reset the left and right pointers
-                tmp->left = tmp->right = tmp;
+				// delete the subtree
+				DestroySubTree(tmp);
 
-                // delete the subtree
-                DestroyTree(tmp);
+				// get the next neighbour
+				tmp = x->right;
 
-                tmp = root;
+			}
 
-            }
+			if (nullptr != x->child) {
 
-            if (nullptr != root->child) {
+				// get the root child address
+				tmp = x->child;
 
-                // get the root child address
-                tmp = root->child;
+				// reset the root's children pointer
+				x->child = nullptr;
 
-                // reset the root's children pointer
-                root->child = nullptr;
+				// delete the subtree
+				DestroySubTree(tmp);
 
-                // delete the subtree
-                DestroyTree(tmp);
+			}
 
-            }
-
-
-            // remove the root node
-            delete(root);
-
-            return;
+			// remove the current node
+			delete(x);
 
         }
 
@@ -372,13 +439,13 @@ class PriorityQueue {
         // PUBLIC ATTRIBUTES
 
         // basic constructor
-        PriorityQueue(T _null) : min(nullptr), N(0), null_value(_null) {}
+        PriorityQueue(T _null) : root(nullptr), min(nullptr), A(0), D(-1), N(0), null_value(_null) {}
 
         // basic destructor
         ~PriorityQueue() {
 
             // destroy the entire heap
-            DestroyHeap();
+            ClearHeap();
 
         }
 
@@ -391,7 +458,14 @@ class PriorityQueue {
             astar::PriorityQueueNodePtr<T> node = new astar::PriorityQueueNode<T>(element, Key);
 
             // insert the node to the heap
-            InsertNode(node);
+            InsertRootList(node);
+
+            // is it a new min node?
+            if (nullptr == min || Key < min->Key) {
+
+            	min = node;
+
+            }
 
             // incrementing the node counter
             N += 1;
@@ -399,131 +473,55 @@ class PriorityQueue {
             // return the node pointer
             return node;
 
-
         }
-
-        // set the null value
 
         // get the min element
         T Min() {
 
-            // build an element
-            T element = null_value;
-
-            if (nullptr != min) {
-
-                element = min->element;
-
-            }
-
+            // get the min element or just the null value
             // return the element
-            return element;
+            return ((nullptr != min) ? min->element : null_value);
 
         }
 
         // extract the min element
         T DeleteMin() {
 
-            // build the element to return
-            T element = null_value;
-
-            if (nullptr != min) {
-
-                // get the min node
-                astar::PriorityQueueNodePtr<T> z = min;
-
-                // an auxiliar pointer to the child
-                astar::PriorityQueueNodePtr<T> x = z->child;
-
-                // find each child
-                while(nullptr != x && nullptr != x->parent) {
-
-                    // disconect the child from the parent
-                    x->parent = nullptr;
-
-                    // update to the next child
-                    x = x->right;
-
-                }
-
-                if (nullptr != x) {
-
-                    // concatenate the root list and the child list
-                    z->left->right = x->right;
-                    x->right->left = z->left;
-                    z->left = x;
-                    x->right = z;
-
-                }
-
-                // remove the z node from the root list
-                z->left->right = z->right;
-                z->right->left = z->left;
-
-                if (z == z->right) {
-
-                    // we got an empty root list
-                    min = nullptr;
-
-                } else {
-
-                    // set the right node as the new root
-                    min = z->right;
-
-                    // consolidate the heap
-                    Consolidate();
-
-                }
-
-                // remove a node
-                N -= 1;
-
-                // get the desired element
-                element = z->element;
-
-                // delete the node
-                delete(z);
-
-            }
-
-            // return the min node
-            return(element);
+        	// return the min element or just the null_value
+        	return ((nullptr != min) ? ExtractMin() : null_value);
 
         }
 
         // update the heap after a decrease key
-        void DecreaseKey(astar::PriorityQueueNode<T> *node, double Key) {
+        void DecreaseKey(astar::PriorityQueueNode<T> *x, double Key) {
 
-            if (Key < node->Key && nullptr != node) {
+            if (nullptr != x && Key < x->Key) {
 
                 // update the node's key
-                node->Key = Key;
+                x->Key = Key;
 
                 // build a new fibonacci heap node
-                astar::PriorityQueueNode<T> *p = node->parent;
+                astar::PriorityQueueNodePtr<T> y = x->parent;
 
-                //
-                if (nullptr != p && Key < p->Key) {
+                if (nullptr != y && Key < y->Key) {
 
                     // cut the node
-                    Cut(node);
+                    Cut(x, y);
 
                     // cascading cut
-                    CascadingCut(p);
+                    CascadingCut(y);
 
                 }
 
                 // verify the min key
-                if (Key < min->Key) {
+                if (nullptr == min || Key < min->Key) {
 
                     // update the new min node
-                    min = node;
+                    min = x;
 
                 }
 
             }
-
-            return;
 
         }
 
@@ -546,24 +544,45 @@ class PriorityQueue {
         }
 
         // delete the entire heap
-        void DestroyHeap() {
+        void ClearHeap() {
 
-            // auxiliar node
-            astar::PriorityQueueNodePtr<T> tmp;
+        	if (nullptr != root) {
 
-            while(nullptr != (tmp = min)) {
 
-                // remove the tmp node from the root list
-                RemoveNodeFromRootList(tmp);
+        		// get the current root
+        		astar::PriorityQueueNodePtr<T> tmp = root->right;
 
-                // remove the subtree
-                DestroyTree(tmp);
+        		while (tmp != root) {
 
-            }
+        			// remove the node from the root list
+        			tmp->right->left = tmp->left;
+        			tmp->left->right = tmp->right;
 
-            return;
+        			// udpate the tmp
+        			tmp->left = tmp->right = tmp;
+
+        			// destroy the sub tree
+        			DestroySubTree(tmp);
+
+        			tmp = root->right;
+
+        		}
+
+        		// remove the current root
+        		delete root;
+
+        		root = nullptr;
+        		min = nullptr;
+
+        		N = 0;
+        		D = -1;
+        		A.clear();
+
+        	}
 
         }
+
+        unsigned int GetN() {return N;};
 
 };
 

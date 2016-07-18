@@ -26,8 +26,20 @@
 
 using namespace astar;
 
-HybridAstar::HybridAstar(VehicleModel &vehicle_, InternalGridMapRef map) : reverse_factor(4), gear_switch_cost(8), rs(),
-	vehicle(vehicle_), grid(map), heuristic(), open(nullptr), discovered(), invalid() {}
+HybridAstar::HybridAstar(
+	VehicleModel &vehicle_,
+	InternalGridMapRef map) :
+	reverse_factor(4),
+	gear_switch_cost(8),
+	voronoi_field_factor(1.5),
+	rs(),
+	vehicle(vehicle_),
+	grid(map),
+	heuristic(),
+	open(nullptr),
+	discovered(),
+	invalid()
+{}
 
 // remove all nodes
 void HybridAstar::RemoveAllNodes() {
@@ -35,7 +47,7 @@ void HybridAstar::RemoveAllNodes() {
     HybridAstarNodePtr tmp;
 
     // clear the open set
-    open.DestroyHeap();
+    open.ClearHeap();
 
     // clear the closed set
     while(!discovered.empty()) {
@@ -257,7 +269,7 @@ HybridAstarNodeArrayPtr HybridAstar::GetChidlren(const Pose2D &start, const Pose
     double inverseThreshold = 10.0/(threshold*threshold);
 
     // quadratic falloff
-    if (10.0 > threshold || inverseThreshold < rand()) {
+    if (10.0 > threshold || inverseThreshold > rand()) {
 
         // the a new HybridAstarNode based on ReedsSheppModel
         HybridAstarNodePtr rsNode = GetReedsSheppChild(start, goal);
@@ -300,7 +312,7 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMap &grid_map, const State2D &st
 
     // the available space around the vehicle
     // provides the total length between the current state and the node's children
-    double length = 0.0;
+    double length;
 
     // the simple case of length
     // length = grid_map.resolution
@@ -319,9 +331,6 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMap &grid_map, const State2D &st
     // push the start node to the discovered set
     discovered.push_back(n);
 
-    // reverse flag
-    bool reverse_gear;
-
     // the cost from the start to the current position
     double tentative_g;
 
@@ -332,8 +341,7 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMap &grid_map, const State2D &st
     // the actual A* algorithm
     while(!open.isEmpty()) {
 
-        // get the high priority node
-        n = open.DeleteMin();
+    	n = open.DeleteMin();
 
         // is it the desired goal?
         if (goal_pose == n->pose) {
@@ -347,13 +355,20 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMap &grid_map, const State2D &st
             // return the path
             return resulting_path;
 
+        } else {
+
+        	std::cout << "Diff: " << goal_pose.position.Distance(n->pose.position) << " and orientation diff: " << mrpt::math::angDistance<double>(goal_pose.orientation, n->pose.orientation) << "\n";
+
         }
 
         // add to the explored set
-        n->cell->status = ExploredNode;
+        // n->cell->status = ExploredNode;
 
         // get the length based on the environment
-        length = std::max(grid_map.resolution, 0.5 * (grid_map.GetObstacleDistance(n->pose.position) + grid_map.GetVoronoiDistance(n->pose.position)));
+        double obst = grid_map.GetObstacleDistance(n->pose.position);
+        double voro_dist = grid_map.GetVoronoiDistance(n->pose.position);
+
+        length = std::max(grid_map.resolution, 0.25 * (obst + voro_dist));
 
         // iterate over the gears
         for (unsigned int i = 0; i < NumGears; i++) {
@@ -361,17 +376,14 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMap &grid_map, const State2D &st
             // casting the gears
             Gear gear = static_cast<Gear>(i);
 
-            // is it reverse gear?
-            reverse_gear = (ForwardGear == gear);
-
             // get the children nodes by expanding all gears and steering
             HybridAstarNodeArrayPtr children = GetChidlren(n->pose, goal_pose, gear, length);
 
             // reference, just a syntactic sugar
             std::vector<HybridAstarNodePtr> &nodes(children->nodes);
 
-            //
-            for (std::vector<HybridAstarNodePtr>::iterator it = nodes.begin(); it < nodes.end(); ++it) {
+            // iterate over the current node's children
+            for (std::vector<HybridAstarNodePtr>::iterator it = nodes.begin(); it != nodes.end(); ++it) {
 
             	HybridAstarNodePtr child = *it;
 
@@ -382,79 +394,79 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMap &grid_map, const State2D &st
                 // we must avoid node->cell = nullptr inside the HybridAstarNode
                 if (nullptr != c) {
 
-                    if (ExploredNode != c->status) {
+					if (nullptr != child->action) {
 
-                        if (nullptr != child->action) {
+						// we a have a valid action, conventional expanding
+						tentative_g = n->g + PathCost(n->pose, n->action->gear, child->pose, gear, length);
 
-                            // we a have a valid action, conventional expanding
-                            tentative_g = n->g + PathCost(n->pose, child->pose, length, reverse_gear);
+					} else if (0 < child->action_set->size()) {
 
-                        } else if (0 < child->action_set->size()) {
+						// we have a valid action set, it was a Reeds-Shepp analytic expanding
+						tentative_g = n->g + child->action_set->CalculateCost(vehicle.min_turn_radius, reverse_factor, gear_switch_cost);
 
-                            // we have a valid action set, it was a Reeds-Shepp analytic expanding
-                            tentative_g = n->g + child->action_set->CalculateCost(vehicle.min_turn_radius, reverse_factor, gear_switch_cost);
+					} else {
 
-                        } else {
+						// we don't have any valid action, it's a bad error
+						// add to the invalid nodes set
+						invalid.push_back(child);
 
-                            // we don't have any valid action, it's a bad error
-                            // add to the invalid nodes set
-                            invalid.push_back(child);
+						// jump to the next iteration
+						continue;
+						// throw std::exception();
 
-                            // jump to the next iteration
-                            continue;
-                            // throw std::exception();
+					}
 
-                        }
+					// get the estimated cost
+					tentative_f = tentative_g + heuristic.GetHeuristicValue(grid_map, child->pose, goal_pose);
 
-                        // get the estimated cost
-                        tentative_f = tentative_g + heuristic.GetHeuristicValue(grid_map, child->pose, goal_pose);
+					// update the cost
+					child->g = tentative_g;
 
-                        // update the cost
-                        child->g = tentative_g;
+					// update the total value -> g cost plus heuristic value
+					child->f = tentative_f;
 
-                        // update the total value -> g cost plus heuristic value
-                        child->f = tentative_f;
+					// set the parent
+					child->parent = n;
 
-                        // set the parent
-                        child->parent = n;
 
-                        // is it a not opened node?
-                        if (UnknownNode == c->status) {
+					// is it a not opened node?
+					if (UnknownNode == c->status) {
 
-                            // the cell is empty and doesn't have any node
+						// the cell is empty and doesn't have any node
 
-                            // set the cell pointer
-                        	child->cell = c;
+						// set the cell pointer
+						child->cell = c;
 
-                            // update the cell pointer
-                            c->node = child;
+						// update the cell pointer
+						c->node = child;
 
-                            // update the cell status
-                            c->status = OpenedNode;
+						// update the cell status
+						c->status = OpenedNode;
 
-                            // add to the open set
-                            child->handle = open.Add(child, tentative_f);
+						// add to the open set
+						child->handle = open.Add(child, tentative_f);
 
-                        } else if (OpenedNode == c->status && tentative_f < c->node->f) {
+					} else if (tentative_f < c->node->f) {
 
-                            // the cell has a node but the current child is a better one
+						// the cell has a node but the current child is a better one
 
-                            // update the node at the cell
-                            // copy the handle to the current child, just to avoid losing that information
-                        	child->handle = c->node->handle;
+						// update the node at the cell
+						// copy the handle to the current child, just to avoid losing that information
+						child->handle = c->node->handle;
 
-                            // the old node is updated but not the corresponding Key in the priority queue
-                            *(c->node) = *child;
+						// copy the cell node
+						child->cell = c;
 
-                            // update the cell status
-                            c->status = OpenedNode;
+						// the old node is updated but not the corresponding Key in the priority queue
+						*(c->node) = *child;
 
-                            // decrease the key at the priority queue
-                            open.DecreaseKey(child->handle, tentative_f);
+						// update the cell status
+						c->status = OpenedNode;
 
-                        }
+						// decrease the key at the priority queue
+						open.DecreaseKey(child->handle, tentative_f);
 
-                    }
+					}
 
                 }
 
@@ -475,11 +487,24 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMap &grid_map, const State2D &st
 }
 
 // get the path cost
-double HybridAstar::PathCost(const astar::Pose2D& start, const astar::Pose2D& goal, double length, bool reverse_gear) {
+double HybridAstar::PathCost(
+	const astar::Pose2D& start,
+	astar::Gear start_gear,
+	const astar::Pose2D& goal,
+	astar::Gear next_gear,
+	double length)
+{
+	//
+	double reverse_cost = 0.0;
 
-	if (reverse_gear)
-		return (start.position.x + goal.orientation * length)*0.0;
-	else
-		return std::numeric_limits<double>::max();
+	// reverse penalty
+	if (BackwardGear == next_gear)
+		reverse_cost =  length * reverse_factor;
 
+	// gear change penalty
+	if (start_gear != next_gear)
+		reverse_cost += gear_switch_cost;
+
+	// compute and return the cost
+	return reverse_cost + length + length * voronoi_field_factor * grid.GetPathCost(goal.position);
 }

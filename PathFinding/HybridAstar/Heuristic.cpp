@@ -13,9 +13,6 @@ void Heuristic::UpdateGoal(const astar::InternalGridMap &grid, const astar::Pose
 double Heuristic::GetHeuristicValue(astar::InternalGridMap &grid, const astar::Pose2D &start, const astar::Pose2D &goal) {
 
 	(void) grid;
-	(void) start;
-	(void) goal;
 
-	return 0;
-
+	return goal.position.Distance(start.position);
 }

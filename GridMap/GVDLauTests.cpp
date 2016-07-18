@@ -140,6 +140,10 @@ int main (int argc, char **argv) {
 	voro_dist = gvd.GetVoronoiDistance(r, c);
 	std::cout << "Done! Result voro_dist(" << r << ", " << c << "): " << voro_dist << "\n";
 
+	std::cout << "\nGet the current pathcost query for (" << r << ", " << c << "), it should not be: inf! ...\n";
+	double cost = gvd.GetPathCost(r, c);
+	std::cout << "Done! Result cost(" << r << ", " << c << "): " << cost << "\n";
+
 	std::cout << "........................................\n";
 	std::cout << "........................................\n";
 

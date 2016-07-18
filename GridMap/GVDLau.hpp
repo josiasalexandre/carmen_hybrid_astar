@@ -138,12 +138,18 @@ class GVDLau {
 		// get the nearest obstacle distance
 		double GetObstacleDistance(unsigned int row, unsigned int col);
 
+		// get the nearest obstacle index
+		GridCellIndex GetObstacleIndex(unsigned int row, unsigned int col);
+
 		// get the nearest voronoi edge distance
 		double GetVoronoiDistance(unsigned int row, unsigned int col);
 
 		// get the nearest voronoi edge distance given a valid
 		// unsigned int overloaded, KDTree usage
 		GridCellIndex GetVoronoiIndex(unsigned int row, unsigned int col);
+
+		// get the path cost index
+		double GetPathCost(unsigned int row, unsigned int col);
 
 		// save the voronoi field map to an external file
 		void Visualize(std::string);

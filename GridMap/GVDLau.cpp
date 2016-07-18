@@ -17,7 +17,7 @@ GVDLau::GVDLau() :
 	width(0),
 	widthminus1(0),
 	alpha(20.0),
-	max_dist(30.0),
+	max_dist(30),
 	max_sqdist(900),
 	max_double(std::numeric_limits<double>::max()),
 	initialized(false),
@@ -463,7 +463,25 @@ void GVDLau::UpdatePathCostMap() {
 			// get the current data cell
 			GVDLau::DataCellRef s(next_data[r][c]);
 
-			if (max_dist <= s.dist || !(s.voro_dist == s.voro_dist)) {
+			// get the nearest voro index
+			PointT<unsigned int, 2> find({r, c});
+
+			// get the closest index
+			PointT<unsigned int, 2> found(edges.Nearest(find));
+
+			// set the nearest voro index
+			s.nearest_voro.row = found[0];
+			s.nearest_voro.col = found[1];
+
+			int dr = (int) found[0] - (int) r;
+			int dc = (int) found[1] - (int) c;
+
+			// set the voro dist
+			s.voro_sqdist = dr*dr + dc*dc;
+			s.voro_dist = std::sqrt(s.voro_sqdist);
+
+			if (max_dist <= s.dist || max_double == s.voro_dist) {
+				// std::cout << "menor " << max_dist << " < " << s.dist << "\n";
 				s.path_cost = 0.0;
 			} else {
 				s.path_cost = (alpha / (alpha + s.dist)) * (s.voro_dist / (s.dist + s.voro_dist)) * ((max_dist - s.dist) * (max_dist - s.dist) / (max_sqdist));
@@ -673,12 +691,6 @@ void GVDLau::Update() {
 		// slow voronoi map, let's use the KDTree instead
 		//UpdateVoronoiMap();
 
-		// swap the pointers
-		//std::swap(this->data, this->next_data);
-		DataCell **tmp = next_data;
-		next_data = data;
-		data = tmp;
-
 		// clear the old add list vector
 		add_list.clear();
 
@@ -690,7 +702,7 @@ void GVDLau::Update() {
 			for (unsigned int c = 0; c < u_width; ++c) {
 
 				// get the current data
-				if (data[r][c].voro) {
+				if (next_data[r][c].voro) {
 
 					// build the point
 					PointT<unsigned int, 2> point({r, c});
@@ -710,17 +722,38 @@ void GVDLau::Update() {
 		std::cout << "\nDone: " << ((double) t) / CLOCKS_PER_SEC << "\n";
 
 		// update the entire path cost map
-		// UpdatePathCostMap();
+		UpdatePathCostMap();
+
+		// swap the pointers
+		//std::swap(this->data, this->next_data);
+		DataCell **tmp = next_data;
+		next_data = data;
+		data = tmp;
+
 	}
 
 }
 
 // get the nearest obstacle distance
 double GVDLau::GetObstacleDistance(unsigned int row, unsigned int col) {
-	if (0 < row && height > row && 0 < col && width > col)
+	if (0 < row && height > row && 0 < col && width > col) {
+
+		(void) data[row][col].nearest_obstacle;
 		return data[row][col].dist;
+
+	}
 	else
 		return 0.0;
+}
+
+// get the nearest obstacle index
+GridCellIndex GVDLau::GetObstacleIndex(unsigned int row, unsigned int col) {
+
+	if (0 < row && height > row && 0 < col && width > col) {
+		return data[row][col].nearest_obstacle;
+	}
+
+	return GridCellIndex(UINT_MAX, UINT_MAX);
 }
 
 // get the nearest voronoi edge distance
@@ -745,6 +778,13 @@ GridCellIndex GVDLau::GetVoronoiIndex(unsigned int row, unsigned int col) {
 	PointT<unsigned int, 2> found(edges.Nearest(point));
 
 	return GridCellIndex(found[0], found[1]);
+
+}
+
+// get the path cost index
+double GVDLau::GetPathCost(unsigned int row, unsigned int col) {
+
+	return data[row][col].path_cost;
 
 }
 

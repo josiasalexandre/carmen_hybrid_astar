@@ -32,6 +32,9 @@ class InternalGridMap {
         // the current grid map
         astar::GridMap grid_map;
 
+        // get the grid cell index from any position
+        astar::GridCellIndex PoseToIndex(const astar::Vector2D<double>&);
+
         // PRIVATE METHODS
 
         // remove the current grid map
@@ -81,6 +84,9 @@ class InternalGridMap {
 
         // indirect voronoi edge distance
         double GetVoronoiDistance(const astar::Vector2D<double>&);
+
+        // get the path cost
+        double GetPathCost(const astar::Vector2D<double>&);
 
 };
 

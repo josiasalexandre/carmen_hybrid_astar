@@ -73,12 +73,17 @@ HybridAstarPathFinder::get_parameters(int argc, char **argv)
 StateArrayPtr
 HybridAstarPathFinder::replan() {
 
-	if (valid_goal && goal) {
+	std::cout << "replaning\n";
+
+	if (valid_goal) {
 
 		if (nullptr != path) {
 			delete path;
 		}
-        // find the path to the goal
+
+		grid.voronoi.Visualize("testmap.ppm");
+
+		// find the path to the goal
         StateArrayPtr raw_path = path_finder.FindPath(grid, robot, goal);
 
         if (3 < raw_path->states.size()) {
@@ -92,8 +97,6 @@ HybridAstarPathFinder::replan() {
 
 		return path;
 	}
-
-	std::cout << "replaning\n";
 
 	return nullptr;
 
@@ -298,10 +301,3 @@ astar::State2D HybridAstarPathFinder::get_robot_state() {
     return robot;
 
 }
-
-astar::StateArray HybridAstarPathFinder::get_path() {
-
-    return StateArray();
-
-}
-

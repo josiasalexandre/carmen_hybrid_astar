@@ -36,23 +36,23 @@ class PriorityQueueNode {
         double Key;
 
         // basic constructor
-        PriorityQueueNode(T e, double Key_) : parent(nullptr), child(nullptr), degree(0), mark(false), element(e), Key(Key_) {
+        PriorityQueueNode(T e, double Key_) :
+        	parent(nullptr), child(nullptr), degree(0), mark(false), element(e), Key(Key_) {
 
-            // set the left and right pointer
-            left = right = this;
-
+        	// set the left and right pointers
+        	left = right = this;
         }
 
         // copy constructor
         PriorityQueueNode(const PriorityQueueNode<T>& n) : parent(n.parent), child(n.child), left(n.left), right(n.right), degree(n.degree), mark(n.mark), element(n.element), Key(n.Key) {}
 
         // basic destructor
-        ~PriorityQueueNode() {
+/*        ~PriorityQueueNode() {
 
             // set all pointers to nullptr
             parent = child = left = right = nullptr;
 
-        }
+        }*/
 
 };
 
