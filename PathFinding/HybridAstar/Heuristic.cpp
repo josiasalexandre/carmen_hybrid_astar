@@ -1,6 +1,8 @@
 #include "Heuristic.hpp"
 #include "../../Helpers/wrap2pi.hpp"
+#include "../../PriorityQueue/PriorityQueue.hpp"
 
+#include <set>
 #include <cmath>
 
 using namespace astar;
@@ -43,17 +45,29 @@ double Heuristic::GetObstacleRelaxedHeuristicValue(Pose2D start, const Pose2D &g
 }
 
 // the holonomic with obstacles heuristic
-double Heuristic::GetNonholonomicRelaxedHeuristicValue(const InternalGridMapRef grid, Pose2D start, const Pose2D &goal) {
+double Heuristic::GetNonholonomicRelaxedHeuristicValue(const InternalGridMapRef grid, const Pose2D &start, const Pose2D &goal) {
 
-	return 0;
-
+	// just a simple euclidian distance now
+	// it's not ready
+	return start.position.Distance(goal.position);
 }
 
 
-void astar::Heuristic::UpdateGoal(const astar::InternalGridMap &grid, const astar::Pose2D &goal) {
 
-	(void) grid;
-	(void) goal;
+
+void astar::Heuristic::UpdateCirclePathHeuristic(const astar::InternalGridMap &grid, const Pose2D &start, const Pose2D &goal_) {
+
+	if (goal != goal_) {
+
+		// update the current goal
+		goal = goal_;
+
+		// clear the old circle path
+		circle_path.clear();
+
+		// TODO implement the circle path search
+
+	}
 
 }
 
