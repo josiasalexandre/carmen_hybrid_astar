@@ -17,11 +17,18 @@ class VehicleModel {
         // PRIVATE ATTRIBUTES
 		double circle_radius;
 
+
+
         // PRIVATE METHODS
 
     public:
 
+		// the default low speed for simulation purpose
+		double low_speed;
+
         // PUBLIC ATTRIBUTES
+		// the minimum turn radius
+		double min_turn_radius;
 
         // the maximum wheel deflection
         double max_wheel_deflection;
@@ -33,7 +40,7 @@ class VehicleModel {
         double understeer;
 
         // default turn radius, it
-        double min_turn_radius;
+        double max_curvature;
 
         // the max velocity
         double max_velocity;
@@ -97,6 +104,12 @@ class VehicleModel {
 
         // PUBLIC METHODS
 
+        // Configure the current vehicle model
+        void Configure();
+
+        // get the next pose with Pose, Steer, Gear, length and custom turn radius
+        astar::Pose2D NextPose(const astar::Pose2D&, astar::Steer, astar::Gear, double length) const;
+
         // get the next pose with Pose, Steer, Gear, length and custom turn radius
         astar::Pose2D NextPose(const astar::Pose2D&, astar::Steer, astar::Gear, double length, double radius) const;
 
@@ -142,6 +155,7 @@ class VehicleModel {
 		// get the desired orientation
 		double GetBackwardOrientation(const astar::Pose2D &prev, const astar::Pose2D &current, const astar::Pose2D &next) const;
 
+		// get the
 };
 
 }

@@ -94,6 +94,8 @@ public:
 
 typedef StateArray* StateArrayPtr;
 
+typedef StateArray& StateArrayRef;
+
 }
 
 #endif

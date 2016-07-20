@@ -1,3 +1,13 @@
+/*
+ * Author : josiasalexandre@gmail.com
+ *
+ *  Free as a beer! Really, really copylefted!
+ * This is my personal and incomplete version of the Microsoft C# Vector2 class
+ * It's based only on their public documentation
+ *
+ *
+ */
+
 #ifndef VECTOR_TEMPLATE_HPP
 #define VECTOR_TEMPLATE_HPP
 

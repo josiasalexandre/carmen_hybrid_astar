@@ -208,9 +208,6 @@ class ReedsSheppModel {
 
     public:
 
-        // basic constructor
-        ReedsSheppModel();
-
         // PUBLIC ATTRIBUTES
 
         // PUBLIC METHODS

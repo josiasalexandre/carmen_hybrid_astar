@@ -6,3 +6,6 @@ kdev4/
 *.o
 gvd
 path_finder
+heuristic_info.txt
+heuristic
+heuristic_loader

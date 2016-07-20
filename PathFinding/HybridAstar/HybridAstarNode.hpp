@@ -49,16 +49,20 @@ class HybridAstarNode {
         // basic constructor with a given action
         HybridAstarNode(
                 const astar::Pose2D&, ReedsSheppActionPtr,
-                astar::GridMapCellPtr = nullptr, double cost_ = 0.0, double h_cost = 0.0, astar::HybridAstarNode *n= nullptr);
+                astar::GridMapCellPtr = nullptr, double cost_ = 0.0, double h_cost = 0.0, astar::HybridAstarNode *p = nullptr);
 
         // basic constructor
         HybridAstarNode(const astar::Pose2D&, ReedsSheppActionSetPtr,
-                astar::GridMapCellPtr = nullptr, double cost_ = 0.0, double h_cost = 0.0, astar::HybridAstarNode *n = nullptr);
+                astar::GridMapCellPtr = nullptr, double cost_ = 0.0, double h_cost = 0.0, astar::HybridAstarNode *p = nullptr);
 
         // basic destructor
         ~HybridAstarNode();
 
         // PUBLIC METHODS
+
+        // update the node values
+        void UpdateValues(const astar::HybridAstarNode&);
+
         // < operator overloading, for priority queue compare purpose
         bool operator<(const astar::HybridAstarNode& n) const;
 

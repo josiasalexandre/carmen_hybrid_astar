@@ -1,3 +1,5 @@
+#include <exception>
+
 #include "HybridAstarNode.hpp"
 #include "../../GridMap/GridMapCell.hpp"
 
@@ -5,13 +7,13 @@ using namespace astar;
 
 // basic constructor with a given action
 HybridAstarNode::HybridAstarNode(
-        const Pose2D &p,
+        const Pose2D &_pose,
         ReedsSheppActionPtr rsAction,
         const GridMapCellPtr c,
         double cost,
         double heuristicCost,
-        HybridAstarNode *n
-    ) : pose(p), action(rsAction), action_set(0), g(cost), f(heuristicCost), parent(n), cell(c), handle(nullptr)
+        HybridAstarNode *p
+    ) : pose(_pose), action(rsAction), action_set(0), g(cost), f(heuristicCost), parent(p), cell(c), handle(nullptr)
 {
 	// update the cell values
 	if (nullptr != cell) {
@@ -27,13 +29,13 @@ HybridAstarNode::HybridAstarNode(
 
 // the basic constructor with a given action set
 HybridAstarNode::HybridAstarNode(
-    const Pose2D &p,
+    const Pose2D &_pose,
     ReedsSheppActionSetPtr rsActionSet,
     GridMapCellPtr c,
     double cost,
     double heuristicCost,
-    HybridAstarNodePtr n
-    ) : pose(p), action(nullptr), action_set(rsActionSet), g(cost), f(heuristicCost), parent(n), cell(c), handle(nullptr)
+    HybridAstarNodePtr p
+    ) : pose(_pose), action(nullptr), action_set(rsActionSet), g(cost), f(heuristicCost), parent(p), cell(c), handle(nullptr)
 {
 	// update the cell values
 	if (nullptr != cell) {
@@ -60,27 +62,77 @@ HybridAstarNode::~HybridAstarNode() {
 
 		// set to unknown node status
 		cell->status = astar::UnknownNode;
+
 	}
 
     // delete the action
     if (nullptr != action) {
 
-        delete(action);
+        delete action;
+
+    } else if (nullptr != action_set) {
+
+    	// delete the action set
+        delete action_set;
 
     }
 
-    // delete the action set
-    if (nullptr != action_set) {
-
-        delete(action_set);
-
-    }
+    parent = nullptr;
 
 }
 
 
 // PUBLIC METHODS
+// update the node values
+void HybridAstarNode::UpdateValues(const astar::HybridAstarNode &n) {
 
+	// copy the input node values
+
+	// the parent node
+	parent = n.parent;
+
+	// the current pose
+	pose = n.pose;
+
+	if (nullptr != n.action) {
+
+		if (nullptr == action) {
+
+			action = new ReedsSheppAction(*(n.action));
+
+		} else {
+
+			// the steering action
+			*action = *(n.action);
+		}
+
+	} else if (nullptr != n.action_set) {
+
+		if (nullptr == action_set) {
+
+			action_set = new ReedsSheppActionSet(*(n.action_set));
+
+		} else {
+
+			// the steering action
+			*action_set = *(n.action_set);
+
+		}
+
+	} else {
+
+		throw std::exception();
+
+	}
+
+	// the current node cost
+	g = n.g;;
+
+	// the current node cost + estimated heuristic cost
+	f = n.f;
+
+
+}
 // < operator overloading, for element comparison inside the priority queue
 bool HybridAstarNode::operator<(const astar::HybridAstarNode& n) const {
 
@@ -92,39 +144,10 @@ bool HybridAstarNode::operator<(const astar::HybridAstarNode& n) const {
 void HybridAstarNode::operator=(const astar::HybridAstarNode& n) {
 
     // copy the input node values
-
-    // the current pose
-    pose = n.pose;
-
-    // the steering action
-    if (nullptr != action) {
-
-        delete action;
-
-    }
-
-    // update the steering action
-    action = n.action;
-
-    // the action set
-    if (nullptr != action_set) {
-
-        delete(action_set);
-
-    }
-
-    // the steering action set
-    action_set = n.action_set;
+	UpdateValues(n);
 
     // the current cell
+	// CAUTION
     cell = n.cell;
-
-    // the current node cost
-    g = n.g;;
-
-    // the current node cost + estimated heuristic cost
-    f = n.f;
-
-    return;
 
 }

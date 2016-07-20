@@ -64,7 +64,7 @@ class ReedsSheppActionSet {
         void AddAction(astar::Steer, astar::Gear, double);
 
         // get the actions vector size
-        unsigned int size();
+        unsigned int Size();
 
         // the entire set cost
         double CalculateCost(double, double, double);
@@ -79,6 +79,9 @@ class ReedsSheppActionSet {
 
         // time flip and reflect in sequence
         static ReedsSheppActionSet* TimeFlipAndReflect(ReedsSheppActionSet*);
+
+        // the assignement operator overloading
+        void operator=(const ReedsSheppActionSet&);
 
 };
 

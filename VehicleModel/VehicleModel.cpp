@@ -4,6 +4,33 @@
 
 using namespace astar;
 
+// configure the current vehicle model
+void VehicleModel::Configure() {
+
+	// set the max lateral acceleration
+	max_lateral_acceleration = 1.2;
+
+	// set the vehicle low speed - 5 m/h -- See Urmson and Thrun
+	low_speed = 2.2352;
+
+	// get the min turn radius for 2.2352 m/s
+	if (0 < max_wheel_deflection && 0 < understeer)
+		min_turn_radius = axledist / std::tan(max_wheel_deflection/(1.0 + low_speed*low_speed*understeer));
+	else if (0 < max_curvature)
+		min_turn_radius = 1.0/max_curvature;
+	else
+		min_turn_radius = 5;
+
+}
+
+// get the next pose with Pose, Steer, Gear, length and custom turn radius
+astar::Pose2D VehicleModel::NextPose(
+		const astar::Pose2D &current_pose, Steer steer, Gear gear, double length) const {
+
+	return NextPose(current_pose, steer, gear, length, min_turn_radius);
+
+}
+
 // get the next pose with Pose, Steer, Gear, length and turn radius
 astar::Pose2D VehicleModel::NextPose(
     const astar::Pose2D &current_pose, Steer steer, Gear gear, double length, double t_radius) const
@@ -59,7 +86,7 @@ astar::Pose2D VehicleModel::NextPose(
     // rotate around z axis
     position.RotateZ(current_pose.orientation);
 
-    // rotate the point to the appropriated result
+    // move the point to the appropriated result
     return Pose2D(position + current_pose.position, mrpt::math::wrapToPi<double>(current_pose.orientation + angle));
 
 }
@@ -76,8 +103,7 @@ Pose2D VehicleModel::NextPose(const astar::Pose2D &current, double vel, double p
     if (0.0 != phi) {
 
         // get the turn radius
-        double turn_radius = axledist /
-                        std::tan(phi/(1.0 + vel*vel*understeer));
+        double turn_radius = axledist / std::tan(phi/(1.0 + vel*vel*understeer));
 
         angle = length/turn_radius;
 

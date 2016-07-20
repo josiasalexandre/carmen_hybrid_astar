@@ -772,8 +772,6 @@ GridCellIndex GVDLau::GetVoronoiIndex(unsigned int row, unsigned int col) {
 	// build the point
 	PointT<unsigned int, 2u> point({row, col});
 
-	std::cout << "\n\n------------Row: " << row << " and collum: " << col << "\n";
-
 	// find the point
 	PointT<unsigned int, 2> found(edges.Nearest(point));
 

@@ -29,22 +29,19 @@
 
 using namespace astar;
 
-// basic constructor
-ReedsSheppModel::ReedsSheppModel() {}
-
 // PUBLIC METHODS
 
 // solve the current start to goal pathfinding
-ReedsSheppActionSetPtr ReedsSheppModel::Solve(const Pose2D &start, const Pose2D &goal, double inverse_unit) {
+ReedsSheppActionSetPtr ReedsSheppModel::Solve(const Pose2D &start, const Pose2D &goal, double unit) {
 
     // Translate the goal so that the start position is at the origin
-    Vector2D<double> position((goal.position.x - start.position.x)*inverse_unit, (goal.position.y - start.position.y)*inverse_unit);
+    Vector2D<double> position((goal.position.x - start.position.x)/unit, (goal.position.y - start.position.y)/unit);
 
     // Rotate the goal so that the start orientation is 0
     position.RotateZ(-start.orientation);
 
     // get the angle difference
-    double orientation = mrpt::math::wrapToPi<double>(goal.orientation - start.orientation);
+    double orientation = mrpt::math::angDistance<double>(goal.orientation, start.orientation);
 
     // the sin of the orientation
     double sin_orientation = std::sin(orientation);
@@ -101,7 +98,7 @@ ReedsSheppActionSetPtr ReedsSheppModel::Solve(const Pose2D &start, const Pose2D 
 
 // return a list of poses from a given action set
 StateArrayPtr ReedsSheppModel::Discretize(
-        const Pose2D &start, ReedsSheppActionSetPtr action_set, double radcurv, double inverse_resolution)
+        const Pose2D &start, ReedsSheppActionSetPtr action_set, double radcurv, double inverse_max_length)
 {
     // get the previous pose
     State2D prev(start);
@@ -124,17 +121,17 @@ StateArrayPtr ReedsSheppModel::Discretize(
     	std::vector<ReedsSheppAction>::iterator end = action_set->actions.end();
 
         // get the iterator
-        for (std::vector<ReedsSheppAction>::iterator it = action_set->actions.begin();  it < end; ++it) {
+        for (std::vector<ReedsSheppAction>::iterator it = action_set->actions.begin();  it != end; ++it) {
 
             // subdivide the entire arc length by the grid resolution
-            unsigned int n = ceil(it->length * radcurv * inverse_resolution);
+            unsigned int n = ceil(it->length * radcurv * inverse_max_length);
 
             // is it a line path?
             if (RSStraight != it->steer) {
 
                 // it's a curve
                 // get the piece angle
-                double pieceAngle = it->length/n;
+                double pieceAngle = it->length/((double) n);
 
                 // get the current phi
                 double phi = pieceAngle / 2;
@@ -168,14 +165,15 @@ StateArrayPtr ReedsSheppModel::Discretize(
                     dx = -dx;
 
                     // invert the pieceAngle
-                    // if the pieceAngle was inverted becase the RSTurnRight
-                    /// let's invert it again
+                    // if the pieceAngle was inverted because the RSTurnRight
+                    // let's invert it again
                     pieceAngle = -pieceAngle;
 
                 }
 
                 // the resulting position, after the movement
                 astar::Vector2D<double> pos;
+
 
                 // iterate over the entire arc length
                 for (unsigned int i = 0; i < n; i++) {
