@@ -320,7 +320,7 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMap &grid_map, const State2D &st
     Pose2D start_pose(start.position, start.orientation);
 
     // update the heuristic to the new goal
-    heuristic.UpdateGoal(grid_map, goal_pose);
+    heuristic.UpdateCirclePathHeuristic(grid_map, start_pose, goal_pose);
 
     // the start state heuristic value
     double heuristic_value = heuristic.GetHeuristicValue(grid_map, start_pose, goal_pose);
@@ -414,7 +414,7 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMap &grid_map, const State2D &st
 						// we a have a valid action, conventional expanding
 						tentative_g = n->g + PathCost(n->pose, n->action->gear, child->pose, gear, length);
 
-					} else if (0 < child->action_set->size()) {
+					} else if (0 < child->action_set->Size()) {
 
 						// we have a valid action set, it was a Reeds-Shepp analytic expanding
 						tentative_g = n->g + child->action_set->CalculateCost(vehicle.min_turn_radius, reverse_factor, gear_switch_cost);
