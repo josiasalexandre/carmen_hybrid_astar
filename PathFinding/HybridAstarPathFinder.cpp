@@ -6,12 +6,10 @@ using namespace astar;
 
 // basic constructor
 HybridAstarPathFinder::HybridAstarPathFinder(int argc, char **argv) :
-    vehicle_model(), grid(), initialized_grid_map(false), gm_mutex(), path_finder(vehicle_model, grid), path(nullptr), odometry_speed(0.0),
-    odometry_steering_angle(0.0), robot(), goal(), valid_goal(false), goal_list(nullptr),
+    vehicle_model(), grid(), initialized_grid_map(false), gm_mutex(), path_finder(vehicle_model, grid), path(), odometry_speed(0.0),
+    odometry_steering_angle(0.0), robot(), goal(), valid_goal(false), goal_list(),
     use_obstacle_avoider(true), activated(false), simulation_mode(false)
-
 {
-
     // read all parameters
     get_parameters(argc, argv);
 
@@ -20,7 +18,6 @@ HybridAstarPathFinder::HybridAstarPathFinder(int argc, char **argv) :
 
     // set the half width
     vehicle_model.width_2 = vehicle_model.width * 0.5;
-
 }
 
 // PRIVATE METHODS
@@ -35,14 +32,13 @@ HybridAstarPathFinder::get_parameters(int argc, char **argv)
 		{(char *)"astar",   (char *)"simulation_mode",                           	CARMEN_PARAM_ONOFF, &this->simulation_mode,                    		                    1, NULL},
 	};
 
-
     // vehicle parameters
     carmen_param_t vehicle_params_list[] = {
         {(char *)"robot",   (char *)"max_steering_angle",                           CARMEN_PARAM_DOUBLE, &vehicle_model.max_wheel_deflection,                           1, NULL},
         {(char *)"robot",   (char *)"desired_steering_command_rate",                CARMEN_PARAM_DOUBLE, &vehicle_model.steering_command_rate,                          1, NULL},
         {(char *)"robot",   (char *)"understeer_coeficient",                        CARMEN_PARAM_DOUBLE, &vehicle_model.understeer,                                     1, NULL},
-        {(char *)"robot",   (char *)"maximum_capable_curvature",              		CARMEN_PARAM_DOUBLE, &vehicle_model.min_turn_radius,                                1, NULL},
-        {(char *)"robot",   (char *)"max_velocity",                                	CARMEN_PARAM_DOUBLE, &vehicle_model.max_velocity,                                  1, NULL},
+        {(char *)"robot",   (char *)"maximum_capable_curvature",              		CARMEN_PARAM_DOUBLE, &vehicle_model.max_curvature, 	                                1, NULL},
+        {(char *)"robot",   (char *)"max_velocity",                                	CARMEN_PARAM_DOUBLE, &vehicle_model.max_velocity,                                   1, NULL},
         {(char *)"robot",   (char *)"maximum_speed_forward",                        CARMEN_PARAM_DOUBLE, &vehicle_model.max_forward_speed,                              1, NULL},
         {(char *)"robot",   (char *)"maximum_speed_reverse",                        CARMEN_PARAM_DOUBLE, &vehicle_model.max_backward_speed,                             1, NULL},
         {(char *)"robot",   (char *)"length",                                       CARMEN_PARAM_DOUBLE, &vehicle_model.length,                                         1, NULL},
@@ -61,44 +57,60 @@ HybridAstarPathFinder::get_parameters(int argc, char **argv)
         {(char *)"robot",   (char *)"desired_decelaration_reverse",                 CARMEN_PARAM_DOUBLE, &vehicle_model.desired_backward_deceleration,                  1, NULL}
     };
 
+
     carmen_param_install_params(argc, argv, vehicle_params_list, sizeof(vehicle_params_list) / sizeof(vehicle_params_list[0]));
 
     carmen_param_allow_unfound_variables(1);
     carmen_param_install_params(argc, argv, planner_params_list, sizeof(planner_params_list) / sizeof(planner_params_list[0]));
 
+    // do some pre-computations and update some indirect parameters
+    vehicle_model.Configure();
+
 }
 
 // PUBLIC METHODS
 // find a smooth find to the goal
-StateArrayPtr
+bool
 HybridAstarPathFinder::replan() {
 
-	std::cout << "replaning\n";
+	// the returning flag
+	bool ret = false;
 
 	if (valid_goal) {
-
-		if (nullptr != path) {
-			delete path;
-		}
-
-		grid.voronoi.Visualize("testmap.ppm");
 
 		// find the path to the goal
         StateArrayPtr raw_path = path_finder.FindPath(grid, robot, goal);
 
-        if (3 < raw_path->states.size()) {
+        if (0 < raw_path->states.size()) {
 
-        	// smoothing proccess
-        	path = path_smoother.Smooth(grid, raw_path);
+        	// copy the new states to our internal version
+        	path.states = raw_path->states;
+
+        	// set the returning flag
+        	ret = true;
+
         }
 
-        // remove the raw path
+        // delete the raw path
 		delete raw_path;
 
-		return path;
 	}
 
-	return nullptr;
+	return ret;
+
+}
+
+// get the resulting path
+StateArrayPtr
+HybridAstarPathFinder::get_path() {
+
+	// build a new state array
+	StateArrayPtr current_path = new StateArray();
+
+	// copy the path
+	current_path->states = path.states;
+
+	return current_path;
 
 }
 
@@ -112,12 +124,40 @@ HybridAstarPathFinder::set_goal_state(const State2D &goal_state) {
 	if (initialized_grid_map) {
 
 		// verify the safety
-		valid_goal = grid.isSafePlace(vehicle_model.GetVehicleBodyCircles(goal_state), vehicle_model.safety_factor);
+		activated = valid_goal = grid.isSafePlace(vehicle_model.GetVehicleBodyCircles(goal_state), vehicle_model.safety_factor);
 
 		return;
 	}
 
 	valid_goal = false;
+}
+
+// get the external goal list, convert to our internal representation and set the new goal
+bool
+HybridAstarPathFinder::same_goal_list(carmen_behavior_selector_goal_list_message *msg) {
+
+	// direct access
+	std::vector<astar::State2D> &igl(goal_list.states);
+
+	Vector2D<double> position;
+
+	for (unsigned int i = 0; i < msg->size; ++i) {
+
+		Gear g = (0 > msg->goal_list[i].v) ? BackwardGear : ForwardGear;
+		position.x = msg->goal_list[i].x;
+		position.y = msg->goal_list[i].y;
+
+		if (position != igl[i].position || 0.001 > std::fabs(msg->goal_list[i].phi - igl[0].phi) || igl[i].v != msg->goal_list[i].v || g != igl[i].gear) {
+
+			return false;
+
+		}
+
+
+	}
+
+	return true;
+
 }
 
 // set the the new goal
@@ -141,21 +181,61 @@ HybridAstarPathFinder::set_goal_state(double x, double y, double theta, double v
 }
 
 // set the goal list
-void HybridAstarPathFinder::set_goal_list(astar::StateArrayPtr goals) {
+void
+HybridAstarPathFinder::set_goal_list(carmen_behavior_selector_goal_list_message *msg) {
 
-    if (0 < goals->states.size())
-    {
-        if (nullptr != goal_list)
-        {
-            delete(goal_list);
-        }
+	if (msg->size != goal_list.states.size() || !same_goal_list(msg)) {
 
-        goal_list = goals;
-    }
+		// direct access
+		std::vector<astar::State2D> &igl(goal_list.states);
+
+		// clear the internal goal list
+		igl.clear();
+
+		// now, convert the external list to our internal representation
+
+		// goal states
+		astar::State2D next_goal;
+
+		unsigned int msg_size = msg->size;
+		carmen_ackerman_traj_point_t *msg_gl = msg->goal_list;
+
+		// registering the next goal index
+		unsigned int index = 0;
+
+		bool first_goal_found = false;
+
+		// save the current goal list
+		for (unsigned int i = 0; i < msg_size; i++)
+		{
+			next_goal.position.x = msg_gl[i].x;
+			next_goal.position.y = msg_gl[i].y;
+			next_goal.orientation = msg_gl[i].theta;
+			next_goal.v = msg_gl[i].v;
+			next_goal.phi = msg_gl[i].phi;
+
+			next_goal.gear = (0 > goal.v) ? astar::BackwardGear : astar::ForwardGear;
+
+			// save the current goal to the internal list
+			igl.push_back(next_goal);
+
+			// registering the current goal index
+			if (8.0 < next_goal.Distance(robot) && !first_goal_found)
+			{
+				index = i;
+				first_goal_found = true;
+			}
+		}
+
+		// set the goal state
+		set_goal_state(igl[index]);
+
+	}
 }
 
 // voronoi thread update
-void HybridAstarPathFinder::voronoi_update(carmen_map_server_compact_cost_map_message *msg) {
+void
+HybridAstarPathFinder::voronoi_update(carmen_map_server_compact_cost_map_message *msg) {
 
 	double x_origin = msg->config.x_origin;
 	double y_origin = msg->config.y_origin;
@@ -189,7 +269,8 @@ void HybridAstarPathFinder::voronoi_update(carmen_map_server_compact_cost_map_me
 }
 
 // voronoi thread update
-void HybridAstarPathFinder::voronoi_update_2(carmen_grid_mapping_message *msg) {
+void
+HybridAstarPathFinder::voronoi_update_2(carmen_grid_mapping_message *msg) {
 
 	double x_origin = msg->config.x_origin;
 	double y_origin = msg->config.y_origin;
@@ -268,35 +349,46 @@ HybridAstarPathFinder::update_map(carmen_grid_mapping_message *msg) {
 void
 HybridAstarPathFinder::set_odometry(double v, double phi) {
 
-    // save the speed
-    odometry_speed = v;
+	// set the current speed
+	odometry_speed = (std::fabs(v) > 0.01) ? v : 0.0;
 
-    // save the wheel angle
-    odometry_steering_angle = phi;
+	// set the current wheel angle
+	odometry_steering_angle =(std::fabs(phi) > 0.001) ? phi : 0.0;
 
 }
 
 // estimate the initial robot state
-void HybridAstarPathFinder::set_initial_state(double x, double y, double theta, double v, double phi, double dt) {
+void
+HybridAstarPathFinder::set_initial_state(double x, double y, double theta, double v, double phi, double dt) {
 
     // predict the initial robot pose
-    robot = vehicle_model.NextPose(Pose2D(x, y, theta), v, phi, dt);
-    robot.v = v;
-    robot.phi = phi;
+	if (std::fabs(v) > 0.01) {
+		robot = vehicle_model.NextPose(Pose2D(x, y, theta), v, phi, dt);
+		robot.v = v;
+	} else {
+		robot.position.x = x;
+		robot.position.y = y;
+		robot.orientation = theta;
+		robot.v = 0.0;
+	}
+
+	robot.phi = phi;
     robot.t = dt;
     robot.gear = (0 > v) ? BackwardGear : ForwardGear;
 
 }
 
 // estimate the initial robot state
-void HybridAstarPathFinder::set_initial_state(double x, double y, double theta, double dt) {
+void
+HybridAstarPathFinder::set_initial_state(double x, double y, double theta, double dt) {
 
     set_initial_state(x, y, theta, odometry_speed, odometry_steering_angle, dt);
 
 }
 
 // get the robot state
-astar::State2D HybridAstarPathFinder::get_robot_state() {
+State2D
+HybridAstarPathFinder::get_robot_state() {
 
     return robot;
 

@@ -38,7 +38,7 @@ class HybridAstarPathFinder {
         astar::CGSmoother path_smoother;
 
         // the current path
-        astar::StateArrayPtr path;
+        astar::StateArray path;
 
         // the current odometry speed
         double odometry_speed;
@@ -56,7 +56,7 @@ class HybridAstarPathFinder {
         bool valid_goal;
 
         // the goal list
-        astar::StateArrayPtr goal_list;
+        astar::StateArray goal_list;
 
         // flag to set obstacle avoider usage
         bool use_obstacle_avoider;
@@ -91,17 +91,23 @@ class HybridAstarPathFinder {
         // get the robot state
         astar::State2D get_robot_state();
 
-        // find a smooth find to the goal and publish
-        astar::StateArrayPtr replan();
+        // find a smooth path to the goal
+        bool replan();
+
+        // get the resulting path
+        astar::StateArrayPtr get_path();
 
         // set the new goal
         void set_goal_state(const State2D&);
+
+        // verify if the external goal list is the same old one
+        bool same_goal_list(carmen_behavior_selector_goal_list_message *msg);
 
         // set the new goal
         void set_goal_state(double x, double y, double theta, double vel = 0);
 
         // set the goal list
-        void set_goal_list(astar::StateArrayPtr);
+        void set_goal_list(carmen_behavior_selector_goal_list_message *msg);
 
         // update the map
         void update_map(carmen_map_server_compact_cost_map_message *msg);

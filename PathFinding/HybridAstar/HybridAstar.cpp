@@ -27,19 +27,26 @@
 using namespace astar;
 
 HybridAstar::HybridAstar(
-	VehicleModel &vehicle_,
-	InternalGridMapRef map) :
-	reverse_factor(4),
-	gear_switch_cost(8),
-	voronoi_field_factor(1.5),
-	rs(),
-	vehicle(vehicle_),
-	grid(map),
-	heuristic(),
-	open(nullptr),
-	discovered(),
-	invalid()
+    VehicleModel &vehicle_,
+    InternalGridMapRef map) :
+    reverse_factor(4),
+    gear_switch_cost(8),
+    voronoi_field_factor(1.5),
+    rs(),
+    vehicle(vehicle_),
+    grid(map),
+    heuristic(),
+    open(nullptr),
+    discovered(),
+    invalid()
 {}
+
+HybridAstar::~HybridAstar() {
+
+	// remove all nodes
+	RemoveAllNodes();
+
+}
 
 // remove all nodes
 void HybridAstar::RemoveAllNodes() {
@@ -47,6 +54,8 @@ void HybridAstar::RemoveAllNodes() {
     HybridAstarNodePtr tmp;
 
     // clear the open set
+    // since we put pointers inside the PriorityQueue, we should delete all by ourselfs
+    // luckilly, they are copied in the discovered and invalid list
     open.ClearHeap();
 
     // clear the closed set
@@ -98,6 +107,8 @@ StateArrayPtr HybridAstar::RebuildPath(HybridAstarNodePtr n, const State2D &goal
     // the current state
     State2D s;
 
+    double inverse_speed = 1.0/vehicle.low_speed;
+
     // building the path
     while(nullptr != n) {
 
@@ -105,6 +116,7 @@ StateArrayPtr HybridAstar::RebuildPath(HybridAstarNodePtr n, const State2D &goal
         if (nullptr != n->action) {
 
             // update the current state
+        	// see operator=(Pose2D) overloading
             s = n->pose;
             s.gear = n->action->gear;
 
@@ -144,7 +156,7 @@ StateArrayPtr HybridAstar::RebuildPath(HybridAstarNodePtr n, const State2D &goal
     // and append the current
     if (1 < states.size()) {
 
-    	// the auxiliary iterators
+        // the auxiliary iterators
         std::list<State2D>::iterator prev, next;
 
         // get the first iterator
@@ -174,7 +186,7 @@ StateArrayPtr HybridAstar::RebuildPath(HybridAstarNodePtr n, const State2D &goal
 
     }
     // save the endpoint speed to the final state
-    if (0 < states.size()) {
+    if (0 < out.size()) {
 
         out.back().v = goal.v;
 
@@ -199,7 +211,7 @@ HybridAstarNodePtr HybridAstar::GetReedsSheppChild(const Pose2D &start, const Po
         StateArrayPtr path = rs.Discretize(start, action_set, vehicle.min_turn_radius, grid.inverse_resolution);
 
         // a reference helper, just in case
-        std::vector<State2D>& states(path->states);
+        std::vector<State2D> &states(path->states);
 
         // get the states end pointer
         std::vector<State2D>::iterator end = states.end();
@@ -218,14 +230,20 @@ HybridAstarNodePtr HybridAstar::GetReedsSheppChild(const Pose2D &start, const Po
 
         }
 
+        // clear the state array
+        delete path;
+
         if (safe) {
 
             // return the HybridAstarNode on the goal state
-            return new HybridAstarNode(start, action_set);
+            return new HybridAstarNode(goal, action_set);
 
         }
 
     }
+
+    // delelete the action set
+    delete action_set;
 
     return nullptr;
 
@@ -341,7 +359,7 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMap &grid_map, const State2D &st
     // the actual A* algorithm
     while(!open.isEmpty()) {
 
-    	n = open.DeleteMin();
+        n = open.DeleteMin();
 
         // is it the desired goal?
         if (goal_pose == n->pose) {
@@ -355,14 +373,10 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMap &grid_map, const State2D &st
             // return the path
             return resulting_path;
 
-        } else {
-
-        	std::cout << "Diff: " << goal_pose.position.Distance(n->pose.position) << " and orientation diff: " << mrpt::math::angDistance<double>(goal_pose.orientation, n->pose.orientation) << "\n";
-
         }
 
         // add to the explored set
-        // n->cell->status = ExploredNode;
+        n->cell->status = ExploredNode;
 
         // get the length based on the environment
         double obst = grid_map.GetObstacleDistance(n->pose.position);
@@ -385,14 +399,15 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMap &grid_map, const State2D &st
             // iterate over the current node's children
             for (std::vector<HybridAstarNodePtr>::iterator it = nodes.begin(); it != nodes.end(); ++it) {
 
-            	HybridAstarNodePtr child = *it;
+            	// avoid a lot of indirect access
+                HybridAstarNodePtr child = *it;
 
                 // find the appropriated location in the grid
                 // reusing the same "c" pointer declared above
                 c = grid_map.PoseToCell(child->pose);
 
-                // we must avoid node->cell = nullptr inside the HybridAstarNode
-                if (nullptr != c) {
+				// we must avoid node->cell = nullptr inside the HybridAstarNode
+				if (nullptr != c && ExploredNode != c->status) {
 
 					if (nullptr != child->action) {
 
@@ -428,7 +443,6 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMap &grid_map, const State2D &st
 					// set the parent
 					child->parent = n;
 
-
 					// is it a not opened node?
 					if (UnknownNode == c->status) {
 
@@ -451,20 +465,13 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMap &grid_map, const State2D &st
 						// the cell has a node but the current child is a better one
 
 						// update the node at the cell
-						// copy the handle to the current child, just to avoid losing that information
-						child->handle = c->node->handle;
+						HybridAstarNodePtr current = c->node;
 
-						// copy the cell node
-						child->cell = c;
-
-						// the old node is updated but not the corresponding Key in the priority queue
-						*(c->node) = *child;
-
-						// update the cell status
-						c->status = OpenedNode;
+						// the old node is updated but not the corresponding Handle/Key in the priority queue
+						current->UpdateValues(*child);
 
 						// decrease the key at the priority queue
-						open.DecreaseKey(child->handle, tentative_f);
+						open.DecreaseKey(current->handle, tentative_f);
 
 					}
 
@@ -474,6 +481,9 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMap &grid_map, const State2D &st
                 discovered.push_back(child);
 
             }
+
+            // delete the children vector
+            delete children;
 
         }
 
@@ -488,23 +498,23 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMap &grid_map, const State2D &st
 
 // get the path cost
 double HybridAstar::PathCost(
-	const astar::Pose2D& start,
-	astar::Gear start_gear,
-	const astar::Pose2D& goal,
-	astar::Gear next_gear,
-	double length)
+    const astar::Pose2D& start,
+    astar::Gear start_gear,
+    const astar::Pose2D& goal,
+    astar::Gear next_gear,
+    double length)
 {
-	//
-	double reverse_cost = 0.0;
+    //
+    double reverse_cost = 0.0;
 
-	// reverse penalty
-	if (BackwardGear == next_gear)
-		reverse_cost =  length * reverse_factor;
+    // reverse penalty
+    if (BackwardGear == next_gear)
+        reverse_cost =  length * reverse_factor;
 
-	// gear change penalty
-	if (start_gear != next_gear)
-		reverse_cost += gear_switch_cost;
+    // gear change penalty
+    if (start_gear != next_gear)
+        reverse_cost += gear_switch_cost;
 
-	// compute and return the cost
-	return reverse_cost + length + length * voronoi_field_factor * grid.GetPathCost(goal.position);
+    // compute and return the cost
+    return reverse_cost + length + length * voronoi_field_factor * grid.GetPathCost(goal.position);
 }

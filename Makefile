@@ -7,7 +7,7 @@ MODULE_COMMENT = Hybrid A* with path optimization
 
 LINK = g++
 CXXFLAGS = -std=c++0x -O0 -g
-CFLAGS += -O0 -g
+CFLAGS += -O0
 
 # Application specific include directories.
 #IFLAGS +=
@@ -15,7 +15,7 @@ CFLAGS += -O0 -g
 SUBDIRS += Interface
 
 # Required default libraries to comunicate with Carmen Core.
-LFLAGS += -g -O0 -lparam_interface -lipc -lglobal -lgrid_mapping_interface -lmap_server_interface -llocalize_ackerman_interface -lsimulator_ackerman_interface -lrobot_ackerman_interface -lbase_ackerman_interface -lbehavior_selector_interface -lm
+LFLAGS += -O0 -g -lparam_interface -lipc -lglobal -lgrid_mapping_interface -lmap_server_interface -llocalize_ackerman_interface -lsimulator_ackerman_interface -lrobot_ackerman_interface -lbase_ackerman_interface -lbehavior_selector_interface -lm
 
 # Source code files (.c, .cpp)
 SOURCES = hybrid_astar_path_finder_main.cpp Interface/hybrid_astar_interface.cpp PathFinding/HybridAstarPathFinder.cpp VehicleModel/VehicleModel.cpp Entities/Circle.cpp Entities/Pose2D.cpp Entities/State2D.cpp GridMap/GVDLau.cpp GridMap/InternalGridMap.cpp ReedsShepp/ReedsSheppActionSet.cpp ReedsShepp/ReedsSheppModel.cpp PathFinding/HybridAstar/HybridAstarNode.cpp PathFinding/HybridAstar/HybridAstar.cpp PathFinding/HybridAstar/Heuristic.cpp PathFinding/Smoother/CGSmoother.cpp ReedsShepp/ReedsSheppActionSet.cpp ReedsShepp/ReedsSheppModel.cpp

@@ -1,6 +1,7 @@
 #ifndef PRIORITY_QUEUE_TEMPLATE_HPP
 #define PRIORITY_QUEUE_TEMPLATE_HPP
 
+#include <iostream>
 #include <vector>
 #include <cmath>
 #include <limits>
@@ -8,6 +9,9 @@
 #include "PriorityQueueNode.hpp"
 
 namespace astar {
+
+
+#define ASTAR_CEIL_LOG_INT_BITS (sizeof(int) * 8)
 
 template<typename T>
 class PriorityQueue {
@@ -39,9 +43,29 @@ class PriorityQueue {
         // get the heap max degree
         int GetMaxDegree() {
 
-            return(ceil(1.44 * log(N) / log(2.0) + 1.0));
+			int oa;
+			int i;
+			int b;
+        	int a = (int) D;
 
-        }
+			oa = a;
+			b = ASTAR_CEIL_LOG_INT_BITS / 2;
+			i = 0;
+			while (b) {
+				i = (i << 1);
+				if (a >= (1 << b)) {
+					a /= (1 << b);
+					i = i | 1;
+				} else
+					a &= (1 << b) - 1;
+				b /= 2;
+			}
+			if ((1 << i) == oa)
+				return i + 1;
+			else
+				return i + 2;
+
+		}
 
         // make sure we have enough memmory to reorganize the heap
         void CheckCons() {

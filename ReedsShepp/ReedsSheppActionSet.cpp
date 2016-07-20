@@ -49,11 +49,11 @@ void ReedsSheppActionSet::AddAction(Steer s, Gear g, double len) {
 
 }
 
-unsigned int ReedsSheppActionSet::size() {
+//
+unsigned int ReedsSheppActionSet::Size() {
 
     return actions.size();
 }
-
 
 // the entire set cost
 double ReedsSheppActionSet::CalculateCost(double unit, double reverseFactor, double gearSwitchCost) {
@@ -181,5 +181,16 @@ ReedsSheppActionSet* ReedsSheppActionSet::Reflect(ReedsSheppActionSet *set) {
 ReedsSheppActionSet* ReedsSheppActionSet::TimeFlipAndReflect(ReedsSheppActionSet *set) {
 
     return ReedsSheppActionSet::Reflect(ReedsSheppActionSet::TimeFlip(set));
+
+}
+
+// the assignement operator overloading
+void ReedsSheppActionSet::operator=(const ReedsSheppActionSet &set) {
+
+    // the list of actions
+	actions = set.actions;
+
+    // the path length
+    length = set.length;
 
 }
