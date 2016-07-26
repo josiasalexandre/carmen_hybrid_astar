@@ -100,22 +100,23 @@ ReedsSheppActionSetPtr ReedsSheppModel::Solve(const Pose2D &start, const Pose2D 
 StateArrayPtr ReedsSheppModel::Discretize(
         const Pose2D &start, ReedsSheppActionSetPtr action_set, double radcurv, double inverse_max_length)
 {
-    // get the previous pose
-    State2D prev(start);
 
     // create the pose array
     StateArrayPtr path = new StateArray();
-
-    // a reference helper
-    std::vector<State2D> &states(path->states);
-
-    // append the first pose
-    states.push_back(State2D(prev, action_set->actions[1].gear));
 
     // get the action size list size
     unsigned int a_size = action_set->actions.size();
 
     if (0 < a_size) {
+
+    	// get the previous pose
+    	State2D prev(start);
+
+    	// a reference helper
+		std::vector<State2D> &states(path->states);
+
+		// append the first pose
+		states.push_back(State2D(prev, action_set->actions[1].gear));
 
     	// get the end pointer
     	std::vector<ReedsSheppAction>::iterator end = action_set->actions.end();
@@ -189,7 +190,7 @@ StateArrayPtr ReedsSheppModel::Discretize(
                     prev.position.Add(pos);
 
                     // update the orientation
-                    prev.orientation += pieceAngle;
+                    prev.orientation = mrpt::math::wrapToPi<double>(prev.orientation + pieceAngle);
 
                     // update the gear
                     prev.gear = it->gear;

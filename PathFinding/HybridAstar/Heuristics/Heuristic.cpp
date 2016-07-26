@@ -1,6 +1,6 @@
 #include "Heuristic.hpp"
-#include "../../Helpers/wrap2pi.hpp"
-#include "../../PriorityQueue/PriorityQueue.hpp"
+#include "../../../Helpers/wrap2pi.hpp"
+#include "../../../PriorityQueue/PriorityQueue.hpp"
 
 #include <set>
 #include <cmath>
@@ -8,7 +8,7 @@
 using namespace astar;
 
 // basic constructor
-astar::Heuristic::Heuristic() : info() {
+astar::Heuristic::Heuristic(InternalGridMapRef map) : info(), holonomic(map) {
 
 	// load the external heuristic file
 	NonholonomicHeuristicInfo::Load(info, "heuristic_info.txt");
@@ -45,34 +45,23 @@ double Heuristic::GetObstacleRelaxedHeuristicValue(Pose2D start, const Pose2D &g
 }
 
 // the holonomic with obstacles heuristic
-double Heuristic::GetNonholonomicRelaxedHeuristicValue(const InternalGridMapRef grid, const Pose2D &start, const Pose2D &goal) {
+double Heuristic::GetNonholonomicRelaxedHeuristicValue(InternalGridMapRef grid, const Pose2D &start, const Pose2D &goal) {
 
 	// just a simple euclidian distance now
 	// it's not ready
 	return start.position.Distance(goal.position);
+
 }
 
+// find a new circel path connecting the start and goal poses
+void astar::Heuristic::UpdateCirclePathHeuristic(astar::InternalGridMap &grid, const Pose2D &start, const Pose2D &goal_) {
 
-
-
-void astar::Heuristic::UpdateCirclePathHeuristic(const astar::InternalGridMap &grid, const Pose2D &start, const Pose2D &goal_) {
-
-	if (goal != goal_) {
-
-		// update the current goal
-		goal = goal_;
-
-		// clear the old circle path
-		circle_path.clear();
-
-		// TODO implement the circle path search
-
-	}
+	holonomic.UpdateHeuristic(grid, start, goal);
 
 }
 
 // get a heuristic value
-double astar::Heuristic::GetHeuristicValue(const InternalGridMapRef grid, const Pose2D &start, const Pose2D &goal) {
+double astar::Heuristic::GetHeuristicValue(InternalGridMapRef grid, const Pose2D &start, const Pose2D &goal) {
 
 	// return the the combined heuristic
 	return std::max(GetObstacleRelaxedHeuristicValue(start, goal), GetNonholonomicRelaxedHeuristicValue(grid, start, goal));

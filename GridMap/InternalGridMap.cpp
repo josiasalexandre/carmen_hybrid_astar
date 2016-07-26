@@ -12,6 +12,7 @@ InternalGridMap::InternalGridMap() :
 	diagonal_resolution(0),
 	origin(),
 	grid_map(nullptr),
+	has_changed(false),
 	voronoi(), resolution(0.0), inverse_resolution(0.0)
 {}
 
@@ -23,8 +24,15 @@ InternalGridMap::~InternalGridMap() {
 
 }
 
+// return the has changed flag
+bool InternalGridMap::HasChanged() const {
+
+	return has_changed;
+
+}
+
 // get the grid cell index from any position
-astar::GridCellIndex InternalGridMap::PoseToIndex(const astar::Vector2D<double> &position) {
+astar::GridCellIndex InternalGridMap::PoseToIndex(const astar::Vector2D<double> &position) const {
 
 	//
 	GridCellIndex index(
@@ -78,6 +86,9 @@ void InternalGridMap::InitializeGridMap(unsigned int h, unsigned int w, double r
 
 		// restart the voronoi diagram
 		voronoi.InitializeEmpty(height, width);
+
+		// set the has changed flag
+		has_changed = true;
 
 	}
 
@@ -169,19 +180,41 @@ void InternalGridMap::ClearCell(int row, int col) {
 void InternalGridMap::UpdateGridMap() {
 
 	// update the GVD
-	voronoi.Update();
+	has_changed = voronoi.Update();
 
 }
 
 // get the current grid map
-astar::GVDLau* InternalGridMap::GetGVD() {
+GVDLau* InternalGridMap::GetGVD() {
 
 	return &voronoi;
 
 }
 
+// get the nearest obstacle position
+Vector2D<double> InternalGridMap::GetObstaclePosition(const astar::Vector2D<double> &position) {
+
+	// get the grid cell index
+	GridCellIndex index(PoseToIndex(position));
+
+	if (height > index.row && width > index.col) {
+
+		// get the nearest obstacle index
+		GridCellIndex obstacle(voronoi.GetObstacleIndex(index.row, index.col));
+
+		// get the position
+		double x = origin.x + ((double) obstacle.col) * resolution;
+		double y = origin.y + ((double) obstacle.row) * resolution;
+
+		return Vector2D<double>(x, y);
+
+	}
+
+	return Vector2D<double>(position);
+}
+
 // indirect obstacle distance
-double InternalGridMap::GetObstacleDistance(const astar::Vector2D<double> &position) {
+double InternalGridMap::GetObstacleDistance(const Vector2D<double> &position) {
 
 	// get the grid cell index
 	GridCellIndex index(PoseToIndex(position));
@@ -199,6 +232,28 @@ double InternalGridMap::GetObstacleDistance(const astar::Vector2D<double> &posit
 	}
 
 	return 0.0;
+}
+
+// get the nearest voronoi edge position
+astar::Vector2D<double> InternalGridMap::GetVoronoiPosition(const astar::Vector2D<double> &position) {
+
+	// get the grid cell index
+	GridCellIndex index(PoseToIndex(position));
+
+	if (height > index.row && width > index.col) {
+
+		// get the voronoi cell index
+		GridCellIndex voro(voronoi.GetVoronoiIndex(index.row, index. col));
+
+		// get the current displacement
+		double x = origin.x + ((double) voro.col) * resolution;
+		double y = origin.y + ((double) voro.row) * resolution;
+
+		return Vector2D<double>(x, y);
+
+	}
+
+	return Vector2D<double>(position);
 }
 
 // indirect voronoi edge distance
@@ -219,7 +274,7 @@ double InternalGridMap::GetVoronoiDistance(const astar::Vector2D<double> &positi
 		return std::sqrt(dx*dx + dy*dy);
 	}
 
-	return std::numeric_limits<double>::max();
+	return 0.0;
 }
 
 // compute the current path cost

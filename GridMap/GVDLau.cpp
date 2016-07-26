@@ -680,7 +680,7 @@ void GVDLau::RemoveObstacle(unsigned int row, unsigned int col) {
 }
 
 // update the entire GVD
-void GVDLau::Update() {
+bool GVDLau::Update() {
 
 	if (!open.Empty()) {
 
@@ -730,7 +730,12 @@ void GVDLau::Update() {
 		next_data = data;
 		data = tmp;
 
+		// the current map has changed
+		return true;
+
 	}
+
+	return false;
 
 }
 

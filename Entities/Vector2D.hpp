@@ -11,7 +11,7 @@
 #ifndef VECTOR_TEMPLATE_HPP
 #define VECTOR_TEMPLATE_HPP
 
-#include <array>
+#include <vector>
 #include <cmath>
 
 #include "Matrix.hpp"
@@ -54,9 +54,15 @@ public:
     }
 
     // norm
-    T Norm()
+    T Norm() const
     {
         return std::sqrt(x*x + y*y);
+    }
+
+    // squared norm
+    T Norm2() const
+    {
+    	return x*x + y*y;
     }
 
     // normalize
@@ -132,6 +138,13 @@ public:
     {
         x *= v.x;
         y *= v.y;
+    }
+
+    // multiply the current vector by a scalar value
+    void Multiply(T value)
+    {
+        x *= value;
+        y *= value;
     }
 
     // the dot product between the two vectors
@@ -251,6 +264,20 @@ public:
     }
 
 };
+
+template<typename T>
+class Vector2DArray {
+
+public:
+
+	// the current array
+	std::vector<astar::Vector2D<T>> vs;
+
+};
+
+template<typename T>
+using Vector2DArrayPtr = Vector2DArray<double>*;
+
 
 }
 #endif

@@ -572,7 +572,6 @@ class PriorityQueue {
 
         	if (nullptr != root) {
 
-
         		// get the current root
         		astar::PriorityQueueNodePtr<T> tmp = root->right;
 

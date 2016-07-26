@@ -17,8 +17,14 @@ class Circle {
 		// the circle radius
 		double r;
 
+		// simplest constructor
+		Circle();
+
 		// basic constructor
 		Circle(const astar::Vector2D<double>&, double);
+
+		// most explicit constructor
+		Circle(double x, double y, double radius);
 
 		// copy constructor
 		Circle(const Circle&);

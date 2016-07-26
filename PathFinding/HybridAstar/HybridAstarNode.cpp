@@ -133,6 +133,7 @@ void HybridAstarNode::UpdateValues(const astar::HybridAstarNode &n) {
 
 
 }
+
 // < operator overloading, for element comparison inside the priority queue
 bool HybridAstarNode::operator<(const astar::HybridAstarNode& n) const {
 

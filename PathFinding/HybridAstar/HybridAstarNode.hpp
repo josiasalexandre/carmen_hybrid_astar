@@ -43,7 +43,7 @@ class HybridAstarNode {
         // the current cell
         astar::GridMapCellPtr cell;
 
-        // the priority queue handle
+        // the priority queue handler
         astar::PriorityQueueNodePtr<HybridAstarNode*> handle;
 
         // basic constructor with a given action
