@@ -32,8 +32,11 @@ class InternalGridMap {
         // the current grid map
         astar::GridMap grid_map;
 
+        // has the grid map changed?
+        bool has_changed;
+
         // get the grid cell index from any position
-        astar::GridCellIndex PoseToIndex(const astar::Vector2D<double>&);
+        astar::GridCellIndex PoseToIndex(const astar::Vector2D<double>&) const;
 
         // PRIVATE METHODS
 
@@ -58,6 +61,9 @@ class InternalGridMap {
         // initialize the grid map given the map dimensions
         void InitializeGridMap(unsigned int w, unsigned int h, double res, const astar::Vector2D<double> &_origin);
 
+        // verify if the current grid map has changed
+        bool HasChanged() const;
+
         // is a valid cell?
         bool isValidPoint(const astar::Vector2D<double>&);
 
@@ -79,8 +85,14 @@ class InternalGridMap {
         // get the current grid map
         astar::GVDLau* GetGVD();
 
+        // get the nearest obstacle position
+        astar::Vector2D<double> GetObstaclePosition(const astar::Vector2D<double>&);
+
         // indirect obstacle distance
         double GetObstacleDistance(const astar::Vector2D<double>&);
+
+        // get the nearest voronoi edge position
+        astar::Vector2D<double> GetVoronoiPosition(const astar::Vector2D<double>&);
 
         // indirect voronoi edge distance
         double GetVoronoiDistance(const astar::Vector2D<double>&);

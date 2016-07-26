@@ -158,6 +158,9 @@ class VehicleModel {
 		// get the
 };
 
+typedef VehicleModel& VehicleModelRef;
+typedef VehicleModel* VehicleModelPtr;
+
 }
 
 #endif

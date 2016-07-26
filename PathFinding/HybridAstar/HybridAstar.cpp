@@ -35,7 +35,7 @@ HybridAstar::HybridAstar(
     rs(),
     vehicle(vehicle_),
     grid(map),
-    heuristic(),
+    heuristic(map),
     open(nullptr),
     discovered(),
     invalid()
@@ -307,7 +307,7 @@ HybridAstarNodeArrayPtr HybridAstar::GetChidlren(const Pose2D &start, const Pose
 // PUBLIC METHODS
 // receives the grid, start and goal states and find a path, if possible
 
-StateArrayPtr HybridAstar::FindPath(InternalGridMap &grid_map, const State2D &start, const State2D &goal) {
+StateArrayPtr HybridAstar::FindPath(InternalGridMapRef grid_map, const State2D &start, const State2D &goal) {
 
     // get the grid map pointer
     // useful inside others methods, just to avoid passing the parameter constantly

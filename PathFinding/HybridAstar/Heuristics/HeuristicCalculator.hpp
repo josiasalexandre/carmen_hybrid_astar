@@ -5,7 +5,7 @@
 #include <limits>
 #include <iostream>
 
-#include "../../ReedsShepp/ReedsSheppModel.hpp"
+#include "../../../ReedsShepp/ReedsSheppModel.hpp"
 #include "NonholonomicHeuristicInfo.hpp"
 
 
@@ -100,9 +100,9 @@ class HeuristicCalculator {
 
 							cost[o] = action_set->CalculateCost(vehicle_turn_radius, 1.0, 0.0);
 
-							if (info->max_heuristic_value < action_set->length) {
+							if (info->max_heuristic_value < cost[o]) {
 
-								info->max_heuristic_value = action_set->length;
+								info->max_heuristic_value = cost[o];
 
 							}
 

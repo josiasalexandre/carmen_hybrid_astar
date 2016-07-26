@@ -34,7 +34,7 @@
 #include "../../ReedsShepp/ReedsSheppModel.hpp"
 #include "../../VehicleModel/VehicleModel.hpp"
 #include "HybridAstarNode.hpp"
-#include "Heuristic.hpp"
+#include "Heuristics/Heuristic.hpp"
 
 namespace astar {
 
@@ -109,7 +109,7 @@ public:
     ~HybridAstar();
 
     // find a path to the goal
-    astar::StateArrayPtr FindPath(astar::InternalGridMap&, const astar::State2D&, const astar::State2D&);
+    astar::StateArrayPtr FindPath(astar::InternalGridMapRef, const astar::State2D&, const astar::State2D&);
 
 };
 

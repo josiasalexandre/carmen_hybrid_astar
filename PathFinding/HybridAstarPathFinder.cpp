@@ -6,7 +6,7 @@ using namespace astar;
 
 // basic constructor
 HybridAstarPathFinder::HybridAstarPathFinder(int argc, char **argv) :
-    vehicle_model(), grid(), initialized_grid_map(false), gm_mutex(), path_finder(vehicle_model, grid), path(), odometry_speed(0.0),
+    vehicle_model(), grid(), initialized_grid_map(false), gm_mutex(), path_finder(vehicle_model, grid), path_smoother(grid, vehicle_model), path(), odometry_speed(0.0),
     odometry_steering_angle(0.0), robot(), goal(), valid_goal(false), goal_list(),
     use_obstacle_avoider(true), activated(false), simulation_mode(false)
 {
@@ -82,6 +82,9 @@ HybridAstarPathFinder::replan() {
         StateArrayPtr raw_path = path_finder.FindPath(grid, robot, goal);
 
         if (0 < raw_path->states.size()) {
+
+        	// smoooth the current path
+        	path_smoother.Smooth(grid, vehicle_model, raw_path);
 
         	// copy the new states to our internal version
         	path.states = raw_path->states;

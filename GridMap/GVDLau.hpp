@@ -133,7 +133,7 @@ class GVDLau {
 		void RemoveObstacle(unsigned int row, unsigned int col);
 
 		// update the entire GVD
-		void Update();
+		bool Update();
 
 		// get the nearest obstacle distance
 		double GetObstacleDistance(unsigned int row, unsigned int col);

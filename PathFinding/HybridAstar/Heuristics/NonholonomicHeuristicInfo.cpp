@@ -1,8 +1,10 @@
 #include "NonholonomicHeuristicInfo.hpp"
 
+#include <exception>
 #include <limits>
 #include <fstream>
 #include <cmath>
+#include <iostream>
 
 using namespace astar;
 
@@ -66,7 +68,7 @@ void NonholonomicHeuristicInfo::Clear() {
 }
 
 // save the current heuristic to external file
-void NonholonomicHeuristicInfo::Save(const NonholonomicHeuristicInfo& info, std::string filename) {
+void NonholonomicHeuristicInfo::Save(const NonholonomicHeuristicInfo &info, std::string filename) {
 
 	if (nullptr != info.heuristic && 0 != info.num_cells && 0 != info.orientations && 0 < filename.size()) {
 
@@ -109,7 +111,7 @@ void NonholonomicHeuristicInfo::Save(const NonholonomicHeuristicInfo& info, std:
 }
 
 // load the external heuristic file
-void NonholonomicHeuristicInfo::Load(NonholonomicHeuristicInfo& info, std::string filename) {
+void NonholonomicHeuristicInfo::Load(NonholonomicHeuristicInfo &info, std::string filename) {
 
 	if (0 < filename.size()) {
 
@@ -117,6 +119,17 @@ void NonholonomicHeuristicInfo::Load(NonholonomicHeuristicInfo& info, std::strin
 
 		// open the external file
 		std::ifstream file(filename);
+
+		// verify if the file is open
+		if (!file.is_open()) {
+
+			//
+			std::cout << "Could no open the file: " << filename << "\n";
+
+			// just a standard exception
+			throw std::exception();
+
+		}
 
 		// clear the old heuristic table, if any
 		info.Clear();
