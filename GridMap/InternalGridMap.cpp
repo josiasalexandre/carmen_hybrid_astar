@@ -120,11 +120,19 @@ bool InternalGridMap::isSafePlace(const std::vector<astar::Circle> &body, double
 
 		GridCellIndex index(PoseToIndex(circle.position));
 
-		// get the closest obstacle from the voronoi distance map
-		obstacle_distance = voronoi.GetObstacleDistance(index.row, index.col);
+		if (0 < index.row && height > index.row && 0 < index.col && width > index.col) {
 
-		if (obstacle_distance < circle.r * safety_factor) {
+			// get the closest obstacle from the voronoi distance map
+			obstacle_distance = voronoi.GetObstacleDistance(index.row, index.col);
+
+			if (obstacle_distance < circle.r * safety_factor) {
+				return false;
+			}
+
+		} else {
+
 			return false;
+
 		}
 
 	}
@@ -253,7 +261,7 @@ astar::Vector2D<double> InternalGridMap::GetVoronoiPosition(const astar::Vector2
 
 	}
 
-	return Vector2D<double>(position);
+	return Vector2D<double>(std::numeric_limits<double>::max());
 }
 
 // indirect voronoi edge distance
@@ -274,7 +282,7 @@ double InternalGridMap::GetVoronoiDistance(const astar::Vector2D<double> &positi
 		return std::sqrt(dx*dx + dy*dy);
 	}
 
-	return 0.0;
+	return std::numeric_limits<double>::max();
 }
 
 // compute the current path cost
@@ -290,5 +298,44 @@ double InternalGridMap::GetPathCost(const astar::Vector2D<double> &position) {
 
 	}
 
-	return 0;
+	return 1.0;
+}
+
+// get the current map
+unsigned char* InternalGridMap::GetGridMap() {
+
+	// build a new array of chars
+	unsigned char *map = new unsigned char[height*width];
+
+	unsigned int k = 0;
+
+	for (int i = ((int) width) - 1; i > -1; --i) {
+
+		for (unsigned int j = 0; j < height; ++j) {
+
+			unsigned char c = (unsigned char) (grid_map[(unsigned int) i][j].occupancy == 0 ? 255 : 0);
+
+			map[k] = c;
+
+			++k;
+
+		}
+
+	}
+
+	return map;
+}
+// get the current path cost map
+unsigned char* InternalGridMap::GetPathCostMap() {
+
+	// build a new array of chars
+	return voronoi.GetPathCostMap();
+
+}
+// get the current path cost map
+unsigned char* InternalGridMap::GetObstacleDistanceMap() {
+
+	// build a new array of chars
+	return voronoi.GetObstacleDistanceMap();
+
 }

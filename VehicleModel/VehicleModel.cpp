@@ -25,7 +25,7 @@ void VehicleModel::Configure() {
 
 // get the next pose with Pose, Steer, Gear, length and custom turn radius
 astar::Pose2D VehicleModel::NextPose(
-		const astar::Pose2D &current_pose, Steer steer, Gear gear, double length) const {
+	const astar::Pose2D &current_pose, Steer steer, Gear gear, double length) const {
 
 	return NextPose(current_pose, steer, gear, length, min_turn_radius);
 
@@ -189,7 +189,7 @@ std::vector<Circle> VehicleModel::GetVehicleBodyCircles(const astar::Pose2D &p) 
 	std::vector<Circle> body;
 
 	// TODO move to the class and get the values in a dynamic manner
-	double circle_radius = 1.225;
+	double circle_radius = 6.1250;
 	double x_position[4] = {-0.36, 0.760, 1.880, 3.00};
 
 	for (unsigned int i = 0; i < 4; ++i) {

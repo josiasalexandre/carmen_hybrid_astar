@@ -24,6 +24,10 @@
 
 #include "HybridAstar.hpp"
 
+#include <opencv2/opencv.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+
 using namespace astar;
 
 HybridAstar::HybridAstar(
@@ -38,8 +42,15 @@ HybridAstar::HybridAstar(
     heuristic(map),
     open(nullptr),
     discovered(),
-    invalid()
-{}
+    invalid(),
+	map(nullptr),
+	w(), h()
+{
+
+	// define common window
+	cv::namedWindow("Astar", cv::WINDOW_AUTOSIZE);
+
+}
 
 HybridAstar::~HybridAstar() {
 
@@ -109,6 +120,11 @@ StateArrayPtr HybridAstar::RebuildPath(HybridAstarNodePtr n, const State2D &goal
 
     double inverse_speed = 1.0/vehicle.low_speed;
 
+    unsigned char *map2 = grid.GetGridMap();
+
+    // draw the current map
+    cv::Mat final_map(w, h, CV_8UC1, map2);
+
     // building the path
     while(nullptr != n) {
 
@@ -123,6 +139,21 @@ StateArrayPtr HybridAstar::RebuildPath(HybridAstarNodePtr n, const State2D &goal
             // save the current state to the list
             states.push_front(s);
 
+			// convert the current position to row and col
+			astar::GridCellIndex index(grid.PoseToIndex(s.position));
+
+			// convert to the opencv format
+			cv::Point p1(index.col - 1, h - index.row - 1);
+			cv::Point p2(index.col + 1, h - index.row + 1);
+
+			// draw a single square
+			cv::rectangle(final_map, p1, p2, cv::Scalar(0.0, 0.0, 0.0), -1);
+
+			// show the imgae
+			cv::imshow("Astar", final_map);
+
+			cv::waitKey(30);
+
         } else if (nullptr != n->action_set) {
 
             // get the subpath provided by the action set discretization
@@ -136,6 +167,21 @@ StateArrayPtr HybridAstar::RebuildPath(HybridAstarNodePtr n, const State2D &goal
 
                 // save the current state to the list
                 states.push_front(subpath->states[i]);
+
+                // convert the current position to row and col
+				astar::GridCellIndex index(grid.PoseToIndex(subpath->states[i].position));
+
+				// convert to the opencv format
+				cv::Point p1(index.col - 1, h - index.row - 1);
+				cv::Point p2(index.col + 1, h - index.row + 1);
+
+				// draw a single square
+				cv::rectangle(final_map, p1, p2, cv::Scalar(0.0, 0.0, 0.0), -1);
+
+				// show the imgae
+				cv::imshow("Astar", final_map);
+
+				cv::waitKey(30);
 
             }
 
@@ -192,6 +238,8 @@ StateArrayPtr HybridAstar::RebuildPath(HybridAstarNodePtr n, const State2D &goal
 
     }
 
+    delete [] map2;
+
     return path;
 
 }
@@ -235,8 +283,14 @@ HybridAstarNodePtr HybridAstar::GetReedsSheppChild(const Pose2D &start, const Po
 
         if (safe) {
 
-            // return the HybridAstarNode on the goal state
+        	std::cout << "Valid RS!\n";
+
+        	// return the HybridAstarNode on the goal state
             return new HybridAstarNode(goal, action_set);
+
+        } else {
+
+        	std::cout << "Invalid RS!\n";
 
         }
 
@@ -261,14 +315,17 @@ HybridAstarNodeArrayPtr HybridAstar::GetChidlren(const Pose2D &start, const Pose
     // a state helper, the current child
     Pose2D child_pose;
 
-    // iterate over the steering moves
+    // double turn_radius
+    double tr = vehicle.min_turn_radius;
+
+	// iterate over the steering moves
     for (unsigned int j = 0; j < astar::NumSteering; j++) {
 
         // casting the steering
         Steer steer = static_cast<Steer>(j);
 
         // get the next state
-        child_pose = vehicle.NextPose(start, steer, gear, length, vehicle.min_turn_radius);
+        child_pose = vehicle.NextPose(start, steer, gear, length, tr);
 
         // verify the safety condition and the grid boundary
         if (grid.isValidPoint(child_pose.position) && grid.isSafePlace(vehicle.GetVehicleBodyCircles(child_pose), vehicle.safety_factor)) {
@@ -283,7 +340,7 @@ HybridAstarNodeArrayPtr HybridAstar::GetChidlren(const Pose2D &start, const Pose
     // expanding Reeds-Shepp curves now
 
     // Reeds-Shepp curve threshold value
-    double threshold = heuristic.GetHeuristicValue(grid, start, goal);
+    double threshold = heuristic.GetHeuristicValue(start, goal);
     double inverseThreshold = 10.0/(threshold*threshold);
 
     // quadratic falloff
@@ -314,23 +371,36 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMapRef grid_map, const State2D &
     // now, all HybridAstar methods have access to the same grid pointer
     grid = grid_map;
 
+    // get the current grid map
+    map = grid.GetGridMap();
+    w = grid.GetWidth();
+    h = grid.GetHeight();
+
+    // draw the current map
+	cv::Mat final_map(w, h, CV_8UC1, map);
+
+	// show the image
+	cv::imshow("Astar", final_map);
+
+	cv::waitKey(30);
+
     // syntactic sugar
     // ge the reference to the base class
     Pose2D goal_pose(goal.position, goal.orientation);
     Pose2D start_pose(start.position, start.orientation);
 
     // update the heuristic to the new goal
-    heuristic.UpdateCirclePathHeuristic(grid_map, start_pose, goal_pose);
+    heuristic.UpdateHeuristic(grid_map, start_pose, goal_pose);
 
     // the start state heuristic value
-    double heuristic_value = heuristic.GetHeuristicValue(grid_map, start_pose, goal_pose);
+    double heuristic_value = heuristic.GetHeuristicValue(start_pose, goal_pose);
 
     // find the current cell
     GridMapCellPtr c = grid_map.PoseToCell(start_pose);
 
     // the available space around the vehicle
     // provides the total length between the current state and the node's children
-    double length;
+    double length = 0.0;
 
     // the simple case of length
     // length = grid_map.resolution
@@ -382,7 +452,7 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMapRef grid_map, const State2D &
         double obst = grid_map.GetObstacleDistance(n->pose.position);
         double voro_dist = grid_map.GetVoronoiDistance(n->pose.position);
 
-        length = std::max(grid_map.resolution, 0.25 * (obst + voro_dist));
+        length = std::max(grid_map.resolution, obst + voro_dist);
 
         // iterate over the gears
         for (unsigned int i = 0; i < NumGears; i++) {
@@ -411,13 +481,16 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMapRef grid_map, const State2D &
 
 					if (nullptr != child->action) {
 
+						double path_cost = PathCost(n->action->gear, child->pose, gear, length);
 						// we a have a valid action, conventional expanding
-						tentative_g = n->g + PathCost(n->pose, n->action->gear, child->pose, gear, length);
+						tentative_g = n->g + path_cost;
 
 					} else if (0 < child->action_set->Size()) {
 
+						double action_path_cost = child->action_set->CalculateCost(vehicle.min_turn_radius, reverse_factor, gear_switch_cost);
+
 						// we have a valid action set, it was a Reeds-Shepp analytic expanding
-						tentative_g = n->g + child->action_set->CalculateCost(vehicle.min_turn_radius, reverse_factor, gear_switch_cost);
+						tentative_g = n->g + action_path_cost;
 
 					} else {
 
@@ -431,8 +504,10 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMapRef grid_map, const State2D &
 
 					}
 
-					// get the estimated cost
-					tentative_f = tentative_g + heuristic.GetHeuristicValue(grid_map, child->pose, goal_pose);
+					// update the heuristic contribution
+					double h = heuristic.GetHeuristicValue(child->pose, goal_pose);
+
+					tentative_f = tentative_g + h;
 
 					// update the cost
 					child->g = tentative_g;
@@ -498,9 +573,8 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMapRef grid_map, const State2D &
 
 // get the path cost
 double HybridAstar::PathCost(
-    const astar::Pose2D& start,
     astar::Gear start_gear,
-    const astar::Pose2D& goal,
+    const astar::Pose2D& goal_pose,
     astar::Gear next_gear,
     double length)
 {
@@ -516,5 +590,5 @@ double HybridAstar::PathCost(
         reverse_cost += gear_switch_cost;
 
     // compute and return the cost
-    return reverse_cost + length + length * voronoi_field_factor * grid.GetPathCost(goal.position);
+    return reverse_cost + length + length * voronoi_field_factor * grid.GetPathCost(goal_pose.position);
 }

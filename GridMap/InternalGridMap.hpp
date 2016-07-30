@@ -23,6 +23,9 @@ class InternalGridMap {
         // the grid map size
         unsigned int size;
 
+        // the map resolution
+        double resolution, inverse_resolution;
+
         // the grid map resolution
         double diagonal_resolution;
 
@@ -35,20 +38,18 @@ class InternalGridMap {
         // has the grid map changed?
         bool has_changed;
 
-        // get the grid cell index from any position
-        astar::GridCellIndex PoseToIndex(const astar::Vector2D<double>&) const;
+        // the Voronoi field  map
+        astar::GVDLau voronoi;
 
         // PRIVATE METHODS
 
         // remove the current grid map
         void RemoveGridMap();
 
+
     public:
-        // the Voronoi field  map
-        astar::GVDLau voronoi;
 
         // PUBLIC ATTRIBUTES
-        double resolution, inverse_resolution;
 
 		// PUBLIC METHODS
 
@@ -69,6 +70,9 @@ class InternalGridMap {
 
         // verify if a given pose is a valid one
         bool isSafePlace(const std::vector<astar::Circle> &body, double safety_factor);
+
+        // get the grid cell index from any position
+		astar::GridCellIndex PoseToIndex(const astar::Vector2D<double>&) const;
 
         // return a cell given a pose
         GridMapCellPtr PoseToCell(const astar::Pose2D&);
@@ -99,6 +103,26 @@ class InternalGridMap {
 
         // get the path cost
         double GetPathCost(const astar::Vector2D<double>&);
+
+        // get the current map
+        unsigned char* GetGridMap();
+
+        // get the current path cost map
+        unsigned char* GetPathCostMap();
+
+        // get the current obstacle distance map
+        unsigned char* GetObstacleDistanceMap();
+
+        // get the current map width
+        unsigned int GetWidth() { return width; }
+
+        // get the current map height
+        unsigned int GetHeight() { return height; }
+
+        // get the map resolution
+        double GetResolution() { return resolution; }
+
+
 
 };
 

@@ -32,7 +32,7 @@ class Heuristic {
 		double GetObstacleRelaxedHeuristicValue(astar::Pose2D, const astar::Pose2D&);
 
 		// nonholonomic relaxed heuristic
-		double GetNonholonomicRelaxedHeuristicValue(astar::InternalGridMapRef,const astar::Pose2D&, const astar::Pose2D&);
+		double GetNonholonomicRelaxedHeuristicValue(const astar::Pose2D&, const astar::Pose2D&);
 
     public:
 
@@ -44,10 +44,10 @@ class Heuristic {
 		Heuristic(astar::InternalGridMapRef);
 
         // update the heuristic around a new goal
-        void UpdateCirclePathHeuristic(astar::InternalGridMap& map, const astar::Pose2D&, const astar::Pose2D&);
+        void UpdateHeuristic(astar::InternalGridMap& map, const astar::Pose2D&, const astar::Pose2D&);
 
         // get a heuristic value
-        double GetHeuristicValue(astar::InternalGridMapRef, const astar::Pose2D&, const astar::Pose2D&);
+        double GetHeuristicValue(const astar::Pose2D&, const astar::Pose2D&);
 
 };
 

@@ -41,6 +41,9 @@ public:
     // explicit constructor
     Vector2D(T x_, T y_) : x(x_), y(y_) {}
 
+    // explicit constructor
+    Vector2D(T xy) : x(xy), y(xy) {}
+
     // distance between two vectors
     T Distance(const Vector2D &v) const
     {
@@ -148,7 +151,7 @@ public:
     }
 
     // the dot product between the two vectors
-    T Dot(const Vector2D &v)
+    T Dot(const Vector2D &v) const
     {
         return x*v.x + y*v.y;
     }
@@ -234,7 +237,7 @@ public:
     }
 
     // - operator, subtract a given vector from the current one values, self.subtract
-    Vector2D operator-(const Vector2D &v)
+    Vector2D operator-(const Vector2D &v) const
     {
         return Vector2D(x - v.x, y - v.y);
     }
@@ -264,20 +267,6 @@ public:
     }
 
 };
-
-template<typename T>
-class Vector2DArray {
-
-public:
-
-	// the current array
-	std::vector<astar::Vector2D<T>> vs;
-
-};
-
-template<typename T>
-using Vector2DArrayPtr = Vector2DArray<double>*;
-
 
 }
 #endif
