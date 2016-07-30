@@ -158,7 +158,7 @@ void NonholonomicHeuristicInfo::Load(NonholonomicHeuristicInfo &info, std::strin
 		}
 
 		// compute the offset
-		info.position_offset = std::floor(info.num_cells * 0.5) / info.resolution;
+		info.position_offset = std::floor(info.num_cells * 0.5) * info.resolution;
 
 		// the max heuristic value
 		info.max_heuristic_value = std::numeric_limits<double>::min();

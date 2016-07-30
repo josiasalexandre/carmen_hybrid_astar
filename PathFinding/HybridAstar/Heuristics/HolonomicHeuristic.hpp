@@ -116,7 +116,8 @@ class HolonomicHeuristic {
 				// operator overloading
 				bool operator() (CircleNodePtr a, CircleNodePtr b) {
 
-					return a->f < b->f;
+					// the default c++ stl is a max heap, so wee need to invert here
+					return a->f > b->f;
 
 				}
 
@@ -129,6 +130,13 @@ class HolonomicHeuristic {
 
 				// the vector of circle nodes
 				std::vector<CircleNodePtr> circles;
+
+				// basic destructor
+				~CircleNodePtrArray() {
+
+					circles.clear();
+
+				}
 
 		};
 

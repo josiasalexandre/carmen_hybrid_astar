@@ -30,7 +30,7 @@ bool HolonomicHeuristic::Overlap(const astar::Circle &a, const astar::Circle &b)
 		greater = b.r;
 	}
 
-	return (a.position.Distance(b.position) - greater > 0.5 * smaller);
+	return ((a.position.Distance(b.position) - greater) < (0.5 * smaller));
 
 }
 
@@ -52,11 +52,12 @@ HolonomicHeuristic::CircleNodePtr HolonomicHeuristic::NearestCircleNode(const as
 		// set the first circle as the closer one
 		std::vector<HolonomicHeuristic::CircleNodePtr>::iterator nearest = it;
 
-		// get the current distance between the pose and the first circle
-		double distance = position.Distance((*it)->circle.position);
-
 		// get the end iterator
 		std::vector<HolonomicHeuristic::CircleNodePtr>::iterator end = circles.end();
+		std::vector<HolonomicHeuristic::CircleNodePtr>::iterator next;
+
+		// get the current distance between the pose and the first circle
+		double distance = position.Distance((*it)->circle.position);
 
 		// update the current iterator
 		++it;
@@ -80,6 +81,23 @@ HolonomicHeuristic::CircleNodePtr HolonomicHeuristic::NearestCircleNode(const as
 		}
 
 		// we got it!
+		next = nearest;
+		++next;
+
+		if (next != end){
+
+			// get the position vectors reference
+			astar::Vector2D<double> &next_circle((*next)->circle.position);
+			astar::Vector2D<double> &current_circle((*nearest)->circle.position);
+
+			if (current_circle.Distance2(next_circle) > position.Distance2(next_circle)) {
+
+				return *next;
+
+			}
+
+		}
+
 		return *nearest;
 
 	}
@@ -132,10 +150,10 @@ HolonomicHeuristic::CircleNodePtrArrayPtr HolonomicHeuristic::GetChildren(Holono
 			ncr = grid.GetObstacleDistance(ncp);
 
 			// is it a safe place?
-			if (ncr > 1.5) {
+			if (ncr > 2.0) {
 
 				// get the distance from the parent node
-				ncg = cn->circle.r;
+				ncg = r + cn->g;
 
 				// get the distance to the goal
 				ncf = ncp.Distance(goal.position) + ncg;
@@ -146,6 +164,7 @@ HolonomicHeuristic::CircleNodePtrArrayPtr HolonomicHeuristic::GetChildren(Holono
 			}
 
 		}
+
 		// update the angle
 		angle += piece_angle;
 
@@ -195,14 +214,28 @@ void HolonomicHeuristic::RebuildCirclePath(HolonomicHeuristic::CircleNodePtr cn,
 	// get the direct access
 	std::vector<HolonomicHeuristic::CircleNodePtr> &circles(circle_path.circles);
 
+	// a temp circle node
+	HolonomicHeuristic::CircleNodePtr tmp = nullptr;
+
+	// the circle node list, just to prepend the actual circle nodes
 	std::list<CircleNodePtr> l;
 
+	// build the goal CircleNode
+	tmp = new CircleNode(c_goal, 0.0, 0.0, cn);
+
+	// append to the list
+	l.push_front(tmp);
+
 	while (nullptr != cn) {
+
+		// update the distance between the current node and the it's child
+		cn->g = tmp->circle.position.Distance(cn->circle.position) + tmp->g;
 
 		// prepend to the circle path list
 		l.push_front(cn);
 
 		// go to the parent node
+		tmp = cn;
 		cn = cn->parent;
 
 	}
@@ -220,6 +253,8 @@ void HolonomicHeuristic::RebuildCirclePath(HolonomicHeuristic::CircleNodePtr cn,
 
 		while (it != end) {
 
+			// get the distance between the
+
 			// build the next circle
 			child_c_node = new HolonomicHeuristic::CircleNode(*(*it));
 
@@ -236,11 +271,10 @@ void HolonomicHeuristic::RebuildCirclePath(HolonomicHeuristic::CircleNodePtr cn,
 
 		}
 
-		// get the current cost
-		double total = c_goal.position.Distance(child_c_node->circle.position) + child_c_node->g;
-
-		// append the goal cicle node
-		circles.push_back(new HolonomicHeuristic::CircleNode(c_goal, total, total, child_c_node));
+		// delete the last element in the list
+		tmp = l.back();
+		l.pop_back();
+		delete tmp;
 
 	}
 
@@ -293,8 +327,10 @@ bool HolonomicHeuristic::SpaceExploration() {
 	// build the start circle
 	Circle c_start(start.position, grid.GetObstacleDistance(start.position));
 
+	double goal_obstacle = grid.GetObstacleDistance(goal.position);
+
 	// build the goal circle
-	Circle c_goal(goal.position, grid.GetObstacleDistance(goal.position));
+	Circle c_goal(goal.position, goal_obstacle);
 
 	// the heuristic values
 	double f = c_start.position.Distance(goal.position);
@@ -417,7 +453,7 @@ double HolonomicHeuristic::GetHeuristicValue(const astar::Pose2D &p) {
 	HolonomicHeuristic::CircleNodePtr nearest = NearestCircleNode(p);
 
 	if (nullptr != nearest) {
-		return nearest->f;
+		return nearest->g + p.position.Distance(nearest->circle.position);
 	}
 
 	// return the old euclidena distance value

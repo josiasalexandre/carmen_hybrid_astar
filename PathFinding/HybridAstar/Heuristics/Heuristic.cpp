@@ -16,18 +16,19 @@ astar::Heuristic::Heuristic(InternalGridMapRef map) : info(), holonomic(map) {
 }
 
 // define the nonholonomic without obstacles heuristic
-double Heuristic::GetObstacleRelaxedHeuristicValue(Pose2D start, const Pose2D &goal) {
+double Heuristic::GetObstacleRelaxedHeuristicValue(Pose2D start_, const Pose2D &goal_) {
 
 	// rotate the start position around the goal
-	start.position.RotateZ(goal.position, -goal.orientation);
+	start_.position.Subtract(goal_.position);
+	start_.position.RotateZ(-goal_.orientation);
 
 	// get the angle displacement
-	start.orientation = mrpt::math::angDistance<double>(start.orientation, goal.orientation);
+	start_.orientation = mrpt::math::angDistance<double>(start_.orientation, goal_.orientation);
 
 	// get the indexes in the heuristic table
-	int row = (int) std::floor((start.position.y + info.position_offset) / info.resolution + 0.5);
-	int col = (int) std::floor((start.position.x + info.position_offset) / info.resolution + 0.5);
-	int o = (int) std::floor(start.orientation / info.orientation_offset + 0.5);
+	int row = (int) std::floor((start_.position.y + info.position_offset) / info.resolution + 0.5);
+	int col = (int) std::floor((start_.position.x + info.position_offset) / info.resolution + 0.5);
+	int o = (int) std::floor(start_.orientation / info.orientation_offset + 0.5);
 
 	if (o == info.orientations) {
 		o = 0;
@@ -36,7 +37,7 @@ double Heuristic::GetObstacleRelaxedHeuristicValue(Pose2D start, const Pose2D &g
 	if (0 > row || info.num_cells <= row || 0 > col || info.num_cells <= col) {
 
 		// return the trivial euclidian norm
-		return start.position.Distance(goal.position);
+		return start_.position.Distance(goal.position);
 
 	}
 
@@ -45,25 +46,27 @@ double Heuristic::GetObstacleRelaxedHeuristicValue(Pose2D start, const Pose2D &g
 }
 
 // the holonomic with obstacles heuristic
-double Heuristic::GetNonholonomicRelaxedHeuristicValue(InternalGridMapRef grid, const Pose2D &start, const Pose2D &goal) {
+double Heuristic::GetNonholonomicRelaxedHeuristicValue(const Pose2D &start, const Pose2D &goal) {
 
 	// just a simple euclidian distance now
 	// it's not ready
-	return start.position.Distance(goal.position);
+	return holonomic.GetHeuristicValue(start);
 
 }
 
 // find a new circel path connecting the start and goal poses
-void astar::Heuristic::UpdateCirclePathHeuristic(astar::InternalGridMap &grid, const Pose2D &start, const Pose2D &goal_) {
+void astar::Heuristic::UpdateHeuristic(astar::InternalGridMap &grid, const Pose2D &start_, const Pose2D &goal_) {
 
-	holonomic.UpdateHeuristic(grid, start, goal);
+	holonomic.UpdateHeuristic(grid, start_, goal_);
 
 }
 
 // get a heuristic value
-double astar::Heuristic::GetHeuristicValue(InternalGridMapRef grid, const Pose2D &start, const Pose2D &goal) {
+double astar::Heuristic::GetHeuristicValue(const Pose2D &start_, const Pose2D &goal_) {
+
+	return std::max(GetObstacleRelaxedHeuristicValue(start_, goal_), start_.position.Distance(goal_.position));
 
 	// return the the combined heuristic
-	return std::max(GetObstacleRelaxedHeuristicValue(start, goal), GetNonholonomicRelaxedHeuristicValue(grid, start, goal));
+	return std::max(GetObstacleRelaxedHeuristicValue(start_, goal_), GetNonholonomicRelaxedHeuristicValue(start_, goal_));
 
 }

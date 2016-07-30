@@ -65,7 +65,7 @@ double ReedsSheppActionSet::CalculateCost(double unit, double reverseFactor, dou
 
         if (1.0 == reverseFactor && 0.0 == gearSwitchCost) {
 
-            return length*unit;
+            return length * unit;
 
         }
 
@@ -75,10 +75,10 @@ double ReedsSheppActionSet::CalculateCost(double unit, double reverseFactor, dou
         // the first gear
         Gear prevGear = actions[0].gear;
 
-        for (unsigned int i = 1; i < a_size; i++) {
+        for (unsigned int i = 0; i < a_size; i++) {
 
             // get the current action cost
-            actionCost = actions[i].length*unit;
+            actionCost = actions[i].length * unit;
 
             if (BackwardGear == actions[i].gear) {
 
@@ -86,10 +86,11 @@ double ReedsSheppActionSet::CalculateCost(double unit, double reverseFactor, dou
                 actionCost *= reverseFactor;
 
             }
+
             if (prevGear != actions[i].gear) {
 
                 // multiply by the gearSwitchCost
-                actionCost *= gearSwitchCost;
+                actionCost += gearSwitchCost;
 
             }
 
@@ -121,17 +122,7 @@ ReedsSheppActionSet* ReedsSheppActionSet::TimeFlip(ReedsSheppActionSet *set) {
             for (std::vector<ReedsSheppAction>::iterator it = set->actions.begin(); it != set->actions.end(); ++it) {
 
                 // update the gear
-                if (BackwardGear == it->gear) {
-
-                    // set to forward movement
-                    it->gear = BackwardGear;
-
-                } else {
-
-                    // set to backward movement
-                    it->gear = ForwardGear;
-
-                }
+            	it->gear = (BackwardGear == it->gear) ? ForwardGear : BackwardGear;
 
             }
 
@@ -176,7 +167,6 @@ ReedsSheppActionSet* ReedsSheppActionSet::Reflect(ReedsSheppActionSet *set) {
 
 }
 
-//
 // time flip and reflect in sequence
 ReedsSheppActionSet* ReedsSheppActionSet::TimeFlipAndReflect(ReedsSheppActionSet *set) {
 

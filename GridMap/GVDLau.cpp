@@ -16,9 +16,9 @@ GVDLau::GVDLau() :
 	heightminus1(0),
 	width(0),
 	widthminus1(0),
-	alpha(20.0),
-	max_dist(30),
-	max_sqdist(900),
+	alpha(40),
+	max_dist(50),
+	max_sqdist(2500),
 	max_double(std::numeric_limits<double>::max()),
 	initialized(false),
 	edges(INT_MAX)
@@ -481,13 +481,21 @@ void GVDLau::UpdatePathCostMap() {
 			s.voro_dist = std::sqrt(s.voro_sqdist);
 
 			if (max_dist <= s.dist || max_double == s.voro_dist) {
+
 				// std::cout << "menor " << max_dist << " < " << s.dist << "\n";
 				s.path_cost = 0.0;
+
 			} else {
+
+				// save the voronoi potential field
 				s.path_cost = (alpha / (alpha + s.dist)) * (s.voro_dist / (s.dist + s.voro_dist)) * ((max_dist - s.dist) * (max_dist - s.dist) / (max_sqdist));
+
 			}
+
 		}
+
 	}
+
 }
 
 // Initialize the GVD
@@ -741,39 +749,31 @@ bool GVDLau::Update() {
 
 // get the nearest obstacle distance
 double GVDLau::GetObstacleDistance(unsigned int row, unsigned int col) {
-	if (0 < row && height > row && 0 < col && width > col) {
 
-		(void) data[row][col].nearest_obstacle;
-		return data[row][col].dist;
+	return data[row][col].dist;
 
-	}
-	else
-		return 0.0;
 }
 
 // get the nearest obstacle index
 GridCellIndex GVDLau::GetObstacleIndex(unsigned int row, unsigned int col) {
 
-	if (0 < row && height > row && 0 < col && width > col) {
-		return data[row][col].nearest_obstacle;
-	}
+	return data[row][col].nearest_obstacle;
 
-	return GridCellIndex(UINT_MAX, UINT_MAX);
 }
 
 // get the nearest voronoi edge distance
 double GVDLau::GetVoronoiDistance(unsigned int row, unsigned int col) {
 
-	if (0 < row && height > row && 0 < col && width > col) {
-		return data[row][col].voro_dist;
-	}
+	return data[row][col].voro_dist;
 
-	return max_double;
 }
 
 // get the nearest voronoi edge distance given the robot's pose
 GridCellIndex GVDLau::GetVoronoiIndex(unsigned int row, unsigned int col) {
 
+	return data[row][col].nearest_voro;
+
+	/*
 	// build the point
 	PointT<unsigned int, 2u> point({row, col});
 
@@ -781,6 +781,7 @@ GridCellIndex GVDLau::GetVoronoiIndex(unsigned int row, unsigned int col) {
 	PointT<unsigned int, 2> found(edges.Nearest(point));
 
 	return GridCellIndex(found[0], found[1]);
+	*/
 
 }
 
@@ -835,4 +836,93 @@ void GVDLau::Visualize(std::string filename) {
 		}
 		fclose(F);
 	}
+}
+
+// get the current path cost map
+unsigned char* GVDLau::GetPathCostMap() {
+
+	if (0 < width && 0 < height) {
+
+		// build a new array of chars
+		unsigned char *map = new unsigned char[height*width];
+
+		unsigned int k = 0;
+
+		for (int i = ((int) width) - 1; i > -1; --i) {
+
+			for (unsigned int j = 0; j < height; ++j) {
+
+				double v = 1.0 - data[i][j].path_cost;
+
+				if (0.0 > v) {
+
+					map[k] = (unsigned char) 0;
+
+				} else if (1.0 < v) {
+
+					map[k] = (unsigned char) 255;
+
+				} else {
+
+					map[k] = (unsigned char) 255.0 * v;
+
+				}
+
+				++k;
+
+			}
+
+		}
+
+		// return the current map
+		return map;
+
+	}
+
+	return nullptr;
+}
+
+// get the current path cost map
+unsigned char* GVDLau::GetObstacleDistanceMap() {
+
+	if (0 < width && 0 < height) {
+
+		// build a new array of chars
+		unsigned char *map = new unsigned char[height*width];
+
+		unsigned int k = 0;
+
+		for (int i = ((int) width) - 1; i > -1; --i) {
+
+			for (unsigned int j = 0; j < height; ++j) {
+
+				if (data[i][j].voro) {
+
+					map[k] = (unsigned char) 255;
+
+				} else if (data[i][j].sqdist == 0) {
+
+					map[k] = 0;
+
+				} else {
+
+					float f = 80 + (sqrt(data[i][j].sqdist)*10);
+					if (f > 255) f = 255;
+					if (f < 0) f = 0;
+					map[k] = (unsigned char) f;
+				}
+
+				// update the k index
+				k++;
+
+			}
+
+		}
+
+		// return the current map
+		return map;
+
+	}
+
+	return nullptr;
 }

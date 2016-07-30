@@ -28,6 +28,9 @@
 #include <vector>
 #include <list>
 
+#include <opencv2/opencv.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+
 #include "../../PriorityQueue/PriorityQueue.hpp"
 #include "../../Entities/Pose2D.hpp"
 #include "../../GridMap/InternalGridMap.hpp"
@@ -74,6 +77,10 @@ private:
     // the invalid nodes set
     std::vector<HybridAstarNodePtr> invalid;
 
+    // the current grid map
+    unsigned char *map;
+    unsigned w, h;
+
     // PRIVATE METHODS
 
     // clear all the sets
@@ -90,9 +97,8 @@ private:
 
     // get the path cost
     double PathCost(
-		const astar::Pose2D& start,
 		astar::Gear start_gear,
-		const astar::Pose2D& goal,
+		const astar::Pose2D& goal_pose,
 		astar::Gear next_gear,
 		double length);
 

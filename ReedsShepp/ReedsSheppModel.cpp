@@ -50,7 +50,7 @@ ReedsSheppActionSetPtr ReedsSheppModel::Solve(const Pose2D &start, const Pose2D 
     double cos_orientation = std::cos(orientation);
 
     // assuming the infinity as the min length
-    double bestPathLength = std::numeric_limits<double>::infinity();
+    double bestPathLength = std::numeric_limits<double>::max();
 
     // maybe the next best path length, let's see
     double potentialLength;
@@ -86,9 +86,9 @@ ReedsSheppActionSetPtr ReedsSheppModel::Solve(const Pose2D &start, const Pose2D 
 
     }
 
-    if (std::numeric_limits<double>::quiet_NaN() == bestPathLength) {
+    if (std::numeric_limits<double>::max() == bestPathLength) {
 
-        return new ReedsSheppActionSet(std::numeric_limits<double>::infinity());
+        return new ReedsSheppActionSet(std::numeric_limits<double>::max());
 
     }
 
@@ -140,13 +140,13 @@ StateArrayPtr ReedsSheppModel::Discretize(
                 // avoiding sin repetitions
                 double sinPhi = std::sin(phi);
 
-                double L = 2*radcurv*sinPhi;
+                double L = 2 * radcurv * sinPhi;
 
                 // get the x displacement
-                double dx = L*std::cos(phi);
+                double dx = L * std::cos(phi);
 
                 // get the y displacement
-                double dy = L*sinPhi;
+                double dy = L * sinPhi;
 
                 // assuming TurnLeft, is it a TurnRight?
                 if (RSTurnRight == it->steer) {
@@ -175,9 +175,8 @@ StateArrayPtr ReedsSheppModel::Discretize(
                 // the resulting position, after the movement
                 astar::Vector2D<double> pos;
 
-
                 // iterate over the entire arc length
-                for (unsigned int i = 0; i < n; i++) {
+                for (unsigned int i = 0; i < n; ++i) {
 
                     // update the position
                     pos.x = dx;
@@ -204,13 +203,13 @@ StateArrayPtr ReedsSheppModel::Discretize(
 
                 // it's a straight line, so piece of cake
                 // get the piece arch length
-                double pieceLength = it->length * radcurv/n;
+                double pieceLength = it->length * radcurv / n;
 
                 // the x displacement
-                double dx = pieceLength*std::cos(prev.orientation);
+                double dx = pieceLength * std::cos(prev.orientation);
 
                 // the y displacement
-                double dy = pieceLength*std::sin(prev.orientation);
+                double dy = pieceLength * std::sin(prev.orientation);
 
                 // verify the direction
                 if (BackwardGear == it->gear) {
@@ -222,7 +221,7 @@ StateArrayPtr ReedsSheppModel::Discretize(
                 }
 
                 // iterate over the entire arc and append the new pose
-                for (unsigned int i = 0; i < n; i++) {
+                for (unsigned int i = 0; i < n; ++i) {
 
                     // update the new position
                     prev.position.Add(dx, dy);
@@ -450,7 +449,7 @@ double ReedsSheppModel::GetLfSfLf(double goal_x, double goal_y, double goal_orie
 
     if (isInvalidAngle(t) || isInvalidAngle(v)) {
 
-        return std::numeric_limits<double>::infinity();
+        return std::numeric_limits<double>::max();
 
     }
 
@@ -493,7 +492,7 @@ double ReedsSheppModel::GetLfSfRf(double goal_x, double goal_y, double goal_orie
 
     if (4 > u1squared) {
 
-        return std::numeric_limits<double>::infinity();
+        return std::numeric_limits<double>::max();
 
     }
 
@@ -511,7 +510,7 @@ double ReedsSheppModel::GetLfSfRf(double goal_x, double goal_y, double goal_orie
 
     if (isInvalidAngle(t) || isInvalidAngle(v)) {
 
-        return std::numeric_limits<double>::infinity();
+        return std::numeric_limits<double>::max();
 
     }
 
@@ -551,7 +550,7 @@ double ReedsSheppModel::GetLfRbLf(double goal_x, double goal_y, double goal_orie
     double u1 = std::sqrt(x * x + eta * eta);
     if (4 < u1) {
 
-        return std::numeric_limits<double>::infinity();
+        return std::numeric_limits<double>::max();
 
     }
 
@@ -569,7 +568,7 @@ double ReedsSheppModel::GetLfRbLf(double goal_x, double goal_y, double goal_orie
 
     if (isInvalidAngle(t) || isInvalidAngle(u) || isInvalidAngle(v)) {
 
-        return std::numeric_limits<double>::infinity();
+        return std::numeric_limits<double>::max();
 
     }
 
@@ -608,7 +607,7 @@ double ReedsSheppModel::GetLfRbLb(double goal_x, double goal_y, double goal_orie
     double u1 = std::sqrt(x * x + eta * eta);
     if (4 < u1) {
 
-        return std::numeric_limits<double>::infinity();
+        return std::numeric_limits<double>::max();
 
     }
 
@@ -659,7 +658,7 @@ double ReedsSheppModel::GetLfRfLb(double goal_x, double goal_y, double goal_orie
     double u1 = std::sqrt(x * x + eta * eta);
     if (4 < u1) {
 
-        return std::numeric_limits<double>::infinity();
+        return std::numeric_limits<double>::max();
 
     }
 
@@ -714,7 +713,7 @@ double ReedsSheppModel::GetLfRufLubRb(double goal_x, double goal_y, double goal_
     double u1 = std::sqrt(x*x + eta * eta);
     if (4 < u1) {
 
-        return std::numeric_limits<double>::infinity();
+        return std::numeric_limits<double>::max();
 
     }
 
@@ -787,7 +786,7 @@ double ReedsSheppModel::GetLfRubLubRf(double goal_x, double goal_y, double goal_
     double u1 = std::sqrt(x * x + eta * eta);
     if (6 < u1) {
 
-        return std::numeric_limits<double>::infinity();
+        return std::numeric_limits<double>::max();
 
     }
 
@@ -795,7 +794,7 @@ double ReedsSheppModel::GetLfRubLubRf(double goal_x, double goal_y, double goal_
     double va1 = 1.25f - u1 * u1 / 16;
     if (va1 < 0 || va1 > 1.0) {
 
-        return std::numeric_limits<double>::infinity();
+        return std::numeric_limits<double>::max();
 
     }
 
@@ -849,7 +848,7 @@ double ReedsSheppModel::GetLfRbpi2SbLb(double goal_x, double goal_y, double goal
     double u1squared = x * x + eta * eta;
     if (u1squared < 4) {
 
-        return std::numeric_limits<double>::infinity();
+        return std::numeric_limits<double>::max();
 
     }
 
@@ -859,7 +858,7 @@ double ReedsSheppModel::GetLfRbpi2SbLb(double goal_x, double goal_y, double goal
     u = std::sqrt(u1squared - 4) - 2;
     if (0 > u) {
 
-        return std::numeric_limits<double>::infinity();
+        return std::numeric_limits<double>::max();
 
     }
 
@@ -909,7 +908,7 @@ double ReedsSheppModel::GetLfRbpi2SbRb(double goal_x, double goal_y, double goal
     double u1 = std::sqrt(x*x + eta*eta);
     if (2.0 > u1) {
 
-        return std::numeric_limits<double>::infinity();
+        return std::numeric_limits<double>::max();
 
     }
 
@@ -963,7 +962,7 @@ double ReedsSheppModel::GetLfSfRfpi2Lb(double goal_x, double goal_y, double goal
     double u1squared = x*x + eta*eta;
     if (4 > u1squared) {
 
-        return std::numeric_limits<double>::infinity();
+        return std::numeric_limits<double>::max();
 
     }
 
@@ -973,7 +972,7 @@ double ReedsSheppModel::GetLfSfRfpi2Lb(double goal_x, double goal_y, double goal
     u = std::sqrt(u1squared - 4) - 2;
     if (0 > (u)) {
 
-        return std::numeric_limits<double>::infinity();
+        return std::numeric_limits<double>::max();
 
     }
 
@@ -1024,7 +1023,7 @@ double ReedsSheppModel::GetLfSfLfpi2Rb(double goal_x, double goal_y, double goal
     double u1 = std::sqrt(x*x + eta * eta);
     if (2.0 > u1) {
 
-        return std::numeric_limits<double>::infinity();
+        return std::numeric_limits<double>::max();
 
     }
 
@@ -1078,7 +1077,7 @@ double ReedsSheppModel::GetLfRbpi2SbLbpi2Rf(double goal_x, double goal_y, double
     double u1squared = x * x + eta * eta;
     if (16 > u1squared) {
 
-        return std::numeric_limits<double>::infinity();
+        return std::numeric_limits<double>::max();
 
     }
 
@@ -1088,7 +1087,7 @@ double ReedsSheppModel::GetLfRbpi2SbLbpi2Rf(double goal_x, double goal_y, double
     u = std::sqrt(u1squared - 4) - 4;
     if (0 > (u)) {
 
-        return std::numeric_limits<double>::infinity();
+        return std::numeric_limits<double>::max();
 
     }
 

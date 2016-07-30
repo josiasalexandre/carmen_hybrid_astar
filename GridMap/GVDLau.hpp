@@ -153,6 +153,12 @@ class GVDLau {
 
 		// save the voronoi field map to an external file
 		void Visualize(std::string);
+
+		// get the current path cost map
+		unsigned char* GetPathCostMap();
+
+		// get the current obstacle distance map
+		unsigned char* GetObstacleDistanceMap();
 };
 
 }
