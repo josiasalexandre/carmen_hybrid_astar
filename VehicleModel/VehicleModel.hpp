@@ -15,20 +15,18 @@ class VehicleModel {
     private:
 
         // PRIVATE ATTRIBUTES
-		double circle_radius;
-
-
+        double circle_radius;
 
         // PRIVATE METHODS
 
     public:
 
-		// the default low speed for simulation purpose
-		double low_speed;
+        // the default low speed for simulation purpose
+        double low_speed;
 
         // PUBLIC ATTRIBUTES
-		// the minimum turn radius
-		double min_turn_radius;
+        // the minimum turn radius
+        double min_turn_radius;
 
         // the maximum wheel deflection
         double max_wheel_deflection;
@@ -119,43 +117,43 @@ class VehicleModel {
         // get the next state
         astar::State2D NextState(const astar::State2D&);
 
-		// get the front axle state with respect to the rear axle pose
-		astar::State2D GetFrontAxleState(const astar::State2D&) const;
+        // get the front axle state with respect to the rear axle pose
+        astar::State2D GetFrontAxleState(const astar::State2D&) const;
 
-		// get the fake front axle state with respect to the rear axle pose
-		astar::State2D GetFakeFrontAxleState(const astar::State2D&) const;
+        // get the fake front axle state with respect to the rear axle pose
+        astar::State2D GetFakeFrontAxleState(const astar::State2D&) const;
 
-		// get the car center position
-		astar::Pose2D GetCenterPosition(const astar::Pose2D&) const;
+        // get the car center position
+        astar::Pose2D GetCenterPosition(const astar::Pose2D&) const;
 
-		// get the list of circles that represents the safe area
-		std::vector<astar::Circle> GetVehicleBodyCircles(const astar::Pose2D&);
+        // get the list of circles that represents the safe area
+        std::vector<astar::Circle> GetVehicleBodyCircles(const astar::Pose2D&);
 
-		// get the desired wheel angle that connects two states
-		double GetDesiredWheelAngle(const astar::Pose2D&, const astar::Pose2D&) const;
+        // get the desired wheel angle that connects two states
+        double GetDesiredWheelAngle(const astar::Pose2D&, const astar::Pose2D&) const;
 
-		// get the desired speed
-		double GetCurvatureConstraint(const astar::Pose2D &prev, const astar::Pose2D &current, const astar::Pose2D &next) const;
+        // get the desired speed
+        double GetCurvatureConstraint(const astar::Pose2D &prev, const astar::Pose2D &current, const astar::Pose2D &next) const;
 
-		// get the desired speed
-		double GetForwardSpeed(const astar::Pose2D &prev, const astar::Pose2D &current, const astar::Pose2D &next) const;
+        // get the desired speed
+        double GetForwardSpeed(const astar::Pose2D &prev, const astar::Pose2D &current, const astar::Pose2D &next) const;
 
-		// get the desired speed
-		double GetBackwardSpeed(const astar::Pose2D &prev, const astar::Pose2D &current, const astar::Pose2D &next) const;
+        // get the desired speed
+        double GetBackwardSpeed(const astar::Pose2D &prev, const astar::Pose2D &current, const astar::Pose2D &next) const;
 
-		// get the max acceleration constraint
-		double GetAccelerationConstraint(double initial_speed, double displacement, astar::Gear g) const;
+        // get the max acceleration constraint
+        double GetAccelerationConstraint(double initial_speed, double displacement, astar::Gear g) const;
 
-		// get the max acceleration constraint
-		double GetDecelerationConstraint(double final_speed, double displacement, astar::Gear g) const;
+        // get the max acceleration constraint
+        double GetDecelerationConstraint(double final_speed, double displacement, astar::Gear g) const;
 
-		// get the desired forward orientation
-		double GetForwardOrientation(const astar::Pose2D &prev, const astar::Pose2D &current, const astar::Pose2D &next) const;
+        // get the desired forward orientation
+        double GetForwardOrientation(const astar::Pose2D &prev, const astar::Pose2D &current, const astar::Pose2D &next) const;
 
-		// get the desired orientation
-		double GetBackwardOrientation(const astar::Pose2D &prev, const astar::Pose2D &current, const astar::Pose2D &next) const;
+        // get the desired orientation
+        double GetBackwardOrientation(const astar::Pose2D &prev, const astar::Pose2D &current, const astar::Pose2D &next) const;
 
-		// get the
+        // get the
 };
 
 typedef VehicleModel& VehicleModelRef;

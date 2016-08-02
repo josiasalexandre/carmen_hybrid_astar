@@ -65,7 +65,7 @@ public:
     // squared norm
     T Norm2() const
     {
-    	return x*x + y*y;
+        return x*x + y*y;
     }
 
     // normalize
@@ -219,7 +219,7 @@ public:
     }
 
     // different comparator
-    bool operator!=(const Vector2D &v)
+    bool operator!=(const Vector2D &v) const
     {
         return (std::fabs(x - v.x) > 0.0001 || std::fabs(y - v.y) > 0.0001);
     }

@@ -37,10 +37,10 @@ class PriorityQueueNode {
 
         // basic constructor
         PriorityQueueNode(T e, double Key_) :
-        	parent(nullptr), child(nullptr), degree(0), mark(false), element(e), Key(Key_) {
+            parent(nullptr), child(nullptr), degree(0), mark(false), element(e), Key(Key_) {
 
-        	// set the left and right pointers
-        	left = right = this;
+            // set the left and right pointers
+            left = right = this;
         }
 
         // copy constructor

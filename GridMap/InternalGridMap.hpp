@@ -51,7 +51,7 @@ class InternalGridMap {
 
         // PUBLIC ATTRIBUTES
 
-		// PUBLIC METHODS
+        // PUBLIC METHODS
 
         // basic constructor
         InternalGridMap();
@@ -72,7 +72,7 @@ class InternalGridMap {
         bool isSafePlace(const std::vector<astar::Circle> &body, double safety_factor);
 
         // get the grid cell index from any position
-		astar::GridCellIndex PoseToIndex(const astar::Vector2D<double>&) const;
+        astar::GridCellIndex PoseToIndex(const astar::Vector2D<double>&) const;
 
         // return a cell given a pose
         GridMapCellPtr PoseToCell(const astar::Pose2D&);
@@ -121,6 +121,9 @@ class InternalGridMap {
 
         // get the map resolution
         double GetResolution() { return resolution; }
+
+        // get the inverse resolution
+        double GetInverseResolution() { return inverse_resolution; }
 
 
 

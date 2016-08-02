@@ -20,7 +20,7 @@
 // COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 // IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-*/
+ */
 
 #ifndef HYBRID_ASTAR_ALGORITHM_HPP
 #define HYBRID_ASTAR_ALGORITHM_HPP
@@ -43,79 +43,79 @@ namespace astar {
 
 class HybridAstar {
 
-private:
+    private:
 
-    // PRIVATE ATTRIBUTES
+        // PRIVATE ATTRIBUTES
 
-    // the reverse factor penalty
-    double reverse_factor;
+        // the reverse factor penalty
+        double reverse_factor;
 
-    // the gear switch cost penalty
-    double gear_switch_cost;
+        // the gear switch cost penalty
+        double gear_switch_cost;
 
-    // the voronoi field factor
-    double voronoi_field_factor;
+        // the voronoi field factor
+        double voronoi_field_factor;
 
-    // the ReedsSheppModel
-    ReedsSheppModel rs;
+        // the ReedsSheppModel
+        ReedsSheppModel rs;
 
-    // the Vehicle model
-    astar::VehicleModel &vehicle;
+        // the Vehicle model
+        astar::VehicleModel &vehicle;
 
-    // grid map pointer
-    astar::InternalGridMapRef grid;
+        // grid map pointer
+        astar::InternalGridMapRef grid;
 
-    // the heuristic
-    astar::Heuristic heuristic;
+        // the heuristic
+        astar::Heuristic heuristic;
 
-    // the opened nodes set
-    astar::PriorityQueue<HybridAstarNodePtr> open;
+        // the opened nodes set
+        astar::PriorityQueue<HybridAstarNodePtr> open;
 
-    // the expanded nodes set
-    std::vector<HybridAstarNodePtr> discovered;
+        // the expanded nodes set
+        std::vector<HybridAstarNodePtr> discovered;
 
-    // the invalid nodes set
-    std::vector<HybridAstarNodePtr> invalid;
+        // the invalid nodes set
+        std::vector<HybridAstarNodePtr> invalid;
 
-    // the current grid map
-    unsigned char *map;
-    unsigned w, h;
+        // the current grid map
+        unsigned char *map;
+        unsigned w, h;
 
-    // PRIVATE METHODS
+        // PRIVATE METHODS
 
-    // clear all the sets
-    void RemoveAllNodes();
+        // clear all the sets
+        void RemoveAllNodes();
 
-    // reconstruct the path from the goal to the start pose
-    astar::StateArrayPtr RebuildPath(HybridAstarNodePtr, const State2D&);
+        // reconstruct the path from the goal to the start pose
+        astar::StateArrayPtr RebuildPath(HybridAstarNodePtr, const State2D&);
 
-    // get the Reeds-Shepp path to the goal and return the appropriated HybridAstarNode
-    HybridAstarNodePtr GetReedsSheppChild(const astar::Pose2D&, const astar::Pose2D&);
+        // get the Reeds-Shepp path to the goal and return the appropriated HybridAstarNode
+        HybridAstarNodePtr GetReedsSheppChild(const astar::Pose2D&, const astar::Pose2D&);
 
-    // get the children nodes by expanding all gears and steering
-    HybridAstarNodeArrayPtr GetChidlren(const astar::Pose2D&, const astar::Pose2D&, astar::Gear, double);
+        // get the children nodes by expanding all gears and steering
+        HybridAstarNodeArrayPtr GetChidlren(const astar::Pose2D&, const astar::Pose2D&, astar::Gear, double);
 
-    // get the path cost
-    double PathCost(
-		astar::Gear start_gear,
-		const astar::Pose2D& goal_pose,
-		astar::Gear next_gear,
-		double length);
+        // get the path cost
+        double PathCost(
+                astar::Gear start_gear,
+                const astar::Pose2D& goal_pose,
+                astar::Gear next_gear,
+                double length);
 
-public:
+    public:
 
-    // PUBLIC ATTRIBUTES
+        // PUBLIC ATTRIBUTES
 
-    // PUBLIC METHODS
+        // PUBLIC METHODS
 
-    // basic constructor
-    HybridAstar(astar::VehicleModel &vehicle_, astar::InternalGridMapRef);
+        // basic constructor
+        HybridAstar(astar::VehicleModel &vehicle_, astar::InternalGridMapRef);
 
-    // basic destructor
-    ~HybridAstar();
+        // basic destructor
+        ~HybridAstar();
 
-    // find a path to the goal
-    astar::StateArrayPtr FindPath(astar::InternalGridMapRef, const astar::State2D&, const astar::State2D&);
+        // find a path to the goal
+        astar::StateArrayPtr FindPath(astar::InternalGridMapRef, const astar::State2D&, const astar::State2D&);
 
 };
 

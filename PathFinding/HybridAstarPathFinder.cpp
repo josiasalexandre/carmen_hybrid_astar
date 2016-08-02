@@ -28,13 +28,13 @@ HybridAstarPathFinder::HybridAstarPathFinder(int argc, char **argv) :
 void
 HybridAstarPathFinder::get_parameters(int argc, char **argv)
 {
-	// hard setup
-	simulation_mode = true;
+    // hard setup
+    simulation_mode = true;
 
-	carmen_param_t planner_params_list[] = {
-		//get the motion planner parameters
-		{(char *)"astar",   (char *)"simulation_mode",                           	CARMEN_PARAM_ONOFF, &this->simulation_mode,                    		                    1, NULL},
-	};
+    carmen_param_t planner_params_list[] = {
+        //get the motion planner parameters
+        {(char *)"astar",   (char *)"simulation_mode",                           	CARMEN_PARAM_ONOFF, &this->simulation_mode,                    		                    1, NULL},
+    };
 
     // vehicle parameters
     carmen_param_t vehicle_params_list[] = {
@@ -77,33 +77,36 @@ HybridAstarPathFinder::get_parameters(int argc, char **argv)
 bool
 HybridAstarPathFinder::replan() {
 
-	// the returning flag
-	bool ret = false;
+    // the returning flag
+    bool ret = false;
 
-	if (valid_goal) {
+    if (valid_goal) {
 
-		// find the path to the goal
+        // find the path to the goal
         StateArrayPtr raw_path = path_finder.FindPath(grid, robot, goal);
 
         if (0 < raw_path->states.size()) {
 
-        	// smoooth the current path
-        	path_smoother.Smooth(grid, vehicle_model, raw_path);
+            // smoooth the current path
+            StateArrayPtr smooth_path = path_smoother.Smooth(grid, vehicle_model, raw_path);
 
-        	// copy the new states to our internal version
-        	path.states = raw_path->states;
+            // copy the new states to our internal version
+            path.states = smooth_path->states;
 
-        	// set the returning flag
-        	ret = true;
+            // delete the smooth path
+            delete smooth_path;
+
+            // set the returning flag
+            ret = true;
 
         }
 
         // delete the raw path
-		delete raw_path;
+        delete raw_path;
 
-	}
+    }
 
-	return ret;
+    return ret;
 
 }
 
@@ -111,13 +114,13 @@ HybridAstarPathFinder::replan() {
 StateArrayPtr
 HybridAstarPathFinder::get_path() {
 
-	// build a new state array
-	StateArrayPtr current_path = new StateArray();
+    // build a new state array
+    StateArrayPtr current_path = new StateArray();
 
-	// copy the path
-	current_path->states = path.states;
+    // copy the path
+    current_path->states = path.states;
 
-	return current_path;
+    return current_path;
 
 }
 
@@ -125,45 +128,45 @@ HybridAstarPathFinder::get_path() {
 void
 HybridAstarPathFinder::set_goal_state(const State2D &goal_state) {
 
-	// copy the goal
-	goal = goal_state;
+    // copy the goal
+    goal = goal_state;
 
-	if (initialized_grid_map) {
+    if (initialized_grid_map) {
 
-		// verify the safety
-		activated = valid_goal = grid.isSafePlace(vehicle_model.GetVehicleBodyCircles(goal_state), vehicle_model.safety_factor);
+        // verify the safety
+        activated = valid_goal = grid.isSafePlace(vehicle_model.GetVehicleBodyCircles(goal_state), vehicle_model.safety_factor);
 
-		return;
-	}
+        return;
+    }
 
-	valid_goal = false;
+    valid_goal = false;
 }
 
 // get the external goal list, convert to our internal representation and set the new goal
 bool
 HybridAstarPathFinder::same_goal_list(carmen_behavior_selector_goal_list_message *msg) {
 
-	// direct access
-	std::vector<astar::State2D> &igl(goal_list.states);
+    // direct access
+    std::vector<astar::State2D> &igl(goal_list.states);
 
-	Vector2D<double> position;
+    Vector2D<double> position;
 
-	for (unsigned int i = 0; i < msg->size; ++i) {
+    for (unsigned int i = 0; i < msg->size; ++i) {
 
-		Gear g = (0 > msg->goal_list[i].v) ? BackwardGear : ForwardGear;
-		position.x = msg->goal_list[i].x;
-		position.y = msg->goal_list[i].y;
+        Gear g = (0 > msg->goal_list[i].v) ? BackwardGear : ForwardGear;
+        position.x = msg->goal_list[i].x;
+        position.y = msg->goal_list[i].y;
 
-		if (position != igl[i].position || 0.001 > std::fabs(msg->goal_list[i].phi - igl[0].phi) || igl[i].v != msg->goal_list[i].v || g != igl[i].gear) {
+        if (position != igl[i].position || 0.001 > std::fabs(msg->goal_list[i].phi - igl[0].phi) || igl[i].v != msg->goal_list[i].v || g != igl[i].gear) {
 
-			return false;
+            return false;
 
-		}
+        }
 
 
-	}
+    }
 
-	return true;
+    return true;
 
 }
 
@@ -176,102 +179,102 @@ HybridAstarPathFinder::set_goal_state(double x, double y, double theta, double v
     goal.orientation = theta;
     goal.v = vel;
 
-	if (initialized_grid_map) {
+    if (initialized_grid_map) {
 
-		// verify the safety
-		valid_goal = grid.isSafePlace(vehicle_model.GetVehicleBodyCircles(goal), vehicle_model.safety_factor);
+        // verify the safety
+        valid_goal = grid.isSafePlace(vehicle_model.GetVehicleBodyCircles(goal), vehicle_model.safety_factor);
 
-		return;
-	}
+        return;
+    }
 
-	valid_goal = false;
+    valid_goal = false;
 }
 
 // set the goal list
 void
 HybridAstarPathFinder::set_goal_list(carmen_behavior_selector_goal_list_message *msg) {
 
-	if (msg->size != goal_list.states.size() || !same_goal_list(msg)) {
+    if (msg->size != goal_list.states.size() || !same_goal_list(msg)) {
 
-		// direct access
-		std::vector<astar::State2D> &igl(goal_list.states);
+        // direct access
+        std::vector<astar::State2D> &igl(goal_list.states);
 
-		// clear the internal goal list
-		igl.clear();
+        // clear the internal goal list
+        igl.clear();
 
-		// now, convert the external list to our internal representation
+        // now, convert the external list to our internal representation
 
-		// goal states
-		astar::State2D next_goal;
+        // goal states
+        astar::State2D next_goal;
 
-		unsigned int msg_size = msg->size;
-		carmen_ackerman_traj_point_t *msg_gl = msg->goal_list;
+        unsigned int msg_size = msg->size;
+        carmen_ackerman_traj_point_t *msg_gl = msg->goal_list;
 
-		// registering the next goal index
-		unsigned int index = 0;
+        // registering the next goal index
+        unsigned int index = 0;
 
-		bool first_goal_found = false;
+        bool first_goal_found = false;
 
-		// save the current goal list
-		for (unsigned int i = 0; i < msg_size; i++)
-		{
-			next_goal.position.x = msg_gl[i].x;
-			next_goal.position.y = msg_gl[i].y;
-			next_goal.orientation = msg_gl[i].theta;
-			next_goal.v = msg_gl[i].v;
-			next_goal.phi = msg_gl[i].phi;
+        // save the current goal list
+        for (unsigned int i = 0; i < msg_size; i++)
+        {
+            next_goal.position.x = msg_gl[i].x;
+            next_goal.position.y = msg_gl[i].y;
+            next_goal.orientation = msg_gl[i].theta;
+            next_goal.v = msg_gl[i].v;
+            next_goal.phi = msg_gl[i].phi;
 
-			next_goal.gear = (0 > goal.v) ? astar::BackwardGear : astar::ForwardGear;
+            next_goal.gear = (0 > goal.v) ? astar::BackwardGear : astar::ForwardGear;
 
-			// save the current goal to the internal list
-			igl.push_back(next_goal);
+            // save the current goal to the internal list
+            igl.push_back(next_goal);
 
-			// registering the current goal index
-			if (8.0 < next_goal.Distance(robot) && !first_goal_found)
-			{
-				index = i;
-				first_goal_found = true;
-			}
-		}
+            // registering the current goal index
+            if (8.0 < next_goal.Distance(robot) && !first_goal_found)
+            {
+                index = i;
+                first_goal_found = true;
+            }
+        }
 
-		// set the goal state
-		set_goal_state(igl[index]);
+        // set the goal state
+        set_goal_state(igl[index]);
 
-	}
+    }
 }
 
 // voronoi thread update
 void
 HybridAstarPathFinder::voronoi_update(carmen_map_server_compact_cost_map_message *msg) {
 
-	double x_origin = msg->config.x_origin;
-	double y_origin = msg->config.y_origin;
-	double resolution = msg->config.resolution;
-	double inverse_resolution = 1.0/resolution;
+    double x_origin = msg->config.x_origin;
+    double y_origin = msg->config.y_origin;
+    double resolution = msg->config.resolution;
+    double inverse_resolution = 1.0/resolution;
 
-	grid.InitializeGridMap(msg->config.y_size, msg->config.x_size, resolution, Vector2D<double>(x_origin, y_origin));
+    grid.InitializeGridMap(msg->config.y_size, msg->config.x_size, resolution, Vector2D<double>(x_origin, y_origin));
 
-	int *x_coord = msg->coord_x;
-	int *y_coord = msg->coord_y;
-	double *val = msg->value;
-	unsigned int size = msg->size;
+    int *x_coord = msg->coord_x;
+    int *y_coord = msg->coord_y;
+    double *val = msg->value;
+    unsigned int size = msg->size;
 
 
-	for (unsigned int i = 0; i < size; i++) {
+    for (unsigned int i = 0; i < size; i++) {
 
-		if (0.5 < val[i]) {
-			grid.OccupyCell(y_coord[i], x_coord[i]);
-		} else {
-			grid.ClearCell(y_coord[i], x_coord[i]);
-		}
+        if (0.5 < val[i]) {
+            grid.OccupyCell(y_coord[i], x_coord[i]);
+        } else {
+            grid.ClearCell(y_coord[i], x_coord[i]);
+        }
 
-	}
+    }
 
-	// update the entire grid map
-	grid.UpdateGridMap();
+    // update the entire grid map
+    grid.UpdateGridMap();
 
-	// unlock the given mutex
-	gm_mutex.unlock();
+    // unlock the given mutex
+    gm_mutex.unlock();
 
 }
 
@@ -279,39 +282,39 @@ HybridAstarPathFinder::voronoi_update(carmen_map_server_compact_cost_map_message
 void
 HybridAstarPathFinder::voronoi_update_2(carmen_grid_mapping_message *msg) {
 
-	double x_origin = msg->config.x_origin;
-	double y_origin = msg->config.y_origin;
-	double resolution = msg->config.resolution;
-	double inverse_resolution = 1.0/resolution;
-	double *val = msg->complete_map;
+    double x_origin = msg->config.x_origin;
+    double y_origin = msg->config.y_origin;
+    double resolution = msg->config.resolution;
+    double inverse_resolution = 1.0/resolution;
+    double *val = msg->complete_map;
 
-	unsigned int width = msg->config.x_size;
-	unsigned int height = msg->config.y_size;
-	unsigned int size = msg->size;
+    unsigned int width = msg->config.x_size;
+    unsigned int height = msg->config.y_size;
+    unsigned int size = msg->size;
 
-	int r, c;
-	grid.InitializeGridMap(msg->config.y_size, msg->config.x_size, resolution, Vector2D<double>(x_origin, y_origin));
+    int r, c;
+    grid.InitializeGridMap(msg->config.y_size, msg->config.x_size, resolution, Vector2D<double>(x_origin, y_origin));
 
-	for (unsigned int i = 0; i < size; i++) {
+    for (unsigned int i = 0; i < size; i++) {
 
-		r = i % width;
-		c = i / width;
+        r = i % width;
+        c = i / width;
 
-		// let's see the row and col
-		if (val[i] > 0.4) {
-			grid.OccupyCell(r, c);
-		} else {
-			grid.ClearCell(r, c);
-		}
-	}
+        // let's see the row and col
+        if (val[i] > 0.4) {
+            grid.OccupyCell(r, c);
+        } else {
+            grid.ClearCell(r, c);
+        }
+    }
 
-	// update the current grid map
-	grid.UpdateGridMap();
+    // update the current grid map
+    grid.UpdateGridMap();
 
-	initialized_grid_map = true;
+    initialized_grid_map = true;
 
-	// unlock the given mutex
-	gm_mutex.unlock();
+    // unlock the given mutex
+    gm_mutex.unlock();
 
 }
 
@@ -319,18 +322,18 @@ HybridAstarPathFinder::voronoi_update_2(carmen_grid_mapping_message *msg) {
 void
 HybridAstarPathFinder::update_map(carmen_map_server_compact_cost_map_message *msg) {
 
-	if (nullptr != msg) {
+    if (nullptr != msg) {
 
-		// try to lock the mutex
-		if (gm_mutex.try_lock()) {
+        // try to lock the mutex
+        if (gm_mutex.try_lock()) {
 
-			// spaw a new thread to update the voronoi map
-			std::thread gvd_update(&HybridAstarPathFinder::voronoi_update, this, msg);
+            // spaw a new thread to update the voronoi map
+            std::thread gvd_update(&HybridAstarPathFinder::voronoi_update, this, msg);
 
-			// detach from the current thread
-			gvd_update.detach();
-		}
-	}
+            // detach from the current thread
+            gvd_update.detach();
+        }
+    }
 }
 
 // get the general map and save it
@@ -338,29 +341,29 @@ void
 HybridAstarPathFinder::update_map(carmen_grid_mapping_message *msg) {
 
 
-	if (nullptr != msg) {
+    if (nullptr != msg) {
 
-		// try to lock the mutex
-		if (gm_mutex.try_lock()) {
+        // try to lock the mutex
+        if (gm_mutex.try_lock()) {
 
-			// spaw a new thread to update the voronoi map
-			std::thread gvd_update(&HybridAstarPathFinder::voronoi_update_2, this, msg);
+            // spaw a new thread to update the voronoi map
+            std::thread gvd_update(&HybridAstarPathFinder::voronoi_update_2, this, msg);
 
-			// detach from the current thread
-			gvd_update.detach();
-		}
-	}
+            // detach from the current thread
+            gvd_update.detach();
+        }
+    }
 }
 
 // update the odometry value
 void
 HybridAstarPathFinder::set_odometry(double v, double phi) {
 
-	// set the current speed
-	odometry_speed = (std::fabs(v) > 0.01) ? v : 0.0;
+    // set the current speed
+    odometry_speed = (std::fabs(v) > 0.01) ? v : 0.0;
 
-	// set the current wheel angle
-	odometry_steering_angle =(std::fabs(phi) > 0.001) ? phi : 0.0;
+    // set the current wheel angle
+    odometry_steering_angle =(std::fabs(phi) > 0.001) ? phi : 0.0;
 
 }
 
@@ -369,17 +372,17 @@ void
 HybridAstarPathFinder::set_initial_state(double x, double y, double theta, double v, double phi, double dt) {
 
     // predict the initial robot pose
-	if (std::fabs(v) > 0.01) {
-		robot = vehicle_model.NextPose(Pose2D(x, y, theta), v, phi, dt);
-		robot.v = v;
-	} else {
-		robot.position.x = x;
-		robot.position.y = y;
-		robot.orientation = theta;
-		robot.v = 0.0;
-	}
+    if (std::fabs(v) > 0.01) {
+        robot = vehicle_model.NextPose(Pose2D(x, y, theta), v, phi, dt);
+        robot.v = v;
+    } else {
+        robot.position.x = x;
+        robot.position.y = y;
+        robot.orientation = theta;
+        robot.v = 0.0;
+    }
 
-	robot.phi = phi;
+    robot.phi = phi;
     robot.t = dt;
     robot.gear = (0 > v) ? BackwardGear : ForwardGear;
 

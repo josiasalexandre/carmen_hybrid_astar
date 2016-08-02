@@ -13,26 +13,26 @@ class Heuristic {
     private:
 
         // PRIVATE ATTRIBUTES
-		//
+        //
 
-		// the current precomputed nonholonomic heuristic info
-		astar::NonholonomicHeuristicInfo info;
+        // the current precomputed nonholonomic heuristic info
+        astar::NonholonomicHeuristicInfo info;
 
-		// non holonomic heuristic, adapted from Chen Chao
-		// It's hard to obtain the Djikstra cost from all nodes/cells to each other node/cell in real time
-		// the map is constantly changed, so we must adapt the current holonomic heuristic
-		astar::HolonomicHeuristic holonomic;
+        // non holonomic heuristic, adapted from Chen Chao
+        // It's hard to obtain the Djikstra cost from all nodes/cells to each other node/cell in real time
+        // the map is constantly changed, so we must adapt the current holonomic heuristic
+        astar::HolonomicHeuristic holonomic;
 
-		// the next goal, updates the circle path heuristic
-		astar::Pose2D goal;
+        // the next goal, updates the circle path heuristic
+        astar::Pose2D goal;
 
         // PRIVATE METHODS
 
-		// obstacle relaxed heuristic
-		double GetObstacleRelaxedHeuristicValue(astar::Pose2D, const astar::Pose2D&);
+        // obstacle relaxed heuristic
+        double GetObstacleRelaxedHeuristicValue(astar::Pose2D, const astar::Pose2D&);
 
-		// nonholonomic relaxed heuristic
-		double GetNonholonomicRelaxedHeuristicValue(const astar::Pose2D&, const astar::Pose2D&);
+        // nonholonomic relaxed heuristic
+        double GetNonholonomicRelaxedHeuristicValue(const astar::Pose2D&, const astar::Pose2D&);
 
     public:
 
@@ -40,8 +40,8 @@ class Heuristic {
 
         // PUBLIC METHODS
 
-		// basic constructor
-		Heuristic(astar::InternalGridMapRef);
+        // basic constructor
+        Heuristic(astar::InternalGridMapRef);
 
         // update the heuristic around a new goal
         void UpdateHeuristic(astar::InternalGridMap& map, const astar::Pose2D&, const astar::Pose2D&);

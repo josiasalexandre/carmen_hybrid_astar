@@ -7,27 +7,32 @@ using namespace astar;
 // configure the current vehicle model
 void VehicleModel::Configure() {
 
-	// set the max lateral acceleration
-	max_lateral_acceleration = 1.2;
+    // set the max lateral acceleration
+    max_lateral_acceleration = 1.2;
 
-	// set the vehicle low speed - 5 m/h -- See Urmson and Thrun
-	low_speed = 2.2352;
+    // set the vehicle low speed - 5 m/h -- See Urmson and Thrun
+    low_speed = 2.2352;
 
-	// get the min turn radius for 2.2352 m/s
-	if (0 < max_wheel_deflection && 0 < understeer)
-		min_turn_radius = axledist / std::tan(max_wheel_deflection/(1.0 + low_speed*low_speed*understeer));
-	else if (0 < max_curvature)
-		min_turn_radius = 1.0/max_curvature;
-	else
-		min_turn_radius = 5;
+    // get the min turn radius for 2.2352 m/s
+    if (0 < max_wheel_deflection && 0 < understeer)
+        min_turn_radius = axledist / std::tan(max_wheel_deflection/(1.0 + low_speed*low_speed*understeer));
+    else if (0 < max_curvature)
+        min_turn_radius = 1.0/max_curvature;
+    else
+        min_turn_radius = 5;
 
+    if (0 == max_curvature) {
+
+        max_curvature = 0.22;
+
+    }
 }
 
 // get the next pose with Pose, Steer, Gear, length and custom turn radius
 astar::Pose2D VehicleModel::NextPose(
-	const astar::Pose2D &current_pose, Steer steer, Gear gear, double length) const {
+    const astar::Pose2D &current_pose, Steer steer, Gear gear, double length) const {
 
-	return NextPose(current_pose, steer, gear, length, min_turn_radius);
+    return NextPose(current_pose, steer, gear, length, min_turn_radius);
 
 }
 
@@ -173,42 +178,42 @@ State2D VehicleModel::GetFakeFrontAxleState(const astar::State2D &s) const {
 // get the car center position
 Pose2D VehicleModel::GetCenterPosition(const astar::Pose2D &pose) const {
 
-	Pose2D front;
+    Pose2D front;
 
-	front.position.x = pose.position.x + std::cos(pose.orientation) * axledist * 0.5;
-	front.position.y = pose.position.y + std::sin(pose.orientation) * axledist * 0.5;
+    front.position.x = pose.position.x + std::cos(pose.orientation) * axledist * 0.5;
+    front.position.y = pose.position.y + std::sin(pose.orientation) * axledist * 0.5;
 
-	return front;
+    return front;
 
 }
 
 // get the list of circles that represents the safe area
 std::vector<Circle> VehicleModel::GetVehicleBodyCircles(const astar::Pose2D &p) {
 
-	// the output array
-	std::vector<Circle> body;
+    // the output array
+    std::vector<Circle> body;
 
-	// TODO move to the class and get the values in a dynamic manner
-	double circle_radius = 6.1250;
-	double x_position[4] = {-0.36, 0.760, 1.880, 3.00};
+    // TODO move to the class and get the values in a dynamic manner
+    double circle_radius = 6.1250;
+    double x_position[4] = {-0.36, 0.760, 1.880, 3.00};
 
-	for (unsigned int i = 0; i < 4; ++i) {
+    for (unsigned int i = 0; i < 4; ++i) {
 
-		// set the current position
-		astar::Vector2D<double> position(x_position[i], 0);
+        // set the current position
+        astar::Vector2D<double> position(x_position[i], 0);
 
-		// rotate the current position, follow the car heading
-		position.RotateZ(p.orientation);
+        // rotate the current position, follow the car heading
+        position.RotateZ(p.orientation);
 
-		// move the current position to the car frame
-		position.Add(p.position);
+        // move the current position to the car frame
+        position.Add(p.position);
 
-		// append the the circle to the body vector
-		body.push_back(astar::Circle(position, circle_radius));
+        // append the the circle to the body vector
+        body.push_back(astar::Circle(position, circle_radius));
 
-	}
+    }
 
-	return body;
+    return body;
 }
 
 // get the desired wheel angle that connects two states
@@ -293,8 +298,8 @@ double VehicleModel::GetDecelerationConstraint(double final_speed, double displa
 // get the desired orientation
 double VehicleModel::GetForwardOrientation(const astar::Pose2D &prev, const astar::Pose2D &current, const astar::Pose2D &next) const {
 
-	astar::Vector2D<double> next_minus_prev(next.position.x - prev.position.x, next.position.y - prev.position.y);
-	astar::Vector2D<double> next_minus_current(next.position.x - current.position.x, next.position.y - current.position.y);
+    astar::Vector2D<double> next_minus_prev(next.position.x - prev.position.x, next.position.y - prev.position.y);
+    astar::Vector2D<double> next_minus_current(next.position.x - current.position.x, next.position.y - current.position.y);
 
     astar::Vector2D<double> displacement(next_minus_prev * 0.25 + next_minus_current * 0.75);
 

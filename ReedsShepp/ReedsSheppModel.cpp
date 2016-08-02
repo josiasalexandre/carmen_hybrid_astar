@@ -109,17 +109,17 @@ StateArrayPtr ReedsSheppModel::Discretize(
 
     if (0 < a_size) {
 
-    	// get the previous pose
-    	State2D prev(start);
+        // get the previous pose
+        State2D prev(start);
 
-    	// a reference helper
-		std::vector<State2D> &states(path->states);
+        // a reference helper
+        std::vector<State2D> &states(path->states);
 
-		// append the first pose
-		states.push_back(State2D(prev, action_set->actions[1].gear));
+        // append the first pose
+        states.push_back(State2D(prev, action_set->actions[1].gear));
 
-    	// get the end pointer
-    	std::vector<ReedsSheppAction>::iterator end = action_set->actions.end();
+        // get the end pointer
+        std::vector<ReedsSheppAction>::iterator end = action_set->actions.end();
 
         // get the iterator
         for (std::vector<ReedsSheppAction>::iterator it = action_set->actions.begin();  it != end; ++it) {
@@ -195,7 +195,7 @@ StateArrayPtr ReedsSheppModel::Discretize(
                     prev.gear = it->gear;
 
                     // append to the pose list
-					states.push_back(prev);
+                    states.push_back(prev);
 
                 }
 

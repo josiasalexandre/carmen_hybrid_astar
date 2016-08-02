@@ -6,6 +6,7 @@
 #include "../../VehicleModel/VehicleModel.hpp"
 #include "../../GridMap/InternalGridMap.hpp"
 #include "../../Entities/State2D.hpp"
+#include "../../Entities/Vector2DArray.hpp"
 
 namespace astar {
 
@@ -18,145 +19,179 @@ class CGSmoother {
 
         // PRIVATE ATTRIBUTES
 
-		// the obstacle weight
-		double wo;
+        // the obstacle weight
+        double wo;
 
-		// the smooth curvature weight
-		double ws;
+        // the smooth curvature weight
+        double ws;
 
-		// the voronoi potential field weight
-		double wp;
+        // the voronoi potential field weight
+        double wp;
 
-		// the curvature weight
-		double wk;
+        // the curvature weight
+        double wk;
 
-		// the max obstacle distance
-		double dmax;
+        // the max obstacle distance
+        double dmax;
 
-		// the inverse dmax squared distance
-		double inverse_dmax2;
+        // the inverse dmax squared distance
+        double inverse_dmax2;
 
-		// the max voronoi distance
-		double vorodmax;
+        // the max voronoi distance
+        double vorodmax;
 
-		// the alpha voronoi parameter
-		double alpha;
+        // the alpha voronoi parameter
+        double alpha;
 
-		// the internal grid map reference
-		astar::InternalGridMapRef grid;
+        // the internal grid map reference
+        astar::InternalGridMapRef grid;
 
-		// the vehicle model reference
-		astar::VehicleModelRef vehicle;
+        // the vehicle model reference
+        astar::VehicleModelRef vehicle;
 
-		// the maximum allowed curvature
-		double kmax;
+        // the maximum allowed curvature
+        double kmax;
 
-		// THE MINIMIZER CONTEXT ATTRIBUTES
+        // THE MINIMIZER CONTEXT ATTRIBUTES
 
-		// the minizer state
-		CGStatus cg_status;
+        // the minizer state
+        CGStatus cg_status;
 
-		// the solution vector
-		astar::StateArrayPtr x;
+        // the solution vector
+        astar::StateArrayPtr x;
 
-		// the cost function evaluated at x
-		double fx;
+        // the cost function evaluated at x
+        double fx;
 
-		// the solution vector at the next position
-		astar::StateArrayPtr x1;
+        // the gradient evaluated at x
+        astar::Vector2DArrayPtr<double> gx;
 
-		// the cost function evaluated at x1
-		double fx1;
+        // the gradient norm - Evaluated at the first point x
+        double gx_norm;
 
-		// the steepest direction vector
-		std::vector<astar::Vector2D<double>> gradient;
+        // the solution vector at the next position
+        astar::StateArrayPtr x1;
 
-		// the gradient norm - Evaluated at the first point x
-		double gx_norm;
+        // the cost function evaluated at x1
+        double fx1;
 
-		// the gradient norm - Evaluated at the second point x1
-		double gx1_norm;
+        // the gradient evaluated at x1
+        astar::Vector2DArrayPtr<double> gx1;
 
-		// the direction vector (Krylov Space)
-		std::vector<astar::Vector2D<double>> s;
+        // the gradient norm - Evaluated at the second point x1
+        double gx1_norm;
 
-		// the direction vector norm
-		double s_norm;
+        // the displacement between the next and previous gradient
+        std::vector<astar::Vector2D<double>> gx1mgx;
 
-		// store the info about the free and locked positions
-		std::vector<bool> locked_positions;
+        // the displacement between the next and the previous position
+        std::vector<astar::Vector2D<double>> x1mx;
 
-		// how many iterations?
-		unsigned int max_iterations;
+        // the difference between the old and the new path
+        double x1mx_norm;
 
-		// the problem dimension
-		unsigned int dim;
+        // the direction vector (Krylov Space)
+        std::vector<astar::Vector2D<double>> s;
 
-		// the next step size
-		double step;
+        // the direction vector norm
+        double s_norm;
 
-		// the tolerance
-		double tol;
+        // the directional derivative value
+        double sg;
 
-		// PRIVATE METHODS
+        // store the info about the free and locked positions
+        std::vector<bool> locked_positions;
 
-		// the main function to be minimized
-		double CostFunction(astar::StateArrayPtr);
+        // how many iterations?
+        unsigned int max_iterations;
 
-		// get the obstacle and voronoi contribution
-		astar::Vector2D<double> GetObstacleAndVoronoiDerivatives(const astar::Vector2D<double>&, const astar::Vector2D<double>&, const astar::Vector2D<double>&);
+        // the problem dimension
+        unsigned int dim;
 
-		// get the curvature contribution
-		astar::Vector2D<double> GetCurvatureDerivative(const astar::Vector2D<double>&, const astar::Vector2D<double>&, const astar::Vector2D<double>&);
+        // the next step size
+        double step;
 
-		// get the smootheness contribution
-		astar::Vector2D<double> GetSmoothPathDerivative(
-				const astar::Vector2D<double>&, const astar::Vector2D<double>&, const astar::Vector2D<double>&, const astar::Vector2D<double>&, const astar::Vector2D<double>&);
+        // the default step length
+        double default_step_length;
 
-		// build the cost function gradient evaluated at a given input path and returns the gradient's norm
-		double ComputeGradient(astar::StateArrayPtr const path);
+        // the max step size limit
+        double stepmax;
 
-		// reset all values in a given position array
-		void SetZero(std::vector<astar::Vector2D<double>> &v);
+        // the min step size limit
+        double stepmin;
 
-		// custom dot product
-		double DotProduct(const std::vector<astar::Vector2D<double>> &a, const std::vector<astar::Vector2D<double>> &b);
+        // the function tolerance
+        double ftol;
 
-		// scale a given Vector2D array
-		void ScaleVector(double value, std::vector<astar::Vector2D<double>> &v);
+        // the gradient tolerance
+        double gtol;
 
-		// add the first vector2D array to the second one
-		void AddVectors(const std::vector<astar::Vector2D<double>> &a, std::vector<astar::Vector2D<double>> &b);
+        // the solution progress tolerance
+        double xtol;
 
-		// compute a norm 2 for a Vector2D array
-		double VectorNorm2(const std::vector<astar::Vector2D<double>> &v);
+        // PRIVATE METHODS
 
-		// take a fixed step at the current direction vector (s)
-		void TakeStep(double factor);
+        // get the greater number considering the absolute values
+        double ABSMax(double a, double b, double c);
 
-		// compare the two last solution vectors, if they are equal we are stuck
-		bool isStuck(const std::vector<astar::State2D> &current, const std::vector<astar::State2D> &next);
+        // the main function to be minimized
+        double CostFunction(astar::StateArrayPtr);
 
-		// the vanilla line search approach
-		// do a line minimization in the region (xa, fa) (xc, fc) to find an intermediate (xb, fb)
-		// satisfying fa > fb < fc. Using parabolic interpolation
-		double LineSearch(double fa, double fc, double lambda, double sg);
+        // get the obstacle and voronoi contribution
+        astar::Vector2D<double> GetObstacleAndVoronoiDerivatives(const astar::Vector2D<double>&, const astar::Vector2D<double>&, const astar::Vector2D<double>&);
 
-		// Starting at (x0, f0) move along the direction p to find a minimum
-		// f(x0 - lambda * p), returning the new point x1 = x0-lambda*p,
-		// f1=f(x1) and g1 = grad(f) at x1.
-		void WalkDownhill(double fa, double fc, double lambda, double sg);
+        // get the obstacle and voronoi contribution
+        // overloaded version
+        astar::Vector2D<double> GetObstacleAndVoronoiDerivatives(
+                const astar::Vector2D<double>&, const astar::Vector2D<double>&, const astar::Vector2D<double>&, double nearest_obstacle_distance, double nearest_voro_distance);
 
-		// setup the first iteration
-		bool Setup(astar::StateArrayPtr raw_path);
+        // get the curvature contribution
+        astar::Vector2D<double> GetCurvatureDerivative(const astar::Vector2D<double>&, const astar::Vector2D<double>&, const astar::Vector2D<double>&);
 
-		// minimize the cost function based on a given state array path
-		void Minimize(astar::StateArrayPtr path);
+        // get the smootheness contribution
+        astar::Vector2D<double> GetSmoothPathDerivative(
+                const astar::Vector2D<double>&, const astar::Vector2D<double>&, const astar::Vector2D<double>&, const astar::Vector2D<double>&, const astar::Vector2D<double>&);
 
-		// interpolate a given path
-		astar::StateArrayPtr Interpolate(astar::StateArrayPtr);
+        // build the cost function gradient evaluated at a given input path and returns the gradient's norm
+        double ComputeGradient(astar::StateArrayPtr const path, std::vector<astar::Vector2D<double>> &gradient);
 
-		bool Iterate();
+        // take a fixed step at the current direction vector (s)
+        void TakeStep(double factor);
+
+        // custom function to evaluate the cost function and the update the gradient at the same time
+        // it uses the x1 as the input array
+        // the resulting cost value is saved in the internal fx1 variable
+        // the gradient vector gx1 is updated and the gradient norm is saved in gx1_norm
+        void EvaluateFunctionAndGradient();
+
+        // The purpose of cstep is to compute a safeguarded step for
+        // a linesearch and to update an interval of uncertainty for
+        // a minimizer of the function.
+        // It's the cstep function provided by the minpack library and it is adapted to our context here
+        //  Argonne National Laboratory. MINPACK Project. June 1983
+        // Jorge J. More', David J. Thuente
+        int CStep(
+                    double& stl, double& fx, double& sgl,
+                    double& stu, double& fu, double& sgu,
+                    double& stp, double& fp, double& sgp,
+                    bool& bracket, double stmin, double stmax);
+
+
+        // the More-Thuente line serch
+        // based on the minpack and derivates codes
+        int MTLineSearch(double lambda);
+
+        // setup the first iteration
+        bool Setup(astar::StateArrayPtr raw_path, bool locked);
+
+        // update the conjugate direction -> s(i+1) = -gradient + gamma * s(i)
+        void UpdateConjugateDirection(std::vector<astar::Vector2D<double>> &s, const std::vector<astar::Vector2D<double>> &gradient, double gamma);
+
+        // the Polak-Ribiere Conjugate Gradient Method With Moré-Thuente Line Search
+        void ConjugateGradientPR(astar::StateArrayPtr path, bool locked = false);
+
+        // interpolate a given path
+        astar::StateArrayPtr Interpolate(astar::StateArrayPtr);
 
     public:
 
@@ -164,11 +199,11 @@ class CGSmoother {
 
         // PUBLIC METHODS
 
-		// the basic constructor
-		CGSmoother(astar::InternalGridMapRef, astar::VehicleModelRef);
+        // the basic constructor
+        CGSmoother(astar::InternalGridMapRef, astar::VehicleModelRef);
 
-		// basic destructor
-		~CGSmoother();
+        // basic destructor
+        ~CGSmoother();
 
         // smooth a given path
         astar::StateArrayPtr Smooth(astar::InternalGridMapRef, astar::VehicleModelRef, astar::StateArrayPtr);

@@ -43,19 +43,19 @@ HybridAstar::HybridAstar(
     open(nullptr),
     discovered(),
     invalid(),
-	map(nullptr),
-	w(), h()
+    map(nullptr),
+    w(), h()
 {
 
-	// define common window
-	cv::namedWindow("Astar", cv::WINDOW_AUTOSIZE);
+    // define common window
+    cv::namedWindow("Astar", cv::WINDOW_AUTOSIZE);
 
 }
 
 HybridAstar::~HybridAstar() {
 
-	// remove all nodes
-	RemoveAllNodes();
+    // remove all nodes
+    RemoveAllNodes();
 
 }
 
@@ -125,6 +125,8 @@ StateArrayPtr HybridAstar::RebuildPath(HybridAstarNodePtr n, const State2D &goal
     // draw the current map
     cv::Mat final_map(w, h, CV_8UC1, map2);
 
+    double inverse_resolution = grid.GetInverseResolution();
+
     // building the path
     while(nullptr != n) {
 
@@ -132,56 +134,56 @@ StateArrayPtr HybridAstar::RebuildPath(HybridAstarNodePtr n, const State2D &goal
         if (nullptr != n->action) {
 
             // update the current state
-        	// see operator=(Pose2D) overloading
+            // see operator=(Pose2D) overloading
             s = n->pose;
             s.gear = n->action->gear;
 
             // save the current state to the list
             states.push_front(s);
 
-			// convert the current position to row and col
-			astar::GridCellIndex index(grid.PoseToIndex(s.position));
+            // convert the current position to row and col
+            astar::GridCellIndex index(grid.PoseToIndex(s.position));
 
-			// convert to the opencv format
-			cv::Point p1(index.col - 1, h - index.row - 1);
-			cv::Point p2(index.col + 1, h - index.row + 1);
+            // convert to the opencv format
+            cv::Point p1(index.col - 1, h - index.row - 1);
+            cv::Point p2(index.col + 1, h - index.row + 1);
 
-			// draw a single square
-			cv::rectangle(final_map, p1, p2, cv::Scalar(0.0, 0.0, 0.0), -1);
+            // draw a single square
+            cv::rectangle(final_map, p1, p2, cv::Scalar(0.0, 0.0, 0.0), -1);
 
-			// show the imgae
-			cv::imshow("Astar", final_map);
+            // show the imgae
+            cv::imshow("Astar", final_map);
 
-			cv::waitKey(30);
+            cv::waitKey(30);
 
         } else if (nullptr != n->action_set) {
 
             // get the subpath provided by the action set discretization
-            StateArrayPtr subpath = ReedsSheppModel::Discretize(n->parent->pose, n->action_set, vehicle.min_turn_radius, grid.inverse_resolution);
+            StateArrayPtr subpath = ReedsSheppModel::Discretize(n->parent->pose, n->action_set, vehicle.min_turn_radius, inverse_resolution);
 
             // get the path size
             subpathSize = subpath->states.size();
 
             // prepend the resulting subpath to the current path
-            for (int i = subpathSize - 1; i >= 0; i--) {
+            for (int i = subpathSize - 1; i > 0; i--) {
 
                 // save the current state to the list
                 states.push_front(subpath->states[i]);
 
                 // convert the current position to row and col
-				astar::GridCellIndex index(grid.PoseToIndex(subpath->states[i].position));
+                astar::GridCellIndex index(grid.PoseToIndex(subpath->states[i].position));
 
-				// convert to the opencv format
-				cv::Point p1(index.col - 1, h - index.row - 1);
-				cv::Point p2(index.col + 1, h - index.row + 1);
+                // convert to the opencv format
+                cv::Point p1(index.col - 1, h - index.row - 1);
+                cv::Point p2(index.col + 1, h - index.row + 1);
 
-				// draw a single square
-				cv::rectangle(final_map, p1, p2, cv::Scalar(0.0, 0.0, 0.0), -1);
+                // draw a single square
+                cv::rectangle(final_map, p1, p2, cv::Scalar(0.0, 0.0, 0.0), -1);
 
-				// show the imgae
-				cv::imshow("Astar", final_map);
+                // show the imgae
+                cv::imshow("Astar", final_map);
 
-				cv::waitKey(30);
+                cv::waitKey(30);
 
             }
 
@@ -250,13 +252,15 @@ HybridAstarNodePtr HybridAstar::GetReedsSheppChild(const Pose2D &start, const Po
     // get the resulting set of actions
     ReedsSheppActionSetPtr action_set = rs.Solve(start, goal, vehicle.min_turn_radius);
 
+    double inverse_resolution = grid.GetInverseResolution();
+
     if (0 < action_set->actions.size()) {
 
         // flag to validate the Reeds-Shepp curve
         bool safe = true;
 
         // get the states in the Reeds-Shepp curve
-        StateArrayPtr path = rs.Discretize(start, action_set, vehicle.min_turn_radius, grid.inverse_resolution);
+        StateArrayPtr path = rs.Discretize(start, action_set, vehicle.min_turn_radius, inverse_resolution);
 
         // a reference helper, just in case
         std::vector<State2D> &states(path->states);
@@ -283,14 +287,14 @@ HybridAstarNodePtr HybridAstar::GetReedsSheppChild(const Pose2D &start, const Po
 
         if (safe) {
 
-        	std::cout << "Valid RS!\n";
+            std::cout << "Valid RS!\n";
 
-        	// return the HybridAstarNode on the goal state
+            // return the HybridAstarNode on the goal state
             return new HybridAstarNode(goal, action_set);
 
         } else {
 
-        	std::cout << "Invalid RS!\n";
+            std::cout << "Invalid RS!\n";
 
         }
 
@@ -318,7 +322,7 @@ HybridAstarNodeArrayPtr HybridAstar::GetChidlren(const Pose2D &start, const Pose
     // double turn_radius
     double tr = vehicle.min_turn_radius;
 
-	// iterate over the steering moves
+    // iterate over the steering moves
     for (unsigned int j = 0; j < astar::NumSteering; j++) {
 
         // casting the steering
@@ -363,7 +367,6 @@ HybridAstarNodeArrayPtr HybridAstar::GetChidlren(const Pose2D &start, const Pose
 
 // PUBLIC METHODS
 // receives the grid, start and goal states and find a path, if possible
-
 StateArrayPtr HybridAstar::FindPath(InternalGridMapRef grid_map, const State2D &start, const State2D &goal) {
 
     // get the grid map pointer
@@ -376,13 +379,16 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMapRef grid_map, const State2D &
     w = grid.GetWidth();
     h = grid.GetHeight();
 
+    // get the grid map resolution
+    double resolution = grid.GetResolution();
+
     // draw the current map
-	cv::Mat final_map(w, h, CV_8UC1, map);
+    cv::Mat final_map(w, h, CV_8UC1, map);
 
-	// show the image
-	cv::imshow("Astar", final_map);
+    // show the image
+    cv::imshow("Astar", final_map);
 
-	cv::waitKey(30);
+    cv::waitKey(30);
 
     // syntactic sugar
     // ge the reference to the base class
@@ -452,7 +458,7 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMapRef grid_map, const State2D &
         double obst = grid_map.GetObstacleDistance(n->pose.position);
         double voro_dist = grid_map.GetVoronoiDistance(n->pose.position);
 
-        length = std::max(grid_map.resolution, obst + voro_dist);
+        length = std::max(resolution, 0.5 * (obst + voro_dist));
 
         // iterate over the gears
         for (unsigned int i = 0; i < NumGears; i++) {
@@ -469,86 +475,86 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMapRef grid_map, const State2D &
             // iterate over the current node's children
             for (std::vector<HybridAstarNodePtr>::iterator it = nodes.begin(); it != nodes.end(); ++it) {
 
-            	// avoid a lot of indirect access
+                // avoid a lot of indirect access
                 HybridAstarNodePtr child = *it;
 
                 // find the appropriated location in the grid
                 // reusing the same "c" pointer declared above
                 c = grid_map.PoseToCell(child->pose);
 
-				// we must avoid node->cell = nullptr inside the HybridAstarNode
-				if (nullptr != c && ExploredNode != c->status) {
+                // we must avoid node->cell = nullptr inside the HybridAstarNode
+                if (nullptr != c && ExploredNode != c->status) {
 
-					if (nullptr != child->action) {
+                    if (nullptr != child->action) {
 
-						double path_cost = PathCost(n->action->gear, child->pose, gear, length);
-						// we a have a valid action, conventional expanding
-						tentative_g = n->g + path_cost;
+                        double path_cost = PathCost(n->action->gear, child->pose, gear, length);
+                        // we a have a valid action, conventional expanding
+                        tentative_g = n->g + path_cost;
 
-					} else if (0 < child->action_set->Size()) {
+                    } else if (0 < child->action_set->Size()) {
 
-						double action_path_cost = child->action_set->CalculateCost(vehicle.min_turn_radius, reverse_factor, gear_switch_cost);
+                        double action_path_cost = child->action_set->CalculateCost(vehicle.min_turn_radius, reverse_factor, gear_switch_cost);
 
-						// we have a valid action set, it was a Reeds-Shepp analytic expanding
-						tentative_g = n->g + action_path_cost;
+                        // we have a valid action set, it was a Reeds-Shepp analytic expanding
+                        tentative_g = n->g + action_path_cost;
 
-					} else {
+                    } else {
 
-						// we don't have any valid action, it's a bad error
-						// add to the invalid nodes set
-						invalid.push_back(child);
+                        // we don't have any valid action, it's a bad error
+                        // add to the invalid nodes set
+                        invalid.push_back(child);
 
-						// jump to the next iteration
-						continue;
-						// throw std::exception();
+                        // jump to the next iteration
+                        continue;
+                        // throw std::exception();
 
-					}
+                    }
 
-					// update the heuristic contribution
-					double h = heuristic.GetHeuristicValue(child->pose, goal_pose);
+                    // update the heuristic contribution
+                    double h = heuristic.GetHeuristicValue(child->pose, goal_pose);
 
-					tentative_f = tentative_g + h;
+                    tentative_f = tentative_g + h;
 
-					// update the cost
-					child->g = tentative_g;
+                    // update the cost
+                    child->g = tentative_g;
 
-					// update the total value -> g cost plus heuristic value
-					child->f = tentative_f;
+                    // update the total value -> g cost plus heuristic value
+                    child->f = tentative_f;
 
-					// set the parent
-					child->parent = n;
+                    // set the parent
+                    child->parent = n;
 
-					// is it a not opened node?
-					if (UnknownNode == c->status) {
+                    // is it a not opened node?
+                    if (UnknownNode == c->status) {
 
-						// the cell is empty and doesn't have any node
+                        // the cell is empty and doesn't have any node
 
-						// set the cell pointer
-						child->cell = c;
+                        // set the cell pointer
+                        child->cell = c;
 
-						// update the cell pointer
-						c->node = child;
+                        // update the cell pointer
+                        c->node = child;
 
-						// update the cell status
-						c->status = OpenedNode;
+                        // update the cell status
+                        c->status = OpenedNode;
 
-						// add to the open set
-						child->handle = open.Add(child, tentative_f);
+                        // add to the open set
+                        child->handle = open.Add(child, tentative_f);
 
-					} else if (tentative_f < c->node->f) {
+                    } else if (tentative_f < c->node->f) {
 
-						// the cell has a node but the current child is a better one
+                        // the cell has a node but the current child is a better one
 
-						// update the node at the cell
-						HybridAstarNodePtr current = c->node;
+                        // update the node at the cell
+                        HybridAstarNodePtr current = c->node;
 
-						// the old node is updated but not the corresponding Handle/Key in the priority queue
-						current->UpdateValues(*child);
+                        // the old node is updated but not the corresponding Handle/Key in the priority queue
+                        current->UpdateValues(*child);
 
-						// decrease the key at the priority queue
-						open.DecreaseKey(current->handle, tentative_f);
+                        // decrease the key at the priority queue
+                        open.DecreaseKey(current->handle, tentative_f);
 
-					}
+                    }
 
                 }
 
