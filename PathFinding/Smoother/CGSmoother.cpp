@@ -126,12 +126,6 @@ double astar::CGSmoother::CostFunction(astar::StateArrayPtr input) {
             double dxi_ = std::atan2(dxi.y, dxi.x);
             double n = dxi.Norm();
 
-            if (0 == n) {
-
-                std::cout << "A norma deu zero!\n";
-
-            }
-
             curvature += std::pow((std::fabs(std::atan2(dxip1.y, dxip1.x) - std::atan2(dxi.y, dxi.x)) / dxi.Norm() - kmax), 2);
 
             // update the smooth term
@@ -567,7 +561,7 @@ void astar::CGSmoother::EvaluateFunctionAndGradient() {
             dxip1.y = xip1.y - xim1.y;
 
             // update the curvature term
-            //curvature += std::pow((std::fabs(std::atan2(dxip1.y, dxip1.x) - std::atan2(dxi.y, dxi.x)) / dxi.Norm() - kmax), 2);
+            curvature += std::pow((std::fabs(std::atan2(dxip1.y, dxip1.x) - std::atan2(dxi.y, dxi.x)) / dxi.Norm() - kmax), 2);
 
             // update the smooth term
             tmp.x = dxip1.x - dxi.x;
@@ -575,7 +569,7 @@ void astar::CGSmoother::EvaluateFunctionAndGradient() {
             smooth += tmp.Norm2();
 
             // add the curvature term contribution
-            //tmp1.Add(GetCurvatureDerivative(xim1, xi, xip1));
+            tmp1.Add(GetCurvatureDerivative(xim1, xi, xip1));
 
             // set up the smooth path derivatives contribution
             tmp1.x += ws * (xim2.x - 4.0 * xim1.x + 6.0 * xi.x - 4.0 * xip1.x + xip2.x);
@@ -859,7 +853,7 @@ int astar::CGSmoother::CStep(
 
 }
 
-// the More-Thuente line serch
+// the Moré-Thuente line serch
 // based on the minpack and derivates codes
 int astar::CGSmoother::MTLineSearch(double lambda) {
 
@@ -1174,6 +1168,9 @@ bool astar::CGSmoother::Setup(astar::StateArrayPtr path, bool locked) {
         // it's the directional derivative along s
         sg = astar::Vector2DArray<double>::DotProduct(s, gx->vs) / s_norm;
 
+        // get the first step
+        MTLineSearch(1.0/s_norm);
+
         // reset the tolerances
         ftol = gtol = xtol = 1e-04;
 
@@ -1275,15 +1272,15 @@ void astar::CGSmoother::ConjugateGradientPR(astar::StateArrayPtr path, bool lock
 
             // SUCCESS!
 
-            // get the displacement between the two gradients
-            astar::Vector2DArray<double>::SubtractCAB(gx1mgx, gx1->vs, gx->vs);
-
-            // get the gamma value
-            // based on Powell 1983
-            double gamma = std::max(astar::Vector2DArray<double>::DotProduct(gx1mgx, gx1->vs)/astar::Vector2DArray<double>::DotProduct(gx->vs, gx->vs), 0.0);
-
-            // the restart case
+            // verify the restart case
             if (0 != iter % dim) {
+
+                // get the displacement between the two gradients
+                astar::Vector2DArray<double>::SubtractCAB(gx1mgx, gx1->vs, gx->vs);
+
+                // get the gamma value
+                // based on Powell 1983
+                double gamma = std::max(astar::Vector2DArray<double>::DotProduct(gx1mgx, gx1->vs)/astar::Vector2DArray<double>::DotProduct(gx->vs, gx->vs), 0.0);
 
                 // the new x1 point is the new position
                 // update the conjugate direction at the new position
@@ -1298,9 +1295,11 @@ void astar::CGSmoother::ConjugateGradientPR(astar::StateArrayPtr path, bool lock
                 // the next direction is exactly the current gradient opposite
                 for (unsigned int i = 0; i < dim; ++i) {
 
+                    // update the current direction
                     s[i].x = -gx1->vs[i].x;
                     s[i].y = -gx1->vs[i].y;
 
+                    // update the norm
                     sg += s[i].x * gx1->vs[i].x + s[i].y * gx1->vs[i].y;
 
                 }
@@ -1487,12 +1486,12 @@ astar::StateArrayPtr astar::CGSmoother::Smooth(astar::InternalGridMapRef grid_, 
     // now, interpolate the entire path
     astar::StateArrayPtr interpolated_path = Interpolate(raw_path);
 
-    unsigned char *map3 = grid.GetGridMap();
+    //unsigned char *map2 = grid.GetGridMap();
 
     // draw the current map
-    cv::Mat final_map2(w, h, CV_8UC1, map3);
+    //cv::Mat final_map2(w, h, CV_8UC1, map3);
 
-    for (unsigned int i = 0 ; i < interpolated_path->states.size(); ++i) {
+    /*for (unsigned int i = 0 ; i < interpolated_path->states.size(); ++i) {
 
         // convert the current position to row and col
         astar::GridCellIndex index(grid.PoseToIndex(interpolated_path->states[i].position));
@@ -1509,10 +1508,12 @@ astar::StateArrayPtr astar::CGSmoother::Smooth(astar::InternalGridMapRef grid_, 
 
         cv::waitKey(30);
 
-    }
-
+    }*/
     delete [] map2;
-    delete [] map3;
+    //delete [] map3;
+
+    cv::destroyWindow("Astar2");
+    //cv::destroyWindow("Astar3");
 
     // minimize again the interpolated path
     // conjugate gradient based on the Polak-Ribiere formula
