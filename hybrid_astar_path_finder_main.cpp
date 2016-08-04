@@ -16,7 +16,6 @@
 // ugly global pointers
 astar::HybridAstarPathFinder *g_hybrid_astar;
 
-
 void save_to_file(astar::StateArrayPtr states) {
 
     std::vector<astar::State2D> &msg(states->states);

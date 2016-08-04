@@ -64,6 +64,8 @@ void astar::Heuristic::UpdateHeuristic(astar::InternalGridMap &grid, const Pose2
 // get a heuristic value
 double astar::Heuristic::GetHeuristicValue(const Pose2D &start_, const Pose2D &goal_) {
 
+    // return std::max(GetObstacleRelaxedHeuristicValue(start_, goal_), start_.position.Distance(goal_.position));
+
     // return the the combined heuristic
     return std::max(GetObstacleRelaxedHeuristicValue(start_, goal_), GetNonholonomicRelaxedHeuristicValue(start_));
 

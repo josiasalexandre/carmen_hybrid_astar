@@ -641,23 +641,6 @@ StateArrayPtr StanleyController::FollowPath(const State2D &start) {
     // set the car pose
     car = start;
 
-    switch (cs) {
-
-        case CSForwardDrive:
-
-            // get the next control
-            car = ForwardDrive(car);
-
-            // save to the command list
-            commands.push_back(car);
-
-            break;
-
-        default:
-            break;
-
-    }
-
     while (CSComplete != cs) {
 
         switch (cs) {

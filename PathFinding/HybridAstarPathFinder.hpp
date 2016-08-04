@@ -73,6 +73,7 @@ class HybridAstarPathFinder {
         void voronoi_update_2(carmen_grid_mapping_message *msg);
 
     public:
+
         // the internal map represetation
         astar::InternalGridMap grid;
 

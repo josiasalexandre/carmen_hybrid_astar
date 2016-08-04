@@ -159,7 +159,7 @@ StateArrayPtr HybridAstar::RebuildPath(HybridAstarNodePtr n, const State2D &goal
         } else if (nullptr != n->action_set) {
 
             // get the subpath provided by the action set discretization
-            StateArrayPtr subpath = ReedsSheppModel::Discretize_LR(n->parent->pose, n->action_set, vehicle.min_turn_radius, inverse_resolution);
+            StateArrayPtr subpath = ReedsSheppModel::Discretize(n->parent->pose, n->action_set, vehicle.min_turn_radius, inverse_resolution);
 
             // get the path size
             subpathSize = subpath->states.size();
@@ -352,11 +352,11 @@ HybridAstarNodeArrayPtr HybridAstar::GetChidlren(const Pose2D &start, const Pose
 
     // Reeds-Shepp curve threshold value
     // double threshold = heuristic.GetHeuristicValue(start, goal);
-    double threshold = start.position.Distance2(goal.position);
-    double inverseThreshold = 100.0/(threshold*threshold);
+    double threshold = heuristic.GetHeuristicValue(start, goal);
+    double inverseThreshold = 10.0/(threshold*threshold);
 
     // quadratic falloff
-    if (100.0 > threshold || inverseThreshold > rand()) {
+    if (10.0 > threshold || inverseThreshold > rand()) {
 
         // the a new HybridAstarNode based on ReedsSheppModel
         HybridAstarNodePtr rsNode = GetReedsSheppChild(start, goal);

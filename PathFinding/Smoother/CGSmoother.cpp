@@ -5,7 +5,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 
 astar::CGSmoother::CGSmoother(astar::InternalGridMapRef map, astar::VehicleModelRef vehicle_) :
-    wo(0.02), ws(4.0), wp(0.2), wk(4.0), dmax(5.0), vorodmax(20),
+    wo(0.02), ws(4.0), wp(0.02), wk(6.0), dmax(5.0), vorodmax(20),
     alpha(0.2), grid(map), vehicle(vehicle_), kmax(0.22),
     cg_status(astar::CGIddle), fx(), gx(nullptr), gx_norm(), fx1(), gx1(nullptr), gx1_norm(), bestfx(), bestgx_norm(), x1mx(), x1mx_norm(), s(), s_norm(), sg(),
     locked_positions(), max_iterations(300), dim(0), step(0.01), default_step_length(1.0), stepmax(1e06), stepmin(1e-12),
@@ -524,7 +524,6 @@ void astar::CGSmoother::EvaluateFunctionAndGradient() {
 
     // it's a boundary value problem
     // the first and last points should no be modified
-
 
     // iterate from the third element till the third last
     // and get the individual derivatives
