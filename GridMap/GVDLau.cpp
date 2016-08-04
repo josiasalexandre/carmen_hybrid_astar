@@ -16,9 +16,9 @@ GVDLau::GVDLau() :
     heightminus1(0),
     width(0),
     widthminus1(0),
-    alpha(40),
-    max_dist(50),
-    max_sqdist(2500),
+    alpha(0.2),
+    max_dist(20),
+    max_sqdist(400),
     max_double(std::numeric_limits<double>::max()),
     initialized(false),
     edges(INT_MAX)

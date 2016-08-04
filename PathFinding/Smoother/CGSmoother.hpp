@@ -35,7 +35,7 @@ class CGSmoother {
         double dmax;
 
         // the inverse dmax squared distance
-        double inverse_dmax2;
+        double inverse_vorodmax2;
 
         // the max voronoi distance
         double vorodmax;
@@ -206,7 +206,7 @@ class CGSmoother {
         astar::StateArrayPtr Interpolate(astar::StateArrayPtr);
 
         // show the current path in the map
-        void ShowPath(astar::StateArrayPtr);
+        void ShowPath(astar::StateArrayPtr, bool plot_locked = true);
 
     public:
 

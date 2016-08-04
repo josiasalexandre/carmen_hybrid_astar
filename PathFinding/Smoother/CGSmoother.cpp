@@ -5,15 +5,15 @@
 #include <opencv2/imgproc/imgproc.hpp>
 
 astar::CGSmoother::CGSmoother(astar::InternalGridMapRef map, astar::VehicleModelRef vehicle_) :
-    wo(0.2), ws(10.0), wp(0.2), wk(4.0), dmax(5.0), vorodmax(20),
+    wo(0.02), ws(4.0), wp(0.2), wk(4.0), dmax(5.0), vorodmax(20),
     alpha(0.2), grid(map), vehicle(vehicle_), kmax(0.22),
     cg_status(astar::CGIddle), fx(), gx(nullptr), gx_norm(), fx1(), gx1(nullptr), gx1_norm(), bestfx(), bestgx_norm(), x1mx(), x1mx_norm(), s(), s_norm(), sg(),
     locked_positions(), max_iterations(300), dim(0), step(0.01), default_step_length(1.0), stepmax(1e06), stepmin(1e-12),
-    ftol(1e-04), gtol(0.99999), xtol(1e-15)
+    ftol(1e-04), gtol(0.99999), xtol(1e-06)
 {
 
     // update the inverse dmax
-    inverse_dmax2 = 1.0/ (dmax * dmax);
+    inverse_vorodmax2 = 1.0/ (vorodmax * vorodmax);
 
     // start the x and x1 vectors
     x = new astar::StateArray();
@@ -116,7 +116,7 @@ double astar::CGSmoother::CostFunction(astar::StateArrayPtr input) {
 
                 // update the Voronoi potential field term
                 // can it become a Nan?
-                potential += (alpha / (alpha  + obst_distance)) * (voro_distance / (obst_distance  + voro_distance)) * (d * inverse_dmax2);
+                potential += (alpha / (alpha  + obst_distance)) * (voro_distance / (obst_distance  + voro_distance)) * (d * inverse_vorodmax2);
 
             }
 
@@ -197,10 +197,10 @@ astar::CGSmoother::GetObstacleAndVoronoiDerivatives(const astar::Vector2D<double
                 double omd = obst_distance - dmax;
 
                 // get the potential field derivative of the nearest voronoi edge with respect the current position
-                double pvdv = alpha_over_obstacle * ((omd*omd)*inverse_dmax2) * (obst_distance / (opv*opv));
+                double pvdv = alpha_over_obstacle * ((omd*omd)*inverse_vorodmax2) * (obst_distance / (opv*opv));
 
                 // get the potential field derivative of the nearest obstacle with respect to the current position
-                double pvdo = alpha_over_obstacle * (voro_distance / opv) * ((omd) * inverse_dmax2) *
+                double pvdo = alpha_over_obstacle * (voro_distance / opv) * ((omd) * inverse_vorodmax2) *
                         (-(omd)/(alpha + obst_distance) - (omd)/opv + 2.0);
 
                 // update the Xi -Oi and Xi - Vi vectors
@@ -242,9 +242,9 @@ astar::CGSmoother::GetObstacleAndVoronoiDerivatives(
 
     // the current obstacle derivative contribution
     res = ximoi;
-    res.Multiply(wo * (nearest_obstacle_distance - dmax));
+    res.Multiply(wo * 2.0 * (nearest_obstacle_distance - dmax));
 
-    if (nearest_obstacle_distance < vorodmax && 0 < nearest_voro_distance) {
+    if (0 < nearest_voro_distance) {
 
         // get the nearest voronoi position
         nearest = grid.GetVoronoiPosition(xi);
@@ -258,13 +258,13 @@ astar::CGSmoother::GetObstacleAndVoronoiDerivatives(
         // avoid a lot of divisions and repetitive floating point operations
         double alpha_over_obstacle = alpha / (alpha + nearest_obstacle_distance);
         double opv = nearest_obstacle_distance + nearest_voro_distance;
-        double omd = nearest_obstacle_distance - dmax;
+        double omd = nearest_obstacle_distance - vorodmax;
 
         // get the potential field derivative of the nearest voronoi edge with respect the current position
-        double pvdv = alpha_over_obstacle * ((omd*omd)*inverse_dmax2) * (nearest_obstacle_distance / (opv*opv));
+        double pvdv = alpha_over_obstacle * ((omd*omd)*inverse_vorodmax2) * (nearest_obstacle_distance / (opv*opv));
 
         // get the potential field derivative of the nearest obstacle with respect to the current position
-        double pvdo = alpha_over_obstacle * (nearest_voro_distance / opv) * ((omd) * inverse_dmax2) *
+        double pvdo = alpha_over_obstacle * (nearest_voro_distance / opv) * ((omd) * inverse_vorodmax2) *
                 (-(omd)/(alpha + nearest_obstacle_distance) - (omd)/opv + 2.0);
 
         // update the Xi -Oi and Xi - Vi vectors
@@ -522,6 +522,10 @@ void astar::CGSmoother::EvaluateFunctionAndGradient() {
     double d;
     unsigned int i;
 
+    // it's a boundary value problem
+    // the first and last points should no be modified
+
+
     // iterate from the third element till the third last
     // and get the individual derivatives
     for (i = 2; i < limit; ++i) {
@@ -536,13 +540,13 @@ void astar::CGSmoother::EvaluateFunctionAndGradient() {
             // THE FUNCTION VALUE
             // update the obstacle and potential field terms
             // get the nearest obstacle distance
-            //obst_distance = grid.GetObstacleDistance(xi);
+            obst_distance = grid.GetObstacleDistance(xi);
 
             // the obstacle and potential field terms are updated only when dmax >= obst_distance
             // otherwise we consider the term += 0.0;
-            /*if (dmax >= obst_distance) {
+            if (dmax >= obst_distance) {
 
-                d = (obst_distance - dmax) * (obst_distance - dmax);
+                d = (dmax - obst_distance) * (dmax - obst_distance);
 
                 // update the obstacle term
                 obstacle += d;
@@ -552,28 +556,30 @@ void astar::CGSmoother::EvaluateFunctionAndGradient() {
 
                 // update the Voronoi potential field term
                 // can it become a Nan?
-                potential += (alpha / (alpha  + obst_distance)) * (voro_distance / (obst_distance  + voro_distance)) * (d * inverse_dmax2);
+                //potential += grid.GetPathCost(xi);
+                potential += (alpha / (alpha  + obst_distance)) * (voro_distance / (obst_distance  + voro_distance)) * ((d - vorodmax*vorodmax)* inverse_vorodmax2);
 
                 // add the obstacle and the voronoi contributions
                 // overloaded method
                 tmp1.Add(GetObstacleAndVoronoiDerivatives(xim1, xi, xip1, obst_distance, voro_distance));
 
-            }*/
+            }
 
             // get the current displacement
-            // dxi.x = xi.x - xim1.x;
-            // dxi.y = xi.y - xim1.y;
+            dxi.x = xi.x - xim1.x;
+            dxi.y = xi.y - xim1.y;
 
             // get the next displacement
-            // dxip1.x = xip1.x - xi.x;
-            // dxip1.y = xip1.y - xim1.y;
+            dxip1.x = xip1.x - xi.x;
+            dxip1.y = xip1.y - xim1.y;
 
             // update the curvature term
-            //curvature += std::pow((std::fabs(std::atan2(dxip1.y, dxip1.x) - std::atan2(dxi.y, dxi.x)) / dxi.Norm() - kmax), 2);
+            curvature += std::pow((std::fabs(std::atan2(dxip1.y, dxip1.x) - std::atan2(dxi.y, dxi.x)) / dxi.Norm() - kmax), 2);
 
             // update the smooth term
             tmp.x = xip1.x - 2.0 * xi.x + xim1.x;
             tmp.y = xip1.y - 2.0 * xi.y + xim1.y;
+
 
             smooth += tmp.Norm2();
 
@@ -581,8 +587,8 @@ void astar::CGSmoother::EvaluateFunctionAndGradient() {
             //tmp1.Add(GetCurvatureDerivative(xim1, xi, xip1));
 
             // set up the smooth path derivatives contribution
-            tmp1.x += (xim2.x - 4.0 * xim1.x + 6.0 * xi.x - 4.0 * xip1.x + xip2.x);
-            tmp1.y += (xim2.y - 4.0 * xim1.y + 6.0 * xi.y - 4.0 * xip1.y + xip2.y);
+            tmp1.x += 2.0*(xim2.x - 4.0 * xim1.x + 6.0 * xi.x - 4.0 * xip1.x + xip2.x);
+            tmp1.y += 2.0*(xim2.y - 4.0 * xim1.y + 6.0 * xi.y - 4.0 * xip1.y + xip2.y);
 
         }
 
@@ -599,10 +605,11 @@ void astar::CGSmoother::EvaluateFunctionAndGradient() {
 
     }
 
+
     // set the euclidean norm final touch
     // gx_norm = std::sqrt(gx_norm); It's no the euclidean version
     //fx1 = wo*obstacle + wp*potential + wk*curvature + ws*smooth;
-    fx1 = smooth;
+    fx1 = ws*smooth + wo*obstacle + wp*potential;
 
 }
 
@@ -1292,7 +1299,7 @@ void astar::CGSmoother::ConjugateGradientPR(astar::StateArrayPtr path, bool lock
 
     double inverse_snorm;
 
-    double gamma = 0;
+    double betha = 0;
 
     while (astar::CGContinue == cg_status && iter < max_iterations) {
 
@@ -1311,9 +1318,17 @@ void astar::CGSmoother::ConjugateGradientPR(astar::StateArrayPtr path, bool lock
             // set
             break;
 
-        } else if (gtol > gx_norm) {
+        } else if (gtol > gx1_norm) {
 
             // success!
+            cg_status = astar::CGSuccess;
+
+            // exit
+            break;
+
+        } else if (ftol > fx1) {
+
+            // success
             cg_status = astar::CGSuccess;
 
             // exit
@@ -1343,7 +1358,7 @@ void astar::CGSmoother::ConjugateGradientPR(astar::StateArrayPtr path, bool lock
                 // flip the norms
                 v = bestgx_norm;
                 bestgx_norm = gx1_norm;
-                gx1_norm = bestgx_norm;
+                gx1_norm = v;
 
             }
 
@@ -1354,39 +1369,21 @@ void astar::CGSmoother::ConjugateGradientPR(astar::StateArrayPtr path, bool lock
                 // get the displacement between the two gradients
                 astar::Vector2DArray<double>::SubtractCAB(gx1mgx, gx1->vs, gx->vs);
 
-                // get the gamma value
+                // get the betha value
                 // based on Powell 1983
-                double gamma = std::max(astar::Vector2DArray<double>::DotProduct(gx1mgx, gx1->vs)/astar::Vector2DArray<double>::DotProduct(gx->vs, gx->vs), 0.0);
-
-                // the new x1 point is the new position
-                // update the conjugate direction at the new position
-                // it also updates the the curent conjugate direction norm
-                UpdateConjugateDirection(s, gx1->vs, gamma);
+                betha = std::max(astar::Vector2DArray<double>::DotProduct(gx1mgx, gx1->vs)/astar::Vector2DArray<double>::DotProduct(gx->vs, gx->vs), 0.0);
 
             } else {
 
-                // reset the slope
-                sg = 0.0;
-
-                // the next direction is exactly the current gradient opposite
-                for (unsigned int i = 0; i < dim; ++i) {
-
-                    // update the current direction
-                    s[i].x = -gx1->vs[i].x;
-                    s[i].y = -gx1->vs[i].y;
-
-                    // dot product
-                    sg += s[i].x * gx1->vs[i].x + s[i].y * gx1->vs[i].y;
-
-                }
-
-                // the new s_norm is equal to gx1_norm
-                s_norm = gx1_norm;
-
-                // normalize the slope
-                sg /= s_norm;
+                // set gamma to zero, it restarts the conjugate gradient
+                betha = 0.0;
 
             }
+
+            // the new x1 point is the new position
+            // update the conjugate direction at the new position
+            // it also updates the the curent conjugate direction norm
+            UpdateConjugateDirection(s, gx1->vs, betha);
 
             // the new position is a better one
             astar::StateArrayPtr tmp = x;
@@ -1431,7 +1428,7 @@ astar::StateArrayPtr astar::CGSmoother::Interpolate(astar::StateArrayPtr path) {
 
     // the grid resolution
     double resolution = grid.GetResolution();
-    double resolution_factor =  resolution * 0.5;
+    double resolution_factor =  resolution * 2.0;
 
     // invert the resolution, avoiding a lot o divisions
     double inverse_resolution = 1.0/resolution;
@@ -1476,10 +1473,10 @@ astar::StateArrayPtr astar::CGSmoother::Interpolate(astar::StateArrayPtr path) {
             n = std::floor(d * inverse_resolution);
 
             // get the x and y step lengths
-            dx = (next->position.x - current->position.x) / ((double) n + 1);
-            dy = (next->position.y - current->position.y) / ((double) n + 1);
+            dx = (next->position.x - current->position.x) / ((double) n);
+            dy = (next->position.y - current->position.y) / ((double) n);
 
-            for (unsigned int i = 1; i < n - 1; ++i) {
+            for (unsigned int i = 0; i < n-2; ++i) {
 
                 // update the tmp position
                 tmp.position.x += dx;
@@ -1524,7 +1521,7 @@ astar::StateArrayPtr astar::CGSmoother::Interpolate(astar::StateArrayPtr path) {
 }
 
 // show the current path in the map
-void astar::CGSmoother::ShowPath(astar::StateArrayPtr path) {
+void astar::CGSmoother::ShowPath(astar::StateArrayPtr path, bool plot_locked) {
 
     // get the map
     unsigned int h = grid.GetHeight();
@@ -1541,6 +1538,11 @@ void astar::CGSmoother::ShowPath(astar::StateArrayPtr path) {
     // draw each point
     for (unsigned int i = 0; i < path->states.size(); ++i) {
 
+        if (!plot_locked && locked_positions[i]) {
+
+            continue;
+
+        }
         // get the currnt point
         astar::GridCellIndex index(grid.PoseToIndex(path->states[i].position));
 
@@ -1580,17 +1582,19 @@ astar::StateArrayPtr astar::CGSmoother::Smooth(astar::InternalGridMapRef grid_, 
     ShowPath(raw_path);
 
     // now, interpolate the entire path
+    // astar::StateArrayPtr interpolated_path = new astar::StateArray();
+    // interpolated_path->states = raw_path->states;
     astar::StateArrayPtr interpolated_path = Interpolate(raw_path);
 
     // get the map
-    ShowPath(interpolated_path);
+    // ShowPath(interpolated_path);
 
     // minimize again the interpolated path
     // conjugate gradient based on the Polak-Ribiere formula
-    ConjugateGradientPR(interpolated_path, true);
+    // ConjugateGradientPR(interpolated_path, true);
 
     // get the map
-    ShowPath(interpolated_path);
+    ShowPath(interpolated_path, false);
 
     // return the new interpolated path
     return interpolated_path;
