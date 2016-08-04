@@ -15,16 +15,16 @@ HybridAstarNode::HybridAstarNode(
         HybridAstarNode *p
     ) : pose(_pose), action(rsAction), action_set(0), g(cost), f(heuristicCost), parent(p), cell(c), handle(nullptr)
 {
-	// update the cell values
-	if (nullptr != cell) {
+    // update the cell values
+    if (nullptr != cell) {
 
-		// set the current node
-		cell->node = this;
+        // set the current node
+        cell->node = this;
 
-		// set the cell status to opened
-		cell->status = astar::OpenedNode;
+        // set the cell status to opened
+        cell->status = astar::OpenedNode;
 
-	}
+    }
 }
 
 // the basic constructor with a given action set
@@ -37,16 +37,16 @@ HybridAstarNode::HybridAstarNode(
     HybridAstarNodePtr p
     ) : pose(_pose), action(nullptr), action_set(rsActionSet), g(cost), f(heuristicCost), parent(p), cell(c), handle(nullptr)
 {
-	// update the cell values
-	if (nullptr != cell) {
+    // update the cell values
+    if (nullptr != cell) {
 
-		// set the current node
-		cell->node = this;
+        // set the current node
+        cell->node = this;
 
-		// set the cell status to opened
-		cell->status = astar::OpenedNode;
+        // set the cell status to opened
+        cell->status = astar::OpenedNode;
 
-	}
+    }
 }
 
 // basic destructor
@@ -55,15 +55,15 @@ HybridAstarNode::~HybridAstarNode() {
     // update the cell status
 
     // the cell should not point to any HybridAstarNode
-	if (nullptr != cell) {
+    if (nullptr != cell) {
 
-		// update the cell's node pointer
-		cell->node = nullptr;
+        // update the cell's node pointer
+        cell->node = nullptr;
 
-		// set to unknown node status
-		cell->status = astar::UnknownNode;
+        // set to unknown node status
+        cell->status = astar::UnknownNode;
 
-	}
+    }
 
     // delete the action
     if (nullptr != action) {
@@ -72,7 +72,7 @@ HybridAstarNode::~HybridAstarNode() {
 
     } else if (nullptr != action_set) {
 
-    	// delete the action set
+        // delete the action set
         delete action_set;
 
     }
@@ -86,50 +86,50 @@ HybridAstarNode::~HybridAstarNode() {
 // update the node values
 void HybridAstarNode::UpdateValues(const astar::HybridAstarNode &n) {
 
-	// copy the input node values
+    // copy the input node values
 
-	// the parent node
-	parent = n.parent;
+    // the parent node
+    parent = n.parent;
 
-	// the current pose
-	pose = n.pose;
+    // the current pose
+    pose = n.pose;
 
-	if (nullptr != n.action) {
+    if (nullptr != n.action) {
 
-		if (nullptr == action) {
+        if (nullptr == action) {
 
-			action = new ReedsSheppAction(*(n.action));
+            action = new ReedsSheppAction(*(n.action));
 
-		} else {
+        } else {
 
-			// the steering action
-			*action = *(n.action);
-		}
+            // the steering action
+            *action = *(n.action);
+        }
 
-	} else if (nullptr != n.action_set) {
+    } else if (nullptr != n.action_set) {
 
-		if (nullptr == action_set) {
+        if (nullptr == action_set) {
 
-			action_set = new ReedsSheppActionSet(*(n.action_set));
+            action_set = new ReedsSheppActionSet(*(n.action_set));
 
-		} else {
+        } else {
 
-			// the steering action
-			*action_set = *(n.action_set);
+            // the steering action
+            *action_set = *(n.action_set);
 
-		}
+        }
 
-	} else {
+    } else {
 
-		throw std::exception();
+        throw std::exception();
 
-	}
+    }
 
-	// the current node cost
-	g = n.g;;
+    // the current node cost
+    g = n.g;;
 
-	// the current node cost + estimated heuristic cost
-	f = n.f;
+    // the current node cost + estimated heuristic cost
+    f = n.f;
 
 
 }
@@ -145,10 +145,10 @@ bool HybridAstarNode::operator<(const astar::HybridAstarNode& n) const {
 void HybridAstarNode::operator=(const astar::HybridAstarNode& n) {
 
     // copy the input node values
-	UpdateValues(n);
+    UpdateValues(n);
 
     // the current cell
-	// CAUTION
+    // CAUTION
     cell = n.cell;
 
 }

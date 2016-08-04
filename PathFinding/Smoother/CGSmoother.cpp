@@ -614,6 +614,12 @@ void astar::CGSmoother::EvaluateFunctionAndGradient() {
 }
 
 // the Moré-Thuente step trial
+// The purpose of cstep is to compute a safeguarded step for
+// a linesearch and to update an interval of uncertainty for
+// a minimizer of the function.
+// It's the cstep function provided by the minpack library and it is adapted to our context here
+//  Argonne National Laboratory. MINPACK Project. June 1983
+// Jorge J. More', David J. Thuente
 int astar::CGSmoother::CStep(
         double& stl, double& fx, double& sgl,
         double& stu, double& fu, double& sgu,
@@ -1294,13 +1300,10 @@ void astar::CGSmoother::ConjugateGradientPR(astar::StateArrayPtr path, bool lock
 
     // the direction is up or down?
     double direction;
-
-    double lambda;
-
     double inverse_snorm;
-
     double betha = 0;
 
+    // the main CG Loop
     while (astar::CGContinue == cg_status && iter < max_iterations) {
 
         // update the iterator counter

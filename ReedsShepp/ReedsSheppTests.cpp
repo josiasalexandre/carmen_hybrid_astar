@@ -1,5 +1,6 @@
 #include <iostream>
 
+#include <exception>
 #include "../Entities/Pose2D.hpp"
 #include "ReedsSheppModel.hpp"
 
@@ -10,17 +11,21 @@ int main () {
 
     astar::ReedsSheppModel rs;
 
+    double pi = M_PI;
+    double pi2 = 2*pi;
+    double pi_2 = pi*0.5;
+
     astar::ReedsSheppActionSetPtr set = nullptr;
 
-    double inverse_unit = 1.0/(2.93/std::tan(0.43633));
+    double inverse_unit = 5.08;
 
     double x1 = 10;
     double y1 = 10;
-    double t1 = 0;
+    double t1 = pi_2;
 
     double x2 = 10;
     double y2 = 100;
-    double t2 = M_PI_2;
+    double t2 = pi_2;
 
     astar::Pose2D start(x1, y1, t1);
     std::cout << "\nStart: " << x1 << ", " << y1 << ", " << t1 << ".\n";
@@ -37,14 +42,22 @@ int main () {
 
         for (unsigned int i = 0; i < s_size; i++) {
 
-            std::cout << "Gear: " << set->actions[i].gear << std::endl;
-            std::cout << "Steer: " << set->actions[i].steer << std::endl;
-            std::cout << "Length: " << set->actions[i].length/inverse_unit << std::endl;
+            std::cout << "Gear: ";
+            if (astar::BackwardGear == set->actions[i].gear) {
+                std::cout << "Backward\n";
+            } else {
+                std::cout << "Forward\n";
+            }
+            std::cout << "Steer: " << set->actions[i].steer << "\n";
+            std::cout << "Length: " << set->actions[i].length*inverse_unit << "\n";
 
         }
 
-        std::cout << std::endl << "Total length: " << set->length/inverse_unit << std::endl;
+        std::cout << std::endl << "Total length: " << set->length*inverse_unit << std::endl;
 
+    }else {
+
+        throw "Invalid Action Set\n";
     }
 
     delete(set);

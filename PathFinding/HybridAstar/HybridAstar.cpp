@@ -33,8 +33,8 @@ using namespace astar;
 HybridAstar::HybridAstar(
     VehicleModel &vehicle_,
     InternalGridMapRef map) :
-    reverse_factor(4),
-    gear_switch_cost(8),
+    reverse_factor(10),
+    gear_switch_cost(20),
     voronoi_field_factor(1.5),
     rs(),
     vehicle(vehicle_),
@@ -351,11 +351,12 @@ HybridAstarNodeArrayPtr HybridAstar::GetChidlren(const Pose2D &start, const Pose
     // expanding Reeds-Shepp curves now
 
     // Reeds-Shepp curve threshold value
-    double threshold = heuristic.GetHeuristicValue(start, goal);
-    double inverseThreshold = 10.0/(threshold*threshold);
+    // double threshold = heuristic.GetHeuristicValue(start, goal);
+    double threshold = start.position.Distance2(goal.position);
+    double inverseThreshold = 100.0/(threshold*threshold);
 
     // quadratic falloff
-    if (10.0 > threshold || inverseThreshold > rand()) {
+    if (100.0 > threshold || inverseThreshold > rand()) {
 
         // the a new HybridAstarNode based on ReedsSheppModel
         HybridAstarNodePtr rsNode = GetReedsSheppChild(start, goal);
