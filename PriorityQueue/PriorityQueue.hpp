@@ -10,7 +10,6 @@
 
 namespace astar {
 
-
 #define ASTAR_CEIL_LOG_INT_BITS (sizeof(int) * 8)
 
 template<typename T>
@@ -79,14 +78,14 @@ class PriorityQueue {
 
                 if (A.size() != D) {
 
-                    // clear the old vector
+                    // resize it
                     A.clear();
 
-                    // resize it
                     A.resize(D, nullptr);
 
-                    return;
                 }
+
+
             }
 
             for (unsigned int i = 0; i < A.size(); ++i) {
@@ -560,7 +559,7 @@ class PriorityQueue {
         T DeleteNode(astar::PriorityQueueNode<T> *node) {
 
             // decrease the Key
-            DecreaseKey(node, -std::numeric_limits<double>::infinity());
+            DecreaseKey(node, -std::numeric_limits<double>::max());
 
             // remove the node and return the element
             return DeleteMin();

@@ -245,6 +245,135 @@ StateArrayPtr ReedsSheppModel::Discretize(
 
 }
 
+// return a list of poses from a given action set
+StateArrayPtr ReedsSheppModel::Discretize_LR(
+        const Pose2D &start, ReedsSheppActionSetPtr action_set, double radcurv, double inverse_max_length)
+{
+
+    // create the pose array
+    StateArrayPtr path = new StateArray();
+
+    // get the action size list size
+    unsigned int a_size = action_set->actions.size();
+
+    if (0 < a_size) {
+
+        // get the previous pose
+        State2D prev(start);
+
+        // a reference helper
+        std::vector<State2D> &states(path->states);
+
+        // append the first pose
+        states.push_back(State2D(prev, action_set->actions[1].gear));
+
+        // get the end pointer
+        std::vector<ReedsSheppAction>::iterator end = action_set->actions.end();
+
+        // get the iterator
+        for (std::vector<ReedsSheppAction>::iterator it = action_set->actions.begin();  it != end; ++it) {
+
+            // is it a line path?
+            if (RSStraight != it->steer) {
+
+                // it's a curve
+                // get the piece angle
+                double pieceAngle = it->length;
+
+                // get the current phi
+                double phi = pieceAngle / 2;
+
+                // avoiding sin repetitions
+                double sinPhi = std::sin(phi);
+
+                double L = 2 * radcurv * sinPhi;
+
+                // get the x displacement
+                double dx = L * std::cos(phi);
+
+                // get the y displacement
+                double dy = L * sinPhi;
+
+                // assuming TurnLeft, is it a TurnRight?
+                if (RSTurnRight == it->steer) {
+
+                    // invert the y displacement
+                    dy = -dy;
+
+                    // invert the pieceAngle
+                    pieceAngle = -pieceAngle;
+
+                }
+
+                // we have assumed ForwardGear, is it a backward instead?
+                if (BackwardGear == it->gear) {
+
+                    // invert the x displacement
+                    dx = -dx;
+
+                    // invert the pieceAngle
+                    // if the pieceAngle was inverted because the RSTurnRight
+                    // let's invert it again
+                    pieceAngle = -pieceAngle;
+
+                }
+
+                // the resulting position, after the movement
+                astar::Vector2D<double> pos(dx, dy);
+
+                // rotate the position to the correct position
+                pos.RotateZ(prev.orientation);
+
+                // update the prev State2D position
+                prev.position.Add(pos);
+
+                // update the gear
+                prev.gear = it->gear;
+
+                // append to the pose list
+                states.push_back(prev);
+
+            } else {
+
+                // it's a straight line, so piece of cake
+                // get the piece arch length
+                double pieceLength = it->length * radcurv;
+
+                // the x displacement
+                double dx = pieceLength * std::cos(prev.orientation);
+
+                // the y displacement
+                double dy = pieceLength * std::sin(prev.orientation);
+
+                // verify the direction
+                if (BackwardGear == it->gear) {
+
+                    // invert the displacements
+                    dx = -dx;
+                    dy = -dy;
+
+                }
+
+                // update the new position
+                prev.position.Add(dx, dy);
+
+                // get the gear action
+                prev.gear = it->gear;
+
+                // append to the poses list
+                states.push_back(prev);
+
+            }
+
+        }
+
+    }
+
+    // return the pose list
+    return path;
+
+}
+
 // PRIVATE METHODS
 // invalid angle test
 bool ReedsSheppModel::isInvalidAngle(double angle) {

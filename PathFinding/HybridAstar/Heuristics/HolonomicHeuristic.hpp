@@ -3,191 +3,219 @@
 
 #include <queue>
 
+#include <opencv2/opencv.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
+
 #include "../../../GridMap/InternalGridMap.hpp"
 #include "../../../Entities/Pose2D.hpp"
 #include "../../../Entities/Circle.hpp"
 #include "../../../PriorityQueue/PriorityQueue.hpp"
 
+
 namespace astar {
 
 class HolonomicHeuristic {
 
-	private:
+    private:
 
-		// the current grid map reference pointer
-		astar::InternalGridMapRef grid;
+        // the current grid map reference pointer
+        astar::InternalGridMapRef grid;
 
-		// the current start pose
-		astar::Pose2D start;
+        // the current start pose
+        astar::Pose2D start;
 
-		// the current goal pose
-		astar::Pose2D goal;
+        // the current goal pose
+        astar::Pose2D goal;
 
-		// the complete circle
-		double twopi;
+        // the complete circle
+        double twopi;
 
-		// the step angle
-		double piece_angle;
+        // the step angle
+        double piece_angle;
 
-		// a helper circle node
-		class CircleNode {
+        // a helper circle node
+        class CircleNode {
 
-			public:
+            public:
 
-				// the current circle reference
-				astar::Circle circle;
+                // the current circle reference
+                astar::Circle circle;
 
-				// the g cost value
-				double g;
+                // the g cost value
+                double g;
 
-				// the total cost, included heuristic value
-				double f;
+                // the total cost, included heuristic value
+                double f;
 
-				// the parent node
-				CircleNode *parent;
+                // the circle radius
+                double radius;
 
-				// the priority queue handler
-				astar::PriorityQueueNodePtr<CircleNode*> handle;
+                // the parent node
+                CircleNode *parent;
 
-				// basic constructor
-				CircleNode(const astar::Circle c, double g_, double f_, CircleNode *p) :
-					circle(c), g(g_), f(f_), parent(p), handle(nullptr) {}
+                bool explored;
 
-				// the copy constructor
-				CircleNode(const CircleNode& cn) :
-					circle(cn.circle), g(cn.g), f(cn.f), parent(nullptr), handle(nullptr) {}
+                // basic constructor
+                CircleNode(const astar::Circle c, double r, double g_, double f_, CircleNode *p) :
+                    circle(c), g(g_), f(f_), radius(r), parent(p), explored(false) {}
 
-				// basic destructor
-				~CircleNode() {
+                // the copy constructor
+                CircleNode(const CircleNode& cn) :
+                    circle(cn.circle), g(cn.g), f(cn.f), radius(cn.circle.r), parent(nullptr), explored(cn.explored) {}
 
-					// reset the parent node to nullptr
-					parent = nullptr;
+                // basic destructor
+                ~CircleNode() {
 
-				}
+                    // reset the parent node to nullptr
+                    parent = nullptr;
 
-				// update the node values
-				void UpdateValues(const CircleNode &cn) {
+                }
 
-					// copy the node values
+                // update the node values
+                void UpdateValues(const CircleNode &cn) {
 
-					// the circle position
-					circle.position = cn.circle.position;
+                    // copy the node values
 
-					// the circle radius
-					circle.r = cn.circle.r;
+                    // the circle position
+                    circle.position = cn.circle.position;
 
-					// the cost
-					g = cn.g;
+                    // the circle radius
+                    circle.r = cn.circle.r;
 
-					// the heuristic cost
-					f = cn.f;
+                    // the cost
+                    g = cn.g;
 
-					// the parent pointer
-					parent = cn.parent;
+                    // the heuristic cost
+                    f = cn.f;
 
-				}
+                    // the parent pointer
+                    parent = cn.parent;
 
-				// < operator overloading, for priority queue compare purpose
-				bool operator<(const CircleNode &cn) const {
+                }
 
-					return f < cn.f;
+                // < operator overloading, for priority queue compare purpose
+                bool operator<(const CircleNode &cn) const {
 
-				}
+                    return f < cn.f;
 
-				// Assignment operator
-				void operator=(const CircleNode &cn) {
+                }
 
-					// copy the values
-					UpdateValues(cn);
+                // Assignment operator
+                void operator=(const CircleNode &cn) {
 
-				}
+                    // copy the values
+                    UpdateValues(cn);
 
-		};
+                }
 
-		// define the syntatic sugar types
-		typedef CircleNode* CircleNodePtr;
-		typedef CircleNode& CircleNodeRef;
+        };
 
-		// define a comparator class
-		class CircleNodePtrComparator {
+        // define the syntatic sugar types
+        typedef CircleNode* CircleNodePtr;
+        typedef CircleNode& CircleNodeRef;
 
-			public:
+        // define a comparator class
+        class CircleNodePtrDistanceComparator {
 
-				// operator overloading
-				bool operator() (CircleNodePtr a, CircleNodePtr b) {
+            public:
 
-					// the default c++ stl is a max heap, so wee need to invert here
-					return a->f > b->f;
+                // operator overloading
+                bool operator() (CircleNodePtr a, CircleNodePtr b) {
 
-				}
+                    // the default c++ stl is a max heap, so wee need to invert here
+                    return a->f > b->f;
 
-		};
+                }
 
-		// define the CircleNodePtrArray
-		class CircleNodePtrArray {
+        };
 
-			public:
+        // define a comparator class
+        class CircleNodePtrRadiusComparator {
 
-				// the vector of circle nodes
-				std::vector<CircleNodePtr> circles;
+            public:
 
-				// basic destructor
-				~CircleNodePtrArray() {
+                // operator overloading
+                bool operator() (CircleNodePtr a, CircleNodePtr b) {
 
-					circles.clear();
+                    // the default c++ stl is a max heap
+                    return a->radius < b->radius;
 
-				}
+                }
 
-		};
+        };
 
-		// define the syntatic sugar type
-		typedef CircleNodePtrArray* CircleNodePtrArrayPtr;
-		typedef CircleNodePtrArray& CircleNodePtrArrayRef;
+        // define the CircleNodePtrArray
+        class CircleNodePtrArray {
 
-		// the resulting circle path
-		CircleNodePtrArray circle_path;
+            public:
 
-		// the open queue
-		std::priority_queue<CircleNodePtr, std::vector<CircleNodePtr>, CircleNodePtrComparator> open;
+                // the vector of circle nodes
+                std::vector<CircleNodePtr> circles;
 
-		// the closed set
-		std::vector<CircleNodePtr> closed;
+                // basic destructor
+                ~CircleNodePtrArray() {
 
-		// THE HEURISTIC PRIVATE METHODS
+                    circles.clear();
 
-		// verify if two circles overlaps with each other
-		bool Overlap(const astar::Circle&, const astar::Circle&);
+                }
 
-		// get the nearest circle from a given pose
-		CircleNodePtr NearestCircleNode(const astar::Pose2D&);
+        };
 
-		// get the circle children
-		CircleNodePtrArrayPtr GetChildren(CircleNodePtr);
+        // define the syntatic sugar type
+        typedef CircleNodePtrArray* CircleNodePtrArrayPtr;
+        typedef CircleNodePtrArray& CircleNodePtrArrayRef;
 
-		// clear the current CircleNodePtr sets
-		void RemoveAllCircleNodes();
+        // the resulting circle path
+        CircleNodePtrArray circle_path;
 
-		// rebuild the circle array
-		void RebuildCirclePath(CircleNodePtr cn, astar::CircleRef c_goal);
+        // the nearest open queue
+        std::priority_queue<CircleNodePtr, std::vector<CircleNodePtr>, CircleNodePtrDistanceComparator> nearest_open;
 
-		// try to find a circle node inside the closed set
-		bool NotExist(CircleNodePtr cn);
+        // the largest open queue
+        std::priority_queue<CircleNodePtr, std::vector<CircleNodePtr>, CircleNodePtrRadiusComparator> largest_open;
 
-		// the current search method
-		bool SpaceExploration();
+        // the closed set
+        std::vector<CircleNodePtr> closed;
 
-	public:
+        // THE HEURISTIC PRIVATE METHODS
 
-		// THE HEURISTIC OBJECT METHODS
+        // verify if two circles overlaps with each other
+        bool Overlap(const astar::Circle&, const astar::Circle&, double factor = 0.5);
 
-		// basic constructor
-		HolonomicHeuristic(astar::InternalGridMapRef map);
+        // get the nearest circle from a given pose
+        CircleNodePtr NearestCircleNode(const astar::Pose2D&);
 
-		// update the Heuristic circle path with a new grid map, start and goal poses
-		void UpdateHeuristic(astar::InternalGridMapRef, const astar::Pose2D&, const astar::Pose2D&);
+        // get the circle children
+        CircleNodePtrArrayPtr GetChildren(CircleNodePtr);
 
-		// get the heuristic value given a pose
-		double GetHeuristicValue(const astar::Pose2D&);
+        // clear the current CircleNodePtr sets
+        void RemoveAllCircleNodes();
+
+        // rebuild the circle array
+        void RebuildCirclePath(CircleNodePtr cn, astar::CircleRef c_goal);
+
+        // try to find a circle node inside the closed set
+        bool NotExist(CircleNodePtr cn);
+
+        // explore a given circle node
+        void ExploreCircleNode(CircleNodePtr cn);
+
+        // the current search method
+        bool SpaceExploration();
+
+    public:
+
+        // THE HEURISTIC OBJECT METHODS
+
+        // basic constructor
+        HolonomicHeuristic(astar::InternalGridMapRef map);
+
+        // update the Heuristic circle path with a new grid map, start and goal poses
+        void UpdateHeuristic(astar::InternalGridMapRef, const astar::Pose2D&, const astar::Pose2D&);
+
+        // get the heuristic value given a pose
+        double GetHeuristicValue(const astar::Pose2D&);
 
 };
 

@@ -159,7 +159,7 @@ StateArrayPtr HybridAstar::RebuildPath(HybridAstarNodePtr n, const State2D &goal
         } else if (nullptr != n->action_set) {
 
             // get the subpath provided by the action set discretization
-            StateArrayPtr subpath = ReedsSheppModel::Discretize(n->parent->pose, n->action_set, vehicle.min_turn_radius, inverse_resolution);
+            StateArrayPtr subpath = ReedsSheppModel::Discretize_LR(n->parent->pose, n->action_set, vehicle.min_turn_radius, inverse_resolution);
 
             // get the path size
             subpathSize = subpath->states.size();
@@ -334,8 +334,15 @@ HybridAstarNodeArrayPtr HybridAstar::GetChidlren(const Pose2D &start, const Pose
         // verify the safety condition and the grid boundary
         if (grid.isValidPoint(child_pose.position) && grid.isSafePlace(vehicle.GetVehicleBodyCircles(child_pose), vehicle.safety_factor)) {
 
+            HybridAstarNodePtr tmp = new HybridAstarNode(child_pose, new ReedsSheppAction(steer, gear, length));
+
+            if (nullptr == tmp) {
+
+                std::cout << "Erro Memória!!\n";
+            }
+
             // append to the children list
-            nodes.push_back(new HybridAstarNode(child_pose, new ReedsSheppAction(steer, gear, length)));
+            nodes.push_back(tmp);
 
         }
 

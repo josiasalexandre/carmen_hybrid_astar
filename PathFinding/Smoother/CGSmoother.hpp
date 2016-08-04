@@ -81,6 +81,18 @@ class CGSmoother {
         // the gradient norm - Evaluated at the second point x1
         double gx1_norm;
 
+        // the best solution so far
+        astar::StateArrayPtr bestx;
+
+        // the best solution function value
+        double bestfx;
+
+        // the best solution gradient
+        astar::Vector2DArrayPtr<double> bestgx;
+
+        // the best solution gradient norm
+        double bestgx_norm;
+
         // the displacement between the next and previous gradient
         std::vector<astar::Vector2D<double>> gx1mgx;
 
@@ -192,6 +204,9 @@ class CGSmoother {
 
         // interpolate a given path
         astar::StateArrayPtr Interpolate(astar::StateArrayPtr);
+
+        // show the current path in the map
+        void ShowPath(astar::StateArrayPtr);
 
     public:
 

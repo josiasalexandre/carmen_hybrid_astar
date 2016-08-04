@@ -5,12 +5,13 @@
 #include <opencv2/imgproc/imgproc.hpp>
 
 astar::CGSmoother::CGSmoother(astar::InternalGridMapRef map, astar::VehicleModelRef vehicle_) :
-    wo(0.002), ws(4.0), wp(0.2), wk(4.0), dmax(5.0), vorodmax(20),
+    wo(0.2), ws(10.0), wp(0.2), wk(4.0), dmax(5.0), vorodmax(20),
     alpha(0.2), grid(map), vehicle(vehicle_), kmax(0.22),
-    cg_status(astar::CGIddle), fx(), gx(nullptr), gx_norm(), fx1(), gx1(nullptr), gx1_norm(), x1mx(), x1mx_norm(), s(), s_norm(), sg(),
+    cg_status(astar::CGIddle), fx(), gx(nullptr), gx_norm(), fx1(), gx1(nullptr), gx1_norm(), bestfx(), bestgx_norm(), x1mx(), x1mx_norm(), s(), s_norm(), sg(),
     locked_positions(), max_iterations(300), dim(0), step(0.01), default_step_length(1.0), stepmax(1e06), stepmin(1e-12),
     ftol(1e-04), gtol(0.99999), xtol(1e-15)
 {
+
     // update the inverse dmax
     inverse_dmax2 = 1.0/ (dmax * dmax);
 
@@ -18,9 +19,15 @@ astar::CGSmoother::CGSmoother(astar::InternalGridMapRef map, astar::VehicleModel
     x = new astar::StateArray();
     x1 = new astar::StateArray();
 
+    // the best solution so far
+    bestx = new astar::StateArray();
+
     // start the gx and gx1 gradient vectors
     gx = new astar::Vector2DArray<double>();
     gx1 = new astar::Vector2DArray<double>();
+
+    // the best solution gradient
+    bestgx = new astar::Vector2DArray<double>();
 
 }
 
@@ -305,7 +312,7 @@ astar::CGSmoother::GetCurvatureDerivative(const astar::Vector2D<double> &xim1, c
         astar::Vector2D<double> p1, p2;
 
         // some helpers
-        double inverse_norm2 = 1.0/xip1.Norm2();
+        double inverse_norm2 = 1.0/xip1.Norm2(); // TODO ERRADO
         double nx = -xip1.x;
         double ny = -xip1.y;
         double tmp = (xi.x * nx + xi.y * ny);
@@ -457,8 +464,11 @@ void astar::CGSmoother::TakeStep(double factor) {
             next[i].position.x = current[i].position.x + factor * s[i].x;
             next[i].position.y = current[i].position.y + factor * s[i].y;
 
-            // update the dx_norm value
-            x1mx_norm += current[i].position.Distance2(next[i].position);
+            //x1mx[i].x = next[i].position.x - current[i].position.x;
+            //x1mx[i].y = next[i].position.y - current[i].position.y;
+
+            x1mx_norm += (next[i].position.x - current[i].position.x)*(next[i].position.x - current[i].position.x);
+            x1mx_norm += (next[i].position.y - current[i].position.y)*(next[i].position.y - current[i].position.y);
 
             // verify the safe condition
             if (!grid.isSafePlace(vehicle.GetVehicleBodyCircles(next[i]), vehicle.safety_factor)) {
@@ -474,8 +484,6 @@ void astar::CGSmoother::TakeStep(double factor) {
         }
 
     }
-
-    // evaluate the function at the new position
 
 }
 
@@ -528,11 +536,11 @@ void astar::CGSmoother::EvaluateFunctionAndGradient() {
             // THE FUNCTION VALUE
             // update the obstacle and potential field terms
             // get the nearest obstacle distance
-            obst_distance = grid.GetObstacleDistance(xi);
+            //obst_distance = grid.GetObstacleDistance(xi);
 
             // the obstacle and potential field terms are updated only when dmax >= obst_distance
             // otherwise we consider the term += 0.0;
-            if (dmax >= obst_distance) {
+            /*if (dmax >= obst_distance) {
 
                 d = (obst_distance - dmax) * (obst_distance - dmax);
 
@@ -550,30 +558,31 @@ void astar::CGSmoother::EvaluateFunctionAndGradient() {
                 // overloaded method
                 tmp1.Add(GetObstacleAndVoronoiDerivatives(xim1, xi, xip1, obst_distance, voro_distance));
 
-            }
+            }*/
 
             // get the current displacement
-            dxi.x = xi.x - xim1.x;
-            dxi.y = xi.y - xim1.y;
+            // dxi.x = xi.x - xim1.x;
+            // dxi.y = xi.y - xim1.y;
 
             // get the next displacement
-            dxip1.x = xip1.x - xi.x;
-            dxip1.y = xip1.y - xim1.y;
+            // dxip1.x = xip1.x - xi.x;
+            // dxip1.y = xip1.y - xim1.y;
 
             // update the curvature term
-            curvature += std::pow((std::fabs(std::atan2(dxip1.y, dxip1.x) - std::atan2(dxi.y, dxi.x)) / dxi.Norm() - kmax), 2);
+            //curvature += std::pow((std::fabs(std::atan2(dxip1.y, dxip1.x) - std::atan2(dxi.y, dxi.x)) / dxi.Norm() - kmax), 2);
 
             // update the smooth term
-            tmp.x = dxip1.x - dxi.x;
-            tmp.y = dxip1.y - dxi.y;
+            tmp.x = xip1.x - 2.0 * xi.x + xim1.x;
+            tmp.y = xip1.y - 2.0 * xi.y + xim1.y;
+
             smooth += tmp.Norm2();
 
             // add the curvature term contribution
-            tmp1.Add(GetCurvatureDerivative(xim1, xi, xip1));
+            //tmp1.Add(GetCurvatureDerivative(xim1, xi, xip1));
 
             // set up the smooth path derivatives contribution
-            tmp1.x += ws * (xim2.x - 4.0 * xim1.x + 6.0 * xi.x - 4.0 * xip1.x + xip2.x);
-            tmp1.y += ws * (xim2.y - 4.0 * xim1.y + 6.0 * xi.y - 4.0 * xip1.y + xip2.y);
+            tmp1.x += (xim2.x - 4.0 * xim1.x + 6.0 * xi.x - 4.0 * xip1.x + xip2.x);
+            tmp1.y += (xim2.y - 4.0 * xim1.y + 6.0 * xi.y - 4.0 * xip1.y + xip2.y);
 
         }
 
@@ -592,7 +601,8 @@ void astar::CGSmoother::EvaluateFunctionAndGradient() {
 
     // set the euclidean norm final touch
     // gx_norm = std::sqrt(gx_norm); It's no the euclidean version
-    fx1 = wo*obstacle + wp*potential + wk*curvature + ws*smooth;
+    //fx1 = wo*obstacle + wp*potential + wk*curvature + ws*smooth;
+    fx1 = smooth;
 
 }
 
@@ -948,6 +958,16 @@ int astar::CGSmoother::MTLineSearch(double lambda) {
 
         fp = fx1;
 
+        if (bestfx > fx1) {
+
+            // update the best solution so far
+            bestx->states = x1->states;
+            bestfx = fx1;
+            bestgx->vs = gx1->vs;
+            bestgx_norm = gx1_norm;
+
+        }
+
         // get the directional derivative
         sgp = astar::Vector2DArray<double>::DotProduct(s, gx1->vs) * lambda;
 
@@ -1098,6 +1118,9 @@ bool astar::CGSmoother::Setup(astar::StateArrayPtr path, bool locked) {
         // set the second point values
         x1->states = path->states;
 
+        // set the best point values
+        bestx->states = path->states;
+
         // update the dx norm
         x1mx_norm = std::numeric_limits<double>::max();
 
@@ -1115,6 +1138,9 @@ bool astar::CGSmoother::Setup(astar::StateArrayPtr path, bool locked) {
 
         // reset the x1mx size
         x1mx.resize(dim, tmp);
+
+        // resize the best position gradient
+        bestgx->vs.resize(dim, tmp);
 
         if (!locked) {
 
@@ -1144,8 +1170,8 @@ bool astar::CGSmoother::Setup(astar::StateArrayPtr path, bool locked) {
 
         EvaluateFunctionAndGradient();
 
-        fx = fx1;
-        gx_norm = gx1_norm;
+        bestfx = fx = fx1;
+        bestgx_norm = gx_norm = gx1_norm;
 
         // flip the gradients
         astar::Vector2DArrayPtr<double> vs = gx;
@@ -1162,14 +1188,44 @@ bool astar::CGSmoother::Setup(astar::StateArrayPtr path, bool locked) {
         }
 
         // the s norm is equal to the gradient's norm
-        s_norm = gx_norm;
+        gx1_norm = s_norm = gx_norm;
 
         // multiply the current direction with the inverse gradient
         // it's the directional derivative along s
         sg = astar::Vector2DArray<double>::DotProduct(s, gx->vs) / s_norm;
 
-        // get the first step
-        MTLineSearch(1.0/s_norm);
+        /*// get the first step
+        if (1 == MTLineSearch(1.0/s_norm)) {
+
+            // we got the first step
+            // SUCCESS!
+
+            // get the displacement between the two gradients
+            astar::Vector2DArray<double>::SubtractCAB(gx1mgx, gx1->vs, gx->vs);
+
+            // get the gamma value
+            // based on Powell 1983
+            double gamma = std::max(astar::Vector2DArray<double>::DotProduct(gx1mgx, gx1->vs)/astar::Vector2DArray<double>::DotProduct(gx->vs, gx->vs), 0.0);
+
+            // the new x1 point is the new position
+            // update the conjugate direction at the new position
+            // it also updates the the curent conjugate direction norm
+            UpdateConjugateDirection(s, gx1->vs, gamma);
+
+            // the new position is a better one
+            astar::StateArrayPtr tmp = x;
+            x = x1;
+            x1 = tmp;
+
+            // flip the gradient vectors
+            astar::Vector2DArrayPtr<double> gradient = gx1;
+            gx1 = gx;
+            gx = gradient;
+
+            // copy the norm
+            gx_norm = gx1_norm;
+
+        }*/
 
         // reset the tolerances
         ftol = gtol = xtol = 1e-04;
@@ -1240,11 +1296,14 @@ void astar::CGSmoother::ConjugateGradientPR(astar::StateArrayPtr path, bool lock
 
     while (astar::CGContinue == cg_status && iter < max_iterations) {
 
-        // take the next step
-        TakeStep(step/s_norm);
+        // update the iterator counter
+        iter += 1;
 
-        // test the stuck case
-        if (0.0 == x1mx_norm) {
+        int info = MTLineSearch(1.0/s_norm);
+
+        if (xtol > x1mx_norm) {
+
+            // test the stuck case
 
             // set the stuck case!
             cg_status = astar::CGStuck;
@@ -1260,18 +1319,35 @@ void astar::CGSmoother::ConjugateGradientPR(astar::StateArrayPtr path, bool lock
             // exit
             break;
 
-        }
+        } else {
 
-        // update the iterator counter
-        iter += 1;
+            if (1 != info) {
 
-        // obtain the step length and move to the new point, if possible
-        int info = MTLineSearch(1.0/s_norm);
+                // bestx is the best solution so far
 
-        if (1 == info) {
+                // flip the function value
+                double v = bestfx;
+                bestfx = fx1;
+                fx1 = v;
+
+                // flip the solution vectors
+                astar::StateArrayPtr tmp = bestx;
+                bestx = x1;
+                x1 = tmp;
+
+                // flip the gradients
+                astar::Vector2DArrayPtr<double> gradient = bestgx;
+                bestgx = gx1;
+                gx1 = gradient;
+
+                // flip the norms
+                v = bestgx_norm;
+                bestgx_norm = gx1_norm;
+                gx1_norm = bestgx_norm;
+
+            }
 
             // SUCCESS!
-
             // verify the restart case
             if (0 != iter % dim) {
 
@@ -1299,12 +1375,15 @@ void astar::CGSmoother::ConjugateGradientPR(astar::StateArrayPtr path, bool lock
                     s[i].x = -gx1->vs[i].x;
                     s[i].y = -gx1->vs[i].y;
 
-                    // update the norm
+                    // dot product
                     sg += s[i].x * gx1->vs[i].x + s[i].y * gx1->vs[i].y;
 
                 }
 
+                // the new s_norm is equal to gx1_norm
                 s_norm = gx1_norm;
+
+                // normalize the slope
                 sg /= s_norm;
 
             }
@@ -1352,7 +1431,7 @@ astar::StateArrayPtr astar::CGSmoother::Interpolate(astar::StateArrayPtr path) {
 
     // the grid resolution
     double resolution = grid.GetResolution();
-    double resolution_factor =  resolution * 1.2;
+    double resolution_factor =  resolution * 0.5;
 
     // invert the resolution, avoiding a lot o divisions
     double inverse_resolution = 1.0/resolution;
@@ -1444,6 +1523,48 @@ astar::StateArrayPtr astar::CGSmoother::Interpolate(astar::StateArrayPtr path) {
 
 }
 
+// show the current path in the map
+void astar::CGSmoother::ShowPath(astar::StateArrayPtr path) {
+
+    // get the map
+    unsigned int h = grid.GetHeight();
+    unsigned int w = grid.GetWidth();
+
+    unsigned char *map = grid.GetGridMap();
+
+    // create a image
+    cv::Mat image(w, h, CV_8UC1, map);
+
+    // draw a new window
+    cv::namedWindow("Smooth", cv::WINDOW_AUTOSIZE);
+
+    // draw each point
+    for (unsigned int i = 0; i < path->states.size(); ++i) {
+
+        // get the currnt point
+        astar::GridCellIndex index(grid.PoseToIndex(path->states[i].position));
+
+        // convert to opencv point
+        cv::Point p1(index.col - 1, h - index.row - 1);
+        cv::Point p2(index.col + 1, h - index.row + 1);
+
+        cv::rectangle(image, p1, p2, cv::Scalar(0, 0, 0), 1);
+
+        // show the image
+        cv::imshow("Smooth", image);
+
+        // draw in the windows
+        cv::waitKey(30);
+
+    }
+
+    delete [] map;
+
+    // destroy
+    cv::destroyWindow("Smooth");
+
+}
+
 // the main smooth function
 astar::StateArrayPtr astar::CGSmoother::Smooth(astar::InternalGridMapRef grid_, astar::VehicleModelRef vehicle_, astar::StateArrayPtr raw_path) {
 
@@ -1455,69 +1576,21 @@ astar::StateArrayPtr astar::CGSmoother::Smooth(astar::InternalGridMapRef grid_, 
     // conjugate gradient based on the Polak-Ribiere formula
     ConjugateGradientPR(raw_path);
 
-    unsigned int h = grid.GetHeight();
-    unsigned int w = grid.GetWidth();
-
-    unsigned char *map2 = grid.GetGridMap();
-
-    // draw the current map
-    cv::Mat final_map(w, h, CV_8UC1, map2);
-
-    for (unsigned int i = 0 ; i < raw_path->states.size(); ++i) {
-
-        // convert the current position to row and col
-        astar::GridCellIndex index(grid.PoseToIndex(raw_path->states[i].position));
-
-        // convert to the opencv format
-        cv::Point p1(index.col - 1, h - index.row - 1);
-        cv::Point p2(index.col + 1, h - index.row + 1);
-
-        // draw a single square
-        cv::rectangle(final_map, p1, p2, cv::Scalar(0.0, 0.0, 0.0), -1);
-
-        // show the imgae
-        cv::imshow("Astar2", final_map);
-
-        cv::waitKey(30);
-
-    }
-
+    // get the map
+    ShowPath(raw_path);
 
     // now, interpolate the entire path
     astar::StateArrayPtr interpolated_path = Interpolate(raw_path);
 
-    //unsigned char *map2 = grid.GetGridMap();
-
-    // draw the current map
-    //cv::Mat final_map2(w, h, CV_8UC1, map3);
-
-    /*for (unsigned int i = 0 ; i < interpolated_path->states.size(); ++i) {
-
-        // convert the current position to row and col
-        astar::GridCellIndex index(grid.PoseToIndex(interpolated_path->states[i].position));
-
-        // convert to the opencv format
-        cv::Point p1(index.col - 1, h - index.row - 1);
-        cv::Point p2(index.col + 1, h - index.row + 1);
-
-        // draw a single square
-        cv::rectangle(final_map2, p1, p2, cv::Scalar(0.0, 0.0, 0.0), -1);
-
-        // show the imgae
-        cv::imshow("Astar3", final_map2);
-
-        cv::waitKey(30);
-
-    }*/
-    delete [] map2;
-    //delete [] map3;
-
-    cv::destroyWindow("Astar2");
-    //cv::destroyWindow("Astar3");
+    // get the map
+    ShowPath(interpolated_path);
 
     // minimize again the interpolated path
     // conjugate gradient based on the Polak-Ribiere formula
     ConjugateGradientPR(interpolated_path, true);
+
+    // get the map
+    ShowPath(interpolated_path);
 
     // return the new interpolated path
     return interpolated_path;

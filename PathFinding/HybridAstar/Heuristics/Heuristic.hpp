@@ -32,7 +32,7 @@ class Heuristic {
         double GetObstacleRelaxedHeuristicValue(astar::Pose2D, const astar::Pose2D&);
 
         // nonholonomic relaxed heuristic
-        double GetNonholonomicRelaxedHeuristicValue(const astar::Pose2D&, const astar::Pose2D&);
+        double GetNonholonomicRelaxedHeuristicValue(const astar::Pose2D&);
 
     public:
 

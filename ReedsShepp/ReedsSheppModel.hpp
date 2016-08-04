@@ -218,6 +218,10 @@ class ReedsSheppModel {
         // return a list of poses from a given action set
         static astar::StateArrayPtr Discretize(const Pose2D&, ReedsSheppActionSetPtr, double, double);
 
+        // return a list of poses from a given action set
+        // low resolution version
+        static astar::StateArrayPtr Discretize_LR(const Pose2D&, ReedsSheppActionSetPtr, double, double);
+
 };
 
 }

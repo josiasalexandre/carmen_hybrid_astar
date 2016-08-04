@@ -91,7 +91,21 @@ HybridAstarPathFinder::replan() {
             StateArrayPtr smooth_path = path_smoother.Smooth(grid, vehicle_model, raw_path);
 
             // copy the new states to our internal version
-            path.states = smooth_path->states;
+            path.states.clear();
+
+            for (unsigned int i = 0; i < smooth_path->states.size(); ++i) {
+
+                // get the state
+                State2D tmp(smooth_path->states[i]);
+
+                std::cout << "Position: " << tmp.position.x << ", " << tmp.position.y << "\n";
+
+                // append to the path vector
+                path.states.push_back(tmp);
+
+            }
+
+            // path.states = smooth_path->states;
 
             // delete the smooth path
             delete smooth_path;
