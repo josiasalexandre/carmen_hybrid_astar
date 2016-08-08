@@ -400,10 +400,6 @@ astar::CGSmoother::GetCurvatureDerivative(const astar::Vector2D<double> &xim1, c
 
     }
 
-    if (res.Norm2() > 10e6) {
-
-        std::cout << "Giant\n";
-    }
     return res;
 
 }
@@ -1535,12 +1531,6 @@ void astar::CGSmoother::ConjugateGradientPR(astar::StateArrayPtr path, bool lock
                 // update the iterator counter
                 iter += 1;
 
-                if (0.0 == s_norm) {
-
-                    std::cout << "wrong s_norm:\n";
-
-                }
-
                 // get the next step
                 int info = MTLineSearch(1.0/s_norm);
 
@@ -1774,7 +1764,6 @@ astar::StateArrayPtr astar::CGSmoother::Smooth(astar::InternalGridMapRef grid_, 
     grid = grid_;
     vehicle = vehicle_;
 
-    // minimize the current state array
     // conjugate gradient based on the Polak-Ribiere formula
     ConjugateGradientPR(raw_path);
 
