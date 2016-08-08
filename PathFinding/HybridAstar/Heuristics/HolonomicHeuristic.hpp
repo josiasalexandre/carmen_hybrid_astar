@@ -204,6 +204,10 @@ class HolonomicHeuristic {
         // the current search method
         bool SpaceExploration();
 
+        // show
+        void ShowCirclePath();
+
+
     public:
 
         // THE HEURISTIC OBJECT METHODS

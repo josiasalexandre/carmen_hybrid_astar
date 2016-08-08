@@ -26,6 +26,17 @@ void VehicleModel::Configure() {
         max_curvature = 0.22;
 
     }
+
+    // set the phi command limits
+    max_phi_acceleration = 6.0;
+    max_phi_velocity = 0.3;
+
+    // set the time to change gears
+    change_gear_time = 1.0;
+
+    // the circle radius
+    circle_radius = 1.5;
+
 }
 
 // get the next pose with Pose, Steer, Gear, length and custom turn radius
@@ -144,7 +155,7 @@ Pose2D VehicleModel::NextPose(const astar::Pose2D &current, double vel, double p
 }
 
 // get the next state
-astar::State2D VehicleModel::NextState(const astar::State2D &current) {
+astar::State2D VehicleModel::NextState(const astar::State2D &current) const {
 
     // creates a new state based on the current input
     State2D s(current);
@@ -188,13 +199,41 @@ Pose2D VehicleModel::GetCenterPosition(const astar::Pose2D &pose) const {
 }
 
 // get the list of circles that represents the safe area
+std::vector<Circle> VehicleModel::GetVehicleBodyCircles(const astar::Vector2D<double> &p, double orientation) {
+
+    // the output array
+    std::vector<Circle> body;
+
+    // TODO get the values in a dynamic manner
+    // the circle radius = 1.25 m / resolution
+    double x_position[4] = {-0.36, 0.760, 1.880, 3.00};
+
+    for (unsigned int i = 0; i < 4; ++i) {
+
+        // set the current position
+        astar::Vector2D<double> position(x_position[i], 0);
+
+        // rotate the current position, follow the car heading
+        position.RotateZ(orientation);
+
+        // move the current position to the car frame
+        position.Add(p);
+
+        // append the the circle to the body vector
+        body.push_back(astar::Circle(position, circle_radius));
+
+    }
+
+    return body;
+}
+
+// get the list of circles that represents the safe area
 std::vector<Circle> VehicleModel::GetVehicleBodyCircles(const astar::Pose2D &p) {
 
     // the output array
     std::vector<Circle> body;
 
     // TODO move to the class and get the values in a dynamic manner
-    double circle_radius = 6.1250;
     double x_position[4] = {-0.36, 0.760, 1.880, 3.00};
 
     for (unsigned int i = 0; i < 4; ++i) {
@@ -236,15 +275,15 @@ double VehicleModel::GetDesiredWheelAngle(const Pose2D &a, const Pose2D &b) cons
 // get the desired speed
 double VehicleModel::GetCurvatureConstraint(const Pose2D &prev, const Pose2D &current, const Pose2D &next) const {
 
-    // get the appropriated vectors
-    Vector2D<double> current_v(current.position.x - prev.position.x, current.position.y - prev.position.y);
-    Vector2D<double> next_v(next.position.x - current.position.x, next.position.y - current.position.y);
+    // get the appropriated displacement vectors
+    Vector2D<double> dxi(current.position.x - prev.position.x, current.position.y - prev.position.y);
+    Vector2D<double> dxip1(next.position.x - current.position.x, next.position.y - current.position.y);
 
     // get the angle between the two vectors
-    double angle = std::fabs(mrpt::math::wrapToPi<double>((std::atan2(next_v.y, next_v.x) - std::atan2(current_v.y, current_v.x))));
+    double angle = std::fabs(mrpt::math::wrapToPi<double>(std::atan2(dxip1.y, dxip1.x) - std::atan2(dxi.y, dxi.x)));
 
     // get the turn radius
-    double radius = current_v.Norm() / angle;
+    double radius = dxi.Norm() / angle;
 
     // get the curvature constraint
     return std::sqrt(radius * max_lateral_acceleration);
@@ -254,14 +293,14 @@ double VehicleModel::GetCurvatureConstraint(const Pose2D &prev, const Pose2D &cu
 // get the desired forward speed
 double VehicleModel::GetForwardSpeed(const Pose2D &prev, const Pose2D &current, const Pose2D &next) const {
 
-    return std::min(max_forward_speed, GetCurvatureConstraint(prev, current, next));
+    return std::min(low_speed, GetCurvatureConstraint(prev, current, next));
 
 }
 
 // get the desired backward speed
 double VehicleModel::GetBackwardSpeed(const Pose2D &prev, const Pose2D &current, const Pose2D &next) const {
 
-    return std::min(max_backward_speed, GetCurvatureConstraint(prev, current, next));
+    return std::min(low_speed, GetCurvatureConstraint(prev, current, next));
 
 }
 

@@ -14,6 +14,8 @@
 #include "HybridAstar/HybridAstar.hpp"
 #include "Smoother/CGSmoother.hpp"
 
+#include "../PathFollower/StanleyController.hpp"
+
 namespace astar {
 
 class HybridAstarPathFinder {
@@ -39,6 +41,12 @@ class HybridAstarPathFinder {
 
         // the current path
         astar::StateArray path;
+
+        // the current path
+        astar::StateArray command_path;
+
+        // the stanley method
+        astar::StanleyController stanley_method;
 
         // the current odometry speed
         double odometry_speed;

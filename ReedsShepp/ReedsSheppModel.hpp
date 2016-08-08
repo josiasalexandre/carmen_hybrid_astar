@@ -216,7 +216,10 @@ class ReedsSheppModel {
         astar::ReedsSheppActionSetPtr Solve(const astar::Pose2D&, const astar::Pose2D&, double);
 
         // return a list of poses from a given action set
-        static astar::StateArrayPtr Discretize(const Pose2D&, ReedsSheppActionSetPtr, double, double);
+        static astar::StateArrayPtr DiscretizeRS(const Pose2D&, ReedsSheppActionPtr, double, double);
+
+        // return a list of poses from a given action set
+        static astar::StateArrayPtr DiscretizeRS(const Pose2D&, ReedsSheppActionSetPtr, double, double);
 
         // return a list of poses from a given action set
         // low resolution version

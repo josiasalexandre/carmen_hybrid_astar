@@ -5,9 +5,9 @@
 #include <opencv2/imgproc/imgproc.hpp>
 
 astar::CGSmoother::CGSmoother(astar::InternalGridMapRef map, astar::VehicleModelRef vehicle_) :
-    wo(0.02), ws(4.0), wp(0.02), wk(6.0), dmax(5.0), vorodmax(20),
-    alpha(0.2), grid(map), vehicle(vehicle_), kmax(0.22),
-    cg_status(astar::CGIddle), fx(), gx(nullptr), gx_norm(), fx1(), gx1(nullptr), gx1_norm(), bestfx(), bestgx_norm(), x1mx(), x1mx_norm(), s(), s_norm(), sg(),
+    wo(0.1), ws(4.0), wp(0.5), wk(4.0), dmax(5.0), vorodmax(20),
+    alpha(0.2), grid(map), vehicle(vehicle_), kmax(0.22), first_time(true), input_path(nullptr),
+    cg_status(astar::CGIddle), fx(), gx_norm(), fx1(), gx1_norm(), ftrialx(), x1mx_norm(), gtrialx_norm(), trialxmx_norm(), s(), s_norm(), sg(),
     locked_positions(), max_iterations(300), dim(0), step(0.01), default_step_length(1.0), stepmax(1e06), stepmin(1e-12),
     ftol(1e-04), gtol(0.99999), xtol(1e-06)
 {
@@ -16,18 +16,15 @@ astar::CGSmoother::CGSmoother(astar::InternalGridMapRef map, astar::VehicleModel
     inverse_vorodmax2 = 1.0/ (vorodmax * vorodmax);
 
     // start the x and x1 vectors
-    x = new astar::StateArray();
-    x1 = new astar::StateArray();
+    x = new astar::Vector2DArray<double>();
+    x1 = new astar::Vector2DArray<double>();
+    trialx = new astar::Vector2DArray<double>();
 
-    // the best solution so far
-    bestx = new astar::StateArray();
-
-    // start the gx and gx1 gradient vectors
+    // the gradient vectors
     gx = new astar::Vector2DArray<double>();
     gx1 = new astar::Vector2DArray<double>();
+    gtrialx = new astar::Vector2DArray<double>();
 
-    // the best solution gradient
-    bestgx = new astar::Vector2DArray<double>();
 
 }
 
@@ -42,6 +39,38 @@ astar::CGSmoother::~CGSmoother() {
     delete gx;
     delete gx1;
 
+}
+
+// verify if a given path is safe
+bool astar::CGSmoother::UnsafePath(astar::Vector2DArrayPtr<double> path) {
+
+    // the boolean result
+    bool unsafe = false;
+
+    // direct access
+    std::vector<astar::Vector2D<double>> &positions(path->vs);
+    std::vector<astar::State2D> &poses(input_path->states);
+
+    double safety = vehicle.safety_factor;
+
+    for (unsigned int i = 0; i < dim; ++i) {
+
+        if (!grid.isSafePlace(vehicle.GetVehicleBodyCircles(positions[i], poses[i].orientation), safety)) {
+
+            // lock the current point
+            locked_positions[i] = true;
+
+            // reset the point to the A* result
+            positions[i] = poses[i].position;
+
+            // set the unsafe flag
+            unsafe = false;
+
+        }
+
+    }
+
+    return unsafe;
 }
 
 // get the greater number considering the absolute values
@@ -63,7 +92,7 @@ double astar::CGSmoother::ABSMax(double a, double b, double c) {
 }
 
 // the cost function to be minimized
-double astar::CGSmoother::CostFunction(astar::StateArrayPtr input) {
+void astar::CGSmoother::CostFunction() {
 
     // the partial values
     double obstacle = 0.0, potential = 0.0, curvature = 0.0, smooth = 0.0;
@@ -78,24 +107,31 @@ double astar::CGSmoother::CostFunction(astar::StateArrayPtr input) {
     double voro_distance;
 
     // get the third last limit
-    unsigned int limit = dim - 2;
+    unsigned int limit = dim - 1;
 
     astar::Vector2D<double> tmp(0.0, 0.0);
 
+    // reset the gx1 gradient norm
+    gtrialx_norm = 0.0;
+
     // the tmp solution direct access
-    std::vector<astar::State2D> &xs(input->states);
+    std::vector<astar::Vector2D<double>> &trialxs(trialx->vs);
+
+    // the gradient direct access
+    std::vector<astar::Vector2D<double>> &gradient(gtrialx->vs);
 
     double d;
+    unsigned int i;
 
-    // iterate from the third element till the third last
     // and get the individual derivatives
-    for (unsigned int i = 2; i < limit; ++i) {
+    // the first and last points should no be modified
+    for (i = 1; i < limit; ++i) {
 
-        // is the current pose a stop one?
         if (!locked_positions[i]) {
 
             // get the position references
-            astar::Vector2D<double> &xim1(xs[i-1].position), &xi(xs[i].position), &xip1(xs[i+1].position);
+            astar::Vector2D<double> &xim2(trialxs[i-2]), &xim1(trialxs[i-1]),
+                    &xi(trialxs[i]), &xip1(trialxs[i+1]), &xip2(trialxs[i+2]);
 
             // THE FUNCTION VALUE
             // update the obstacle and potential field terms
@@ -106,7 +142,7 @@ double astar::CGSmoother::CostFunction(astar::StateArrayPtr input) {
             // otherwise we consider the term += 0.0;
             if (dmax >= obst_distance) {
 
-                d = (obst_distance - dmax) * (obst_distance - dmax);
+                d = (dmax - obst_distance) * (dmax - obst_distance);
 
                 // update the obstacle term
                 obstacle += d;
@@ -116,7 +152,8 @@ double astar::CGSmoother::CostFunction(astar::StateArrayPtr input) {
 
                 // update the Voronoi potential field term
                 // can it become a Nan?
-                potential += (alpha / (alpha  + obst_distance)) * (voro_distance / (obst_distance  + voro_distance)) * (d * inverse_vorodmax2);
+                //potential += grid.GetPathCost(xi);
+                potential += (alpha / (alpha  + obst_distance)) * (voro_distance / (obst_distance  + voro_distance)) * ((d - vorodmax*vorodmax)* inverse_vorodmax2);
 
             }
 
@@ -126,27 +163,29 @@ double astar::CGSmoother::CostFunction(astar::StateArrayPtr input) {
 
             // get the next displacement
             dxip1.x = xip1.x - xi.x;
-            dxip1.y = xip1.y - xi.y;
+            dxip1.y = xip1.y - xim1.y;
 
             // update the curvature term
-            double dxip1_ = std::atan2(dxip1.y, dxip1.x);
-            double dxi_ = std::atan2(dxi.y, dxi.x);
-            double n = dxi.Norm();
-
             curvature += std::pow((std::fabs(std::atan2(dxip1.y, dxip1.x) - std::atan2(dxi.y, dxi.x)) / dxi.Norm() - kmax), 2);
 
             // update the smooth term
-            tmp.x = dxip1.x - dxi.x;
-            tmp.y = dxip1.y - dxi.y;
+            tmp.x = xip1.x - 2.0 * xi.x + xim1.x;
+            tmp.y = xip1.y - 2.0 * xi.y + xim1.y;
+
             smooth += tmp.Norm2();
 
         }
+
+        // reset the tmp and tmp1 vectors
+        tmp.x = 0.0;
+        tmp.y = 0.0;
 
     }
 
     // set the euclidean norm final touch
     // gx_norm = std::sqrt(gx_norm); It's no the euclidean version
-    return wo*obstacle + wp*potential + wk*curvature + ws*smooth;
+    //fx1 = ws*smooth + wo*obstacle + wp*potential + ;
+    ftrialx = wo*obstacle + wp*potential + wk*curvature + ws*smooth;
 
 }
 
@@ -312,7 +351,7 @@ astar::CGSmoother::GetCurvatureDerivative(const astar::Vector2D<double> &xim1, c
         astar::Vector2D<double> p1, p2;
 
         // some helpers
-        double inverse_norm2 = 1.0/xip1.Norm2(); // TODO ERRADO
+        double inverse_norm2 = 1.0/xip1.Norm2();
         double nx = -xip1.x;
         double ny = -xip1.y;
         double tmp = (xi.x * nx + xi.y * ny);
@@ -356,11 +395,15 @@ astar::CGSmoother::GetCurvatureDerivative(const astar::Vector2D<double> &xim1, c
         kip1.Multiply(coeff1 * 0.25 * k);
 
         // add the curvature contribution
-        res.x += kim1.x + ki.x + kip1.x;
-        res.y += kim1.y + ki.y + kip1.y;
+        res.x += wk*(kim1.x + ki.x + kip1.x);
+        res.y += wk*(kim1.y + ki.y + kip1.y);
 
     }
 
+    if (res.Norm2() > 10e6) {
+
+        std::cout << "Giant\n";
+    }
     return res;
 
 }
@@ -385,59 +428,97 @@ astar::Vector2D<double> astar::CGSmoother::GetSmoothPathDerivative(
 }
 
 // build the cost function gradient evaluated at a given input path and returns the norm of the gradient
-double astar::CGSmoother::ComputeGradient(astar::StateArrayPtr const path, std::vector<astar::Vector2D<double>> &gradient) {
+void astar::CGSmoother::ComputeGradient() {
 
     // get the third last limit
     unsigned int limit = dim - 2;
 
-    astar::Vector2D<double> tmp(0.0, 0.0);
+    // reset the gx1 gradient norm
+    gtrialx_norm = 0.0;
 
-    // reset the gradient norm
-    double norm2 = 0.0;
+    // the tmp solution direct access
+    std::vector<astar::Vector2D<double>> &trialxs(trialx->vs);
 
-    // the current solution direct access
-    std::vector<astar::State2D> &xs(path->states);
+    // the gradient direct access
+    std::vector<astar::Vector2D<double>> &gradient(gtrialx->vs);
 
-    // iterate from the third element till the third last
-    // and get the individual derivatives
-    for (unsigned int i = 2; i < limit; ++i) {
+    // reset the first gradient value
+    gradient[1].x = 0.0;
+    gradient[1].y = 0.0;
 
-        // is the current pose a stop one?
-        if (!locked_positions[i]) {
+    if (!locked_positions[1]) {
 
-            // get the position references
-            astar::Vector2D<double> &xim2(xs[i-2].position), &xim1(xs[i-1].position),
-                    &xi(xs[i].position), &xip1(xs[i+1].position), &xip2(xs[i+2].position);
+        astar::Vector2D<double> &xim1(trialxs[0]), &xi(trialxs[1]), &xip1(trialxs[2]), &xip2(trialxs[3]);
 
-            // add the obstacle and the voronoi contributions
-            tmp.Add(GetObstacleAndVoronoiDerivatives(xim1, xi, xip1));
+        // evaluate the second point
+        // the
+        EvaluateG(xim1, xi, xip1, gradient[1]);
 
-            // add the curvature term contribution
-            tmp.Add(GetCurvatureDerivative(xim1, xi, xip1));
-
-            // set up the smooth path derivatives contribution
-            tmp.x += ws * (xim2.x - 4.0 * xim1.x + 6.0 * xi.x - 4.0 * xip1.x + xip2.x);
-            tmp.y += ws * (xim2.y - 4.0 * xim1.y + 6.0 * xi.y - 4.0 * xip1.y + xip2.y);
-
-        }
-
-        // save the current derivative
-        gradient[i] = tmp;
+        // the boundary
+        // set up the smooth path derivatives contribution
+        gradient[1].x += ws * (-2.0 * xim1.x + 5.0 * xi.x - 4.0 * xip1.x + xip2.x);
+        gradient[1].y += ws * (-2.0 * xim1.y + 5.0 * xi.y - 4.0 * xip1.y + xip2.y);
 
         // update the gradient norm
-        norm2 += tmp.Norm2();
-
-        // reset the tmp vector
-        tmp.x = 0.0;
-        tmp.y = 0.0;
+        gtrialx_norm += gradient[1].Norm2();
 
     }
 
-    // set the euclidean norm final touch
-    // gx_norm = std::sqrt(gx_norm); It's no the euclidean version
+    unsigned int i;
 
-    // return the norm 2
-    return norm2;
+    // iterate from the third element till the third last
+    // and get the individual derivatives
+    // the first and last points should no be modified
+    for (i = 2; i < limit; ++i) {
+
+        // reset the current gradient value
+        gradient[i].x = 0.0;
+        gradient[i].y = 0.0;
+
+        if (!locked_positions[i]) {
+
+            // get the position references
+            astar::Vector2D<double> &xim2(trialxs[i-2]), &xim1(trialxs[i-1]),
+                    &xi(trialxs[i]), &xip1(trialxs[i+1]), &xip2(trialxs[i+2]);
+
+            // evaluate the current point/
+            EvaluateG(xim1, xi, xip1, gradient[i]);
+
+            // the custom smooth formula
+            // set up the smooth path derivatives contribution
+            gradient[i].x += ws * (xim2.x - 4.0 * xim1.x + 6.0 * xi.x - 4.0 * xip1.x + xip2.x);
+            gradient[i].y += ws * (xim2.y - 4.0 * xim1.y + 6.0 * xi.y - 4.0 * xip1.y + xip2.y);
+
+            // update the gradient norm
+            gtrialx_norm += gradient[i].Norm2();
+
+        }
+
+    }
+
+    // reset the current gradient value
+    gradient[i].x = 0.0;
+    gradient[i].y = 0.0;
+
+    if (!locked_positions[i]) {
+
+        astar::Vector2D<double> &xim2(trialxs[i-2]), &xim1(trialxs[i-1]), &xi(trialxs[i]), &xip1(trialxs[i+1]);
+
+        // evaluate the second point
+        // the
+        EvaluateG(xim1, xi, xip1, gradient[i]);
+
+        // set up the smooth path derivatives contribution
+        gradient[i].x += ws * (xim2.x - 4.0 * xim1.x + 5.0 * xi.x - 2.0 * xip1.x);
+        gradient[i].y += ws * (xim2.y - 4.0 * xim1.y + 5.0 * xi.y - 2.0 * xip1.y);
+
+        // update the gradient norm
+        gtrialx_norm += gradient[i].Norm2();
+
+    }
+
+    // euclidean norm
+    gtrialx_norm = std::sqrt(gtrialx_norm);
 
 }
 
@@ -445,45 +526,176 @@ double astar::CGSmoother::ComputeGradient(astar::StateArrayPtr const path, std::
 void astar::CGSmoother::TakeStep(double factor) {
 
     // get the limit
-    unsigned int limit = dim - 2;
+    unsigned int limit = dim - 1;
 
-    std::vector<astar::State2D> &current(x->states);
-    std::vector<astar::State2D> &next(x1->states);
+    std::vector<astar::Vector2D<double>> &current(x->vs);
+    std::vector<astar::Vector2D<double>> &next(trialx->vs);
+
+    // input path direct access
+    std::vector<astar::State2D> &input(input_path->states);
 
     // reset the dx norm
-    x1mx_norm = 0.0;
+    trialxmx_norm = 0.0;
 
     // update the current position
-    for (unsigned int i = 2; i < limit; i++) {
+    for (unsigned int i = 1; i < limit; i++) {
 
         if (!locked_positions[i]) {
 
             // see the plus signal: the factor should be negative
             // the factor value is equal to -step/ s_norm
             // the s vector is not normalized, so ...
-            next[i].position.x = current[i].position.x + factor * s[i].x;
-            next[i].position.y = current[i].position.y + factor * s[i].y;
+            next[i].x = current[i].x + factor * s[i].x;
+            next[i].y = current[i].y + factor * s[i].y;
 
-            //x1mx[i].x = next[i].position.x - current[i].position.x;
-            //x1mx[i].y = next[i].position.y - current[i].position.y;
-
-            x1mx_norm += (next[i].position.x - current[i].position.x)*(next[i].position.x - current[i].position.x);
-            x1mx_norm += (next[i].position.y - current[i].position.y)*(next[i].position.y - current[i].position.y);
-
-            // verify the safe condition
-            if (!grid.isSafePlace(vehicle.GetVehicleBodyCircles(next[i]), vehicle.safety_factor)) {
-
-                // lock the current position
-                locked_positions[i] = true;
-
-                // the old position is the valid one
-                next[i].position = current[i].position;
-
-            }
+            trialxmx_norm += std::pow(next[i].x - current[i].x, 2) + std::pow(next[i].y - current[i].y, 2);
 
         }
 
     }
+
+    // euclidean norm
+    trialxmx_norm = std::sqrt(trialxmx_norm);
+
+}
+
+// process the current points
+void astar::CGSmoother::EvaluateF(
+    const astar::Vector2D<double> &xim1,
+    const astar::Vector2D<double> &xi,
+    const astar::Vector2D<double> &xip1,
+    double &obstacle,
+    double &potential,
+    double &smooth,
+    double &curvature
+    ) {
+
+    //
+    astar::Vector2D<double> dxi, dxip1, tmp;
+
+    // get the nearest obstacle distance
+    double obst_distance = grid.GetObstacleDistance(xi);
+
+    if (dmax >= obst_distance) {
+
+        double d = (dmax - obst_distance)*(dmax - obst_distance);
+
+        // updatate the obstacle term
+        obstacle += d;
+
+        // get the nearest voronoi edge distance
+        double voro_distance = grid.GetVoronoiDistance(xi);
+
+        // update the Voronoi potential field term
+        // can it become a Nan?
+        //potential += grid.GetPathCost(xi);
+        potential += (alpha / (alpha  + obst_distance)) * (voro_distance / (obst_distance  + voro_distance)) * ((d - vorodmax*vorodmax)* inverse_vorodmax2);
+
+    }
+
+    // get the current displacement
+    dxi.x = xi.x - xim1.x;
+    dxi.y = xi.y - xim1.y;
+
+    // get the next displacement
+    dxip1.x = xip1.x - xi.x;
+    dxip1.y = xip1.y - xi.y;
+
+    // update the curvature term
+    curvature += std::pow((std::fabs(std::atan2(dxip1.y, dxip1.x) - std::atan2(dxi.y, dxi.x)) / dxi.Norm() - kmax), 2);
+
+    // update the smooth term
+    smooth += std::pow(xip1.x - 2.0 * xi.x + xim1.x, 2) + std::pow(xip1.y - 2.0 * xi.y + xim1.y, 2);
+
+}
+
+// process the current points
+void astar::CGSmoother::EvaluateG(
+    const astar::Vector2D<double> &xim1,
+    const astar::Vector2D<double> &xi,
+    const astar::Vector2D<double> &xip1,
+    astar::Vector2D<double> &gradient
+    ) {
+
+    //
+    astar::Vector2D<double> dxi, dxip1;
+
+    // get the nearest obstacle distance
+    double obst_distance = grid.GetObstacleDistance(xi);
+
+    if (dmax >= obst_distance) {
+
+        // get the nearest voronoi edge distance
+        double voro_distance = grid.GetVoronoiDistance(xi);
+
+        // add the obstacle and the voronoi contributions
+        // overloaded method
+        // is the current pose a stop one?
+        gradient.Add(GetObstacleAndVoronoiDerivatives(xim1, xi, xip1, obst_distance, voro_distance));
+
+    }
+
+    // add the curvature term contribution
+    gradient.Add(GetCurvatureDerivative(xim1, xi, xip1));
+
+}
+
+// process the current points
+void astar::CGSmoother::EvaluateFG(
+    const astar::Vector2D<double> &xim1,
+    const astar::Vector2D<double> &xi,
+    const astar::Vector2D<double> &xip1,
+    double &obstacle,
+    double &potential,
+    double &smooth,
+    double &curvature,
+    astar::Vector2D<double> &gradient
+    ) {
+
+    //
+    astar::Vector2D<double> dxi, dxip1;
+
+    // get the nearest obstacle distance
+    double obst_distance = grid.GetObstacleDistance(xi);
+
+    if (dmax >= obst_distance) {
+
+        double d = (dmax - obst_distance)*(dmax - obst_distance);
+
+        // updatate the obstacle term
+        obstacle += d;
+
+        // get the nearest voronoi edge distance
+        double voro_distance = grid.GetVoronoiDistance(xi);
+
+        // update the Voronoi potential field term
+        // can it become a Nan?
+        //potential += grid.GetPathCost(xi);
+        potential += (alpha / (alpha  + obst_distance)) * (voro_distance / (obst_distance  + voro_distance)) * ((d - vorodmax*vorodmax)* inverse_vorodmax2);
+
+        // add the obstacle and the voronoi contributions
+        // overloaded method
+        // is the current pose a stop one?
+        gradient.Add(GetObstacleAndVoronoiDerivatives(xim1, xi, xip1, obst_distance, voro_distance));
+
+    }
+
+    // get the current displacement
+    dxi.x = xi.x - xim1.x;
+    dxi.y = xi.y - xim1.y;
+
+    // get the next displacement
+    dxip1.x = xip1.x - xi.x;
+    dxip1.y = xip1.y - xi.y;
+
+    // update the curvature term
+    curvature += std::pow((std::fabs(std::atan2(dxip1.y, dxip1.x) - std::atan2(dxi.y, dxi.x)) / dxi.Norm() - kmax), 2);
+
+    // update the smooth term
+    smooth += std::pow(xip1.x - 2.0 * xi.x + xim1.x, 2) + std::pow(xip1.y - 2.0 * xi.y + xim1.y, 2);
+
+    // add the curvature term contribution
+    gradient.Add(GetCurvatureDerivative(xim1, xi, xip1));
 
 }
 
@@ -496,119 +708,107 @@ void astar::CGSmoother::EvaluateFunctionAndGradient() {
     // the partial values
     double obstacle = 0.0, potential = 0.0, curvature = 0.0, smooth = 0.0;
 
-    // some helpers
-    astar::Vector2D<double> dxi, dxip1;
-
-    // nearest obstacle distance
-    double obst_distance;
-
-    // nearest voronoi distance
-    double voro_distance;
-
     // get the third last limit
     unsigned int limit = dim - 2;
 
-    astar::Vector2D<double> tmp(0.0, 0.0), tmp1(0.0, 0.0);
-
     // reset the gx1 gradient norm
-    gx1_norm = 0.0;
+    gtrialx_norm = 0.0;
 
     // the tmp solution direct access
-    std::vector<astar::State2D> &xs(x1->states);
+    std::vector<astar::Vector2D<double>> &trialxs(trialx->vs);
 
     // the gradient direct access
-    std::vector<astar::Vector2D<double>> &gradient(gx1->vs);
+    std::vector<astar::Vector2D<double>> &gradient(gtrialx->vs);
 
-    double d;
-    unsigned int i;
+    // reset the first gradient value
+    gradient[1].x = 0.0;
+    gradient[1].y = 0.0;
 
-    // it's a boundary value problem
-    // the first and last points should no be modified
+    astar::Vector2D<double> &lxim1(trialxs[0]), &lxi(trialxs[1]), &lxip1(trialxs[2]), &lxip2(trialxs[3]);
 
-    // iterate from the third element till the third last
-    // and get the individual derivatives
-    for (i = 2; i < limit; ++i) {
+    // evaluate the second point
+    EvaluateFG(lxim1, lxi, lxip1, obstacle, potential, smooth, curvature, gradient[1]);
 
-        // is the current pose a stop one?
-        if (!locked_positions[i]) {
+    // the boundary
+    // set up the smooth path derivatives contribution
+    gradient[1].x += ws * (-2.0 * lxim1.x + 5.0 * lxi.x - 4.0 * lxip1.x + lxip2.x);
+    gradient[1].y += ws * (-2.0 * lxim1.y + 5.0 * lxi.y - 4.0 * lxip1.y + lxip2.y);
 
-            // get the position references
-            astar::Vector2D<double> &xim2(xs[i-2].position), &xim1(xs[i-1].position),
-                    &xi(xs[i].position), &xip1(xs[i+1].position), &xip2(xs[i+2].position);
+    if (locked_positions[1]) {
 
-            // THE FUNCTION VALUE
-            // update the obstacle and potential field terms
-            // get the nearest obstacle distance
-            obst_distance = grid.GetObstacleDistance(xi);
-
-            // the obstacle and potential field terms are updated only when dmax >= obst_distance
-            // otherwise we consider the term += 0.0;
-            if (dmax >= obst_distance) {
-
-                d = (dmax - obst_distance) * (dmax - obst_distance);
-
-                // update the obstacle term
-                obstacle += d;
-
-                // get the nearest voronoi edge distance
-                voro_distance = grid.GetVoronoiDistance(xi);
-
-                // update the Voronoi potential field term
-                // can it become a Nan?
-                //potential += grid.GetPathCost(xi);
-                potential += (alpha / (alpha  + obst_distance)) * (voro_distance / (obst_distance  + voro_distance)) * ((d - vorodmax*vorodmax)* inverse_vorodmax2);
-
-                // add the obstacle and the voronoi contributions
-                // overloaded method
-                tmp1.Add(GetObstacleAndVoronoiDerivatives(xim1, xi, xip1, obst_distance, voro_distance));
-
-            }
-
-            // get the current displacement
-            dxi.x = xi.x - xim1.x;
-            dxi.y = xi.y - xim1.y;
-
-            // get the next displacement
-            dxip1.x = xip1.x - xi.x;
-            dxip1.y = xip1.y - xim1.y;
-
-            // update the curvature term
-            curvature += std::pow((std::fabs(std::atan2(dxip1.y, dxip1.x) - std::atan2(dxi.y, dxi.x)) / dxi.Norm() - kmax), 2);
-
-            // update the smooth term
-            tmp.x = xip1.x - 2.0 * xi.x + xim1.x;
-            tmp.y = xip1.y - 2.0 * xi.y + xim1.y;
-
-
-            smooth += tmp.Norm2();
-
-            // add the curvature term contribution
-            //tmp1.Add(GetCurvatureDerivative(xim1, xi, xip1));
-
-            // set up the smooth path derivatives contribution
-            tmp1.x += 2.0*(xim2.x - 4.0 * xim1.x + 6.0 * xi.x - 4.0 * xip1.x + xip2.x);
-            tmp1.y += 2.0*(xim2.y - 4.0 * xim1.y + 6.0 * xi.y - 4.0 * xip1.y + xip2.y);
-
-        }
-
-        // save the current derivative
-        gradient[i] = tmp1;
-
-        // update the gradient norm
-        gx1_norm += tmp1.Norm2();
-
-        // reset the tmp and tmp1 vectors
-        tmp.x = 0.0;
-        tmp.y = 0.0;
-        tmp1 = tmp;
+        gradient[1].x = 0.0;
+        gradient[1].y = 0.0;
 
     }
 
+    // update the gradient norm
+    gtrialx_norm += gradient[1].Norm2();
+
+    unsigned int i;
+
+    // iterate from the third element till the third last
+    // and get the individual derivatives
+    // the first and last points should no be modified
+    for (i = 2; i < limit; ++i) {
+
+        // reset the current gradient value
+        gradient[i].x = 0.0;
+        gradient[i].y = 0.0;
+
+        // get the position references
+        astar::Vector2D<double> &xim2(trialxs[i-2]), &xim1(trialxs[i-1]), &xi(trialxs[i]), &xip1(trialxs[i+1]), &xip2(trialxs[i+2]);
+
+        // evaluate the current point
+        EvaluateFG(xim1, xi, xip1, obstacle, potential, smooth, curvature, gradient[i]);
+
+        // the custom smooth formula
+        // set up the smooth path derivatives contribution
+        gradient[i].x += ws * (xim2.x - 4.0 * xim1.x + 6.0 * xi.x - 4.0 * xip1.x + xip2.x);
+        gradient[i].y += ws * (xim2.y - 4.0 * xim1.y + 6.0 * xi.y - 4.0 * xip1.y + xip2.y);
+
+        if (locked_positions[i]) {
+
+            gradient[i].x = 0.0;
+            gradient[i].y = 0.0;
+
+        }
+
+        // update the gradient norm
+        gtrialx_norm += gradient[i].Norm2();
+
+
+    }
+
+    // reset the second last gradient value
+    gradient[i].x = 0.0;
+    gradient[i].y = 0.0;
+
+    // shadow
+    astar::Vector2D<double> &rxim2(trialxs[i-2]), &rxim1(trialxs[i-1]), &rxi(trialxs[i]), &rxip1(trialxs[i+1]);
+
+    // evaluate the second point
+    // the
+    EvaluateFG(rxim1, rxi, rxip1, obstacle, potential, smooth, curvature, gradient[i]);
+
+    // set up the smooth path derivatives contribution
+    gradient[i].x += ws * (rxim2.x - 4.0 * rxim1.x + 5.0 * rxi.x - 2.0 * rxip1.x);
+    gradient[i].y += ws * (rxim2.y - 4.0 * rxim1.y + 5.0 * rxi.y - 2.0 * rxip1.y);
+
+    if (locked_positions[i]) {
+
+        gradient[i].x = 0.0;
+        gradient[i].y = 0.0;
+
+    }
+
+    // update the gradient norm
+    gtrialx_norm += gradient[i].Norm2();
 
     // set the euclidean norm final touch
-    // gx_norm = std::sqrt(gx_norm); It's no the euclidean version
-    //fx1 = wo*obstacle + wp*potential + wk*curvature + ws*smooth;
-    fx1 = ws*smooth + wo*obstacle + wp*potential;
+    gtrialx_norm = std::sqrt(gtrialx_norm);
+
+    //fx1 = ws*smooth + wo*obstacle + wp*potential + ;
+    ftrialx = wo*obstacle + wp*potential + wk*curvature + ws*smooth;
 
 }
 
@@ -960,28 +1160,42 @@ int astar::CGSmoother::MTLineSearch(double lambda) {
         }
 
         // Evaluate the function and the gradient at the current stp
-        // move x1 to the new position
+        // move trialx to the new position
         TakeStep(stp * lambda);
 
-        // evaluate the function and the gradient
-        // fp = CostFunction(x1);
-        // gx1_norm = ComputeGradient(x1, gx1->vs);
+        // evaluate the function at the new point
+        // CostFunction();
+        // ComputeGradient();
         EvaluateFunctionAndGradient();
 
-        fp = fx1;
+        // get the directional derivative
+        sgp = astar::Vector2DArray<double>::DotProduct(s, gtrialx->vs) * lambda;
 
-        if (bestfx > fx1) {
+        fp = ftrialx;
+
+        if (fx1 > ftrialx) {
 
             // update the best solution so far
-            bestx->states = x1->states;
-            bestfx = fx1;
-            bestgx->vs = gx1->vs;
-            bestgx_norm = gx1_norm;
+            // flip x1 and bestx
+            astar::Vector2DArrayPtr<double> tmp = trialx;
+            trialx = x1;
+            x1 = tmp;
+
+            // flip the gradient vectors
+            tmp = gtrialx;
+            gtrialx = gx1;
+            gx1 = tmp;
+
+            // copy the function value
+            fx1 = ftrialx;
+
+            // copy the norm of gradient
+            gx1 = gtrialx;
+
+            // set the norm of the displacement vector between the old and the new path
+            x1mx_norm = trialxmx_norm;
 
         }
-
-        // get the directional derivative
-        sgp = astar::Vector2DArray<double>::DotProduct(s, gx1->vs) * lambda;
 
         // Armijo-Goldstein sufficient decrease
         double ftest = finit + stp * sgtest;
@@ -1118,26 +1332,34 @@ bool astar::CGSmoother::Setup(astar::StateArrayPtr path, bool locked) {
 
     if (astar::CGIddle == cg_status) {
 
+        // get the reference to the input path
+        input_path = path;
+
         // set the kmax value
-        kmax = 1.0/(vehicle.min_turn_radius * 1.1);
+        kmax = first_time ? 1.0/(vehicle.min_turn_radius * 1.25) : 0.02;
 
         // get the input path size and store the problem's dimension
         dim = path->states.size();
 
-        // set the first value to the solution vector
-        x->states = path->states;
-
-        // set the second point values
-        x1->states = path->states;
-
-        // set the best point values
-        bestx->states = path->states;
-
-        // update the dx norm
-        x1mx_norm = std::numeric_limits<double>::max();
-
         // tmp vector
         astar::Vector2D<double> tmp(0.0, 0.0);
+
+        // resize the solution vectors
+        x->vs.resize(dim, tmp);
+        x1->vs.resize(dim, tmp);
+        trialx->vs.resize(dim, tmp);
+
+        // copy the input positions
+        for (unsigned int i = 0; i < dim; ++i) {
+
+            x->vs[i] = path->states[i].position;
+            x1->vs[i] = path->states[i].position;
+            trialx->vs[i] = path->states[i].position;
+
+        }
+
+        // update the dx norm
+        trialxmx_norm = x1mx_norm = std::numeric_limits<double>::max();
 
         // reset the gradient at x
         gx->vs.resize(dim, tmp);
@@ -1148,25 +1370,22 @@ bool astar::CGSmoother::Setup(astar::StateArrayPtr path, bool locked) {
         // reset the gradient displacement
         gx1mgx.resize(dim, tmp);
 
-        // reset the x1mx size
-        x1mx.resize(dim, tmp);
-
-        // resize the best position gradient
-        bestgx->vs.resize(dim, tmp);
+        // resize the trial position gradient
+        gtrialx->vs.resize(dim, tmp);
 
         if (!locked) {
 
             // reset the lock vector size
-            locked_positions.resize(dim, false);
+            locked_positions.resize(dim, true);
 
             // direct access
             std::vector<astar::State2D> &states(path->states);
 
             // set the index acess limit
-            unsigned int limit = dim - 2;
+            unsigned int limit = dim - 1;
 
             // lock the stoping points
-            for (unsigned int i = 2; i < limit; ++i) {
+            for (unsigned int i = 1; i < limit; ++i) {
 
                 locked_positions[i] = states[i].gear != states[i-1].gear;
 
@@ -1175,72 +1394,46 @@ bool astar::CGSmoother::Setup(astar::StateArrayPtr path, bool locked) {
         }
 
         // evaluate the cost function at the given position
-        // fx = CostFunction(x);
+        // ftrialx = CostFunction(trialx);
 
         // evaluate the first gradient
-        // gx_norm = ComputeGradient(x, gx->vs);
+        // gtrialx_norm = ComputeGradient(trialx, gtrialx->vs);
 
+        // evaluate the function and the gradient at the same time
         EvaluateFunctionAndGradient();
 
-        bestfx = fx = fx1;
-        bestgx_norm = gx_norm = gx1_norm;
+        // minima?
+        if (0.0 == gtrialx_norm) {
 
-        // flip the gradients
-        astar::Vector2DArrayPtr<double> vs = gx;
-        gx = gx1;
-        gx1 = vs;
+            // already a solution, local minima
+            return false;
+
+        }
 
         // reset the direction vector
         s.resize(dim, tmp);
         for (unsigned int i = 0; i < dim; ++i) {
 
-            s[i].x = -gx->vs[i].x;
-            s[i].y = -gx->vs[i].y;
+            s[i].x = -gtrialx->vs[i].x;
+            s[i].y = -gtrialx->vs[i].y;
 
         }
 
-        // the s norm is equal to the gradient's norm
-        gx1_norm = s_norm = gx_norm;
-
         // multiply the current direction with the inverse gradient
         // it's the directional derivative along s
-        sg = astar::Vector2DArray<double>::DotProduct(s, gx->vs) / s_norm;
+        sg = astar::Vector2DArray<double>::DotProduct(s, gtrialx->vs) / gtrialx_norm;
 
-        /*// get the first step
-        if (1 == MTLineSearch(1.0/s_norm)) {
+        fx = fx1 = ftrialx;
+        gx_norm = gx1_norm = s_norm = gtrialx_norm;
 
-            // we got the first step
-            // SUCCESS!
-
-            // get the displacement between the two gradients
-            astar::Vector2DArray<double>::SubtractCAB(gx1mgx, gx1->vs, gx->vs);
-
-            // get the gamma value
-            // based on Powell 1983
-            double gamma = std::max(astar::Vector2DArray<double>::DotProduct(gx1mgx, gx1->vs)/astar::Vector2DArray<double>::DotProduct(gx->vs, gx->vs), 0.0);
-
-            // the new x1 point is the new position
-            // update the conjugate direction at the new position
-            // it also updates the the curent conjugate direction norm
-            UpdateConjugateDirection(s, gx1->vs, gamma);
-
-            // the new position is a better one
-            astar::StateArrayPtr tmp = x;
-            x = x1;
-            x1 = tmp;
-
-            // flip the gradient vectors
-            astar::Vector2DArrayPtr<double> gradient = gx1;
-            gx1 = gx;
-            gx = gradient;
-
-            // copy the norm
-            gx_norm = gx1_norm;
-
-        }*/
+        // flip the gradients
+        astar::Vector2DArrayPtr<double> vs = gtrialx;
+        gtrialx = gx;
+        gx = vs;
 
         // reset the tolerances
-        ftol = gtol = xtol = 1e-04;
+        ftol = xtol = 1e-04;
+        gtol = 0.001;
 
         // start the minimizer
         cg_status = astar::CGContinue;
@@ -1277,6 +1470,9 @@ void astar::CGSmoother::UpdateConjugateDirection(std::vector<astar::Vector2D<dou
 
     }
 
+    // euclidean norm
+    s_norm = std::sqrt(s_norm);
+
     sg /= s_norm;
 }
 
@@ -1295,120 +1491,106 @@ void astar::CGSmoother::ConjugateGradientPR(astar::StateArrayPtr path, bool lock
 
     }
 
-    unsigned int iter = 0;
+    // the main conjugate gradient process
+    do {
 
-    // the direction is up or down?
-    double direction;
-    double inverse_snorm;
-    double betha = 0;
+        // the direction is up or down?
+        double direction;
+        double inverse_snorm;
+        double betha = 0;
 
-    // the main CG Loop
-    while (astar::CGContinue == cg_status && iter < max_iterations) {
+        unsigned int iter = 0;
 
-        // update the iterator counter
-        iter += 1;
+        // the main CG Loop
+        while (astar::CGContinue == cg_status && iter < max_iterations) {
 
-        int info = MTLineSearch(1.0/s_norm);
+            if (xtol > x1mx_norm) {
 
-        if (xtol > x1mx_norm) {
+                // test the stuck case
 
-            // test the stuck case
+                // set the stuck case!
+                cg_status = astar::CGStuck;
 
-            // set the stuck case!
-            cg_status = astar::CGStuck;
+                // set
+                break;
 
-            // set
-            break;
+            } else if (gtol > gx_norm) {
 
-        } else if (gtol > gx1_norm) {
+                // success!
+                cg_status = astar::CGSuccess;
 
-            // success!
-            cg_status = astar::CGSuccess;
+                // exit
+                break;
 
-            // exit
-            break;
+            } else if (ftol > fx) {
 
-        } else if (ftol > fx1) {
+                // success
+                cg_status = astar::CGSuccess;
 
-            // success
-            cg_status = astar::CGSuccess;
-
-            // exit
-            break;
-
-        } else {
-
-            if (1 != info) {
-
-                // bestx is the best solution so far
-
-                // flip the function value
-                double v = bestfx;
-                bestfx = fx1;
-                fx1 = v;
-
-                // flip the solution vectors
-                astar::StateArrayPtr tmp = bestx;
-                bestx = x1;
-                x1 = tmp;
-
-                // flip the gradients
-                astar::Vector2DArrayPtr<double> gradient = bestgx;
-                bestgx = gx1;
-                gx1 = gradient;
-
-                // flip the norms
-                v = bestgx_norm;
-                bestgx_norm = gx1_norm;
-                gx1_norm = v;
-
-            }
-
-            // SUCCESS!
-            // verify the restart case
-            if (0 != iter % dim) {
-
-                // get the displacement between the two gradients
-                astar::Vector2DArray<double>::SubtractCAB(gx1mgx, gx1->vs, gx->vs);
-
-                // get the betha value
-                // based on Powell 1983
-                betha = std::max(astar::Vector2DArray<double>::DotProduct(gx1mgx, gx1->vs)/astar::Vector2DArray<double>::DotProduct(gx->vs, gx->vs), 0.0);
+                // exit
+                break;
 
             } else {
 
-                // set gamma to zero, it restarts the conjugate gradient
-                betha = 0.0;
+                // update the iterator counter
+                iter += 1;
+
+                if (0.0 == s_norm) {
+
+                    std::cout << "wrong s_norm:\n";
+
+                }
+
+                // get the next step
+                int info = MTLineSearch(1.0/s_norm);
+
+                // SUCCESS!
+                // verify the restart case
+                if (0 != iter % dim) {
+
+                    // get the displacement between the two gradients
+                    astar::Vector2DArray<double>::SubtractCAB(gx1mgx, gx1->vs, gx->vs);
+
+                    // get the betha value
+                    // based on Powell 1983
+                    betha = std::max(astar::Vector2DArray<double>::DotProduct(gx1->vs, gx1mgx)/astar::Vector2DArray<double>::DotProduct(gx->vs, gx->vs), 0.0);
+
+                } else {
+
+                    // set gamma to zero, it restarts the conjugate gradient
+                    betha = 0.0;
+
+                }
+
+                // the new x1 point is the new position
+                // update the conjugate direction at the new position
+                // it also updates the the curent conjugate direction norm
+                UpdateConjugateDirection(s, gx1->vs, betha);
+
+                // the new position is a better one
+                astar::Vector2DArrayPtr<double> tmp = x;
+                x = x1;
+                x1 = tmp;
+
+                // flip the gradient vectors
+                astar::Vector2DArrayPtr<double> gradient = gx1;
+                gx1 = gx;
+                gx = gradient;
+
+                // copy the norm
+                gx_norm = gx1_norm;
 
             }
 
-            // the new x1 point is the new position
-            // update the conjugate direction at the new position
-            // it also updates the the curent conjugate direction norm
-            UpdateConjugateDirection(s, gx1->vs, betha);
-
-            // the new position is a better one
-            astar::StateArrayPtr tmp = x;
-            x = x1;
-            x1 = tmp;
-
-            // flip the gradient vectors
-            astar::Vector2DArrayPtr<double> gradient = gx1;
-            gx1 = gx;
-            gx = gradient;
-
-            // copy the norm
-            gx_norm = gx1_norm;
-
         }
 
-    }
+    } while (UnsafePath(x));
+
+    // copy the resulting path back
+    InputPathUpdate(x, path);
 
     // set the cg status to iddle
     cg_status = astar::CGIddle;
-
-    // copy the resulting path back
-    path->states = x1->states;
 
 }
 
@@ -1430,7 +1612,7 @@ astar::StateArrayPtr astar::CGSmoother::Interpolate(astar::StateArrayPtr path) {
 
     // the grid resolution
     double resolution = grid.GetResolution();
-    double resolution_factor =  resolution * 2.0;
+    double resolution_factor =  resolution * 2.1;
 
     // invert the resolution, avoiding a lot o divisions
     double inverse_resolution = 1.0/resolution;
@@ -1453,8 +1635,7 @@ astar::StateArrayPtr astar::CGSmoother::Interpolate(astar::StateArrayPtr path) {
 
         // push back the current one
         // copy the current state
-        tmp.position = current->position;
-        tmp.gear = current->gear;
+        tmp = *current;
 
         // set the coming to stop flag to false
         tmp.coming_to_stop = false;
@@ -1522,6 +1703,23 @@ astar::StateArrayPtr astar::CGSmoother::Interpolate(astar::StateArrayPtr path) {
 
 }
 
+// copy the current solution to the input path
+void astar::CGSmoother::InputPathUpdate(astar::Vector2DArrayPtr<double> solution, astar::StateArrayPtr output) {
+
+    // direct access
+    std::vector<astar::State2D> &states(output->states);
+    std::vector<astar::Vector2D<double>> &xs(solution->vs);
+
+    for (unsigned int i = 0; i < dim; ++i) {
+
+        // set the new position
+        states[i].position.x = xs[i].x;
+        states[i].position.y = xs[i].y;
+
+    }
+
+}
+
 // show the current path in the map
 void astar::CGSmoother::ShowPath(astar::StateArrayPtr path, bool plot_locked) {
 
@@ -1584,19 +1782,25 @@ astar::StateArrayPtr astar::CGSmoother::Smooth(astar::InternalGridMapRef grid_, 
     ShowPath(raw_path);
 
     // now, interpolate the entire path
-    // astar::StateArrayPtr interpolated_path = new astar::StateArray();
-    // interpolated_path->states = raw_path->states;
+    //astar::StateArrayPtr interpolated_path = new astar::StateArray();
+    //interpolated_path->states = raw_path->states;
     astar::StateArrayPtr interpolated_path = Interpolate(raw_path);
 
     // get the map
-    // ShowPath(interpolated_path);
+    //ShowPath(interpolated_path);
+
+    first_time = false;
+
+    // set the weights
 
     // minimize again the interpolated path
     // conjugate gradient based on the Polak-Ribiere formula
-    // ConjugateGradientPR(interpolated_path, true);
+    ConjugateGradientPR(interpolated_path);
+
+    first_time = true;
 
     // get the map
-    ShowPath(interpolated_path, false);
+    //ShowPath(interpolated_path, false);
 
     // return the new interpolated path
     return interpolated_path;

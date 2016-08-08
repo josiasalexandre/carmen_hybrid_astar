@@ -1,17 +1,27 @@
 #include "StanleyController.hpp"
+
+#include <limits>
 #include <array>
+
+#include <opencv2/opencv.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 
 using namespace astar;
 
 // basic constructor
-StanleyController::StanleyController(const VehicleModel &vehicle) :
-        vehicle_model(vehicle), cs(CSStandby), next_waypoint(0), prev_waypoint(0),
-        dt(0.1), reverse_mode(false), front_axle(), fake_front_axle(), closest_point(),
-        left(), right(), raw_path(), forward_path(), reverse_path(), consolidated_path(false),
-        raw_path_size(0), raw_path_last_index(0), stopping(), prev_wheel_angle_error(0), vpasterror(0.0), last_cusp(0) {}
+StanleyController::StanleyController(const InternalGridMapRef grid_map, const VehicleModel &vehicle) :
+    grid(grid_map),
+    vehicle_model(vehicle), cs(CSStandby), next_waypoint(0), prev_waypoint(0),
+    dt(0.1), reverse_mode(false), front_axle(), fake_front_axle(), closest_point(),
+    left(), right(), raw_path(), forward_path(), reverse_path(), consolidated_path(false),
+    raw_path_size(0), raw_path_last_index(0), stopping(), prev_wheel_angle_error(0),
+    vpasterror(0.0), last_cusp(0)
+{
+}
 
 // update the path around stopping points
-void StanleyController::UpdateLowSpeedRegions(const VehicleModel &vehicle) {
+void StanleyController::UpdateLowSpeedRegions() {
 
     // get the stopping points vector size
     unsigned int s_size = stopping.size();
@@ -19,8 +29,8 @@ void StanleyController::UpdateLowSpeedRegions(const VehicleModel &vehicle) {
     double acceleration_constraint;
     int prev, next, current_stop;
 
-    /// some ref helper
-    astar::State2D &prev_state, &next_state;
+    // some ref helper
+    astar::State2D &prev_state(car), &next_state(car);
 
     for (unsigned int i = 0; i < s_size; i++) {
 
@@ -122,7 +132,7 @@ void StanleyController::UpdateLowSpeedRegions(const VehicleModel &vehicle) {
 bool StanleyController::ConsolidateStateList(StateArrayPtr input_path) {
 
     // syntactic sugar
-    std::list<State2D> &input(input_path->states);
+    std::vector<State2D> &input(input_path->states);
 
     // clear the internal paths
     raw_path.clear();
@@ -133,13 +143,16 @@ bool StanleyController::ConsolidateStateList(StateArrayPtr input_path) {
     stopping.clear();
 
     // get the limit iterators
-    std::list<State2D>::iterator end = input.end();
-    std::list<State2D>::iterator last = --input.end();
+    std::vector<State2D>::iterator end = input.end();
+    std::vector<State2D>::iterator last = --input.end();
 
     // get the list iterators
-    std::list<State2D>::iterator prev = input.begin();
-    std::list<State2D>::iterator current = std::advance(prev, 1);
-    std::list<State2D>::iterator next = std::advance(current, 1);
+    std::vector<State2D>::iterator prev = input.begin();
+    std::vector<State2D>::iterator current = prev;
+    std::advance(current, 1);
+
+    std::vector<State2D>::iterator next = current;
+    std::advance(next, 1);
 
     // save the first state to the internal state lists
     raw_path.push_back(*prev);
@@ -254,7 +267,12 @@ bool StanleyController::ConsolidateStateList(StateArrayPtr input_path) {
 
     // get the required speed around curves and stopping points
     // TODO -> we need to get slower speed next to obstacles
-    UpdateLowSpeedRegions(vehicle);
+    UpdateLowSpeedRegions();
+
+    // set the prev and next waypoints
+    prev_waypoint = 0;
+    next_waypoint = 1;
+    last_cusp = 0;
 
     return true;
 
@@ -274,11 +292,12 @@ double StanleyController::HowFarAlong(const Pose2D &current, const Pose2D &prev,
 void StanleyController::Localize(const astar::State2D &s, unsigned int &prev_index, unsigned int &next_index) {
 
     // Find closest path point to back axle
-    double inf = std::numeric_limits<double>::infinity();
+    double inf = std::numeric_limits<double>::max();
     double bestd = inf;
 
     int start = std::max<int>(last_cusp, std::max<int>(0, next_waypoint - 2));
     int end = std::min<int>(raw_path_last_index, next_waypoint + 2);
+
     int besti = start;
 
     for (int i = start + 1; i < end; i++) {
@@ -292,8 +311,6 @@ void StanleyController::Localize(const astar::State2D &s, unsigned int &prev_ind
             bestd = d;
             besti = i;
 
-        } else if (d != inf && d > bestd) {
-            break;
         }
 
     }
@@ -325,6 +342,7 @@ void StanleyController::Localize(const astar::State2D &s, unsigned int &prev_ind
 
         } else {
 
+            // TODO
             prev_index = next_index;
             next_index = besti + 1;
 
@@ -332,7 +350,7 @@ void StanleyController::Localize(const astar::State2D &s, unsigned int &prev_ind
 
     }
 
-    if (raw_path[prev_index - 1].coming_to_stop && prev_index != prev_waypoint) {
+    if (0 < prev_index && (raw_path[prev_index - 1].coming_to_stop && prev_index != prev_waypoint)){
 
         prev_index--;
         next_index--;
@@ -379,9 +397,6 @@ State2D StanleyController::Stopped(const State2D &s) {
     // syntactic sugar
     std::vector<State2D> &states = (ForwardGear == forward_path[prev_waypoint].gear) ? forward_path : reverse_path;
 
-    State2D &next(states[next_waypoint]);
-    State2D &prev(states[prev_waypoint]);
-
     if (raw_path_last_index == next_waypoint && raw_path_last_index == prev_waypoint) {
 
         desired_heading = s.orientation;
@@ -391,7 +406,8 @@ State2D StanleyController::Stopped(const State2D &s) {
 
     } else {
 
-        unsigned int last_waypoint = states.size() - 1;
+        State2D &next(states[next_waypoint]);
+        State2D &prev(states[prev_waypoint]);
 
         Vector2D<double> heading = next.position - prev.position;
 
@@ -401,9 +417,17 @@ State2D StanleyController::Stopped(const State2D &s) {
 
     }
 
-    phi_error = -mrpt::math::wrapToPi<double>(s.orientation - desired_heading) - s.phi;
+    // BUG?????
+    double dtheta = mrpt::math::wrapToPi<double>(s.orientation - desired_heading);
+    phi_error = -dtheta - s.phi;
 
-    if (0.001 > std::fabs(phi_error) || 0.1 > std::fabs(std::fabs(s.phi) - vehicle_model.max_wheel_deflection)) {
+    if (std::fabs(phi_error) > vehicle_model.max_wheel_deflection) {
+
+        state.phi = (0 < phi_error) ? vehicle_model.max_wheel_deflection : -vehicle_model.max_wheel_deflection;
+
+    }
+
+    if (0.001 > std::fabs(phi_error) || 0.1 > std::fabs(state.phi - vehicle_model.max_wheel_deflection)) {
 
         // start to move
         cs = next_controller_state;
@@ -413,10 +437,12 @@ State2D StanleyController::Stopped(const State2D &s) {
 
     }
 
+    phi_error *= 8.0;
+
     // update the command values
     state.v = 0.0;
-    state.phi = phi_error * 8.0;
-    state.t = dt;
+    state.phi = std::min(phi_error * 8.0, (0 <= phi_error) ? state.phi : -state.phi);
+    state.t = (s.phi - state.phi)/vehicle_model.max_phi_velocity;
 
     return state;
 
@@ -437,10 +463,13 @@ State2D StanleyController::ForwardDrive(const State2D &s) {
     // copy the input state
     State2D state(s);
 
-    // set the reverse mode flag
-    reverse_mode = (BackwardGear == forward_path[prev_index].gear);
-
     std::vector<State2D> &the_path = reverse_mode ? reverse_path : forward_path;
+
+    // set the reverse mode flag
+    reverse_mode = (BackwardGear == the_path[prev_index].gear);
+
+    // set the coming to stop flag
+    bool coming_to_stop = 0.0 == the_path[next_index].v;
 
     // get the previous and next states
     State2D &prev(the_path[prev_index]);
@@ -460,7 +489,7 @@ State2D StanleyController::ForwardDrive(const State2D &s) {
 
     double next_heading;
 
-    if (s.coming_to_stop) {
+    if (coming_to_stop) {
 
         next_heading = next.orientation + (reverse_mode ? M_PI : 0);
 
@@ -478,7 +507,8 @@ State2D StanleyController::ForwardDrive(const State2D &s) {
     Vector2D<double> norm = next_point - prev_point;
     norm.Normalize();
 
-    left = right = norm;
+    left = norm;
+    right = norm;
 
     left.RotateZ(M_PI_2);
     left.Scale(2.0);
@@ -500,6 +530,12 @@ State2D StanleyController::ForwardDrive(const State2D &s) {
     double dist = front_axle.position.Distance(closest_point.position);
     double d_theta = mrpt::math::wrapToPi<double>(s.orientation - desired_heading + (reverse_mode ? M_PI : 0));
 
+    if (0.8 < std::fabs(d_theta)) {
+
+        std::cout << "Wrong!\n";
+
+    }
+
     if (reverse_mode) {
 
         d_theta = -d_theta;
@@ -507,8 +543,9 @@ State2D StanleyController::ForwardDrive(const State2D &s) {
     }
 
     double phi;
-    double inverse_speed = (16 < s.v) ? 1.0/s.v: 1.0;
-    if (s.coming_to_stop) {
+    double inverse_speed = (4.5 < s.v) ? 1.0/s.v: 1.0;
+
+    if (0.0 == the_path[next_index].v) {
 
         phi = std::atan(4 * k * direction * dist * inverse_speed);
 
@@ -520,13 +557,14 @@ State2D StanleyController::ForwardDrive(const State2D &s) {
 
     double phi_error = phi - s.phi;
     double d_phi_error = (phi_error - prev_wheel_angle_error) / dt;
-    double steer = phi_error * 8 + d_phi_error * 0.5;
-
     prev_wheel_angle_error = phi_error;
+    // double steer = phi_error * 8 + d_phi_error * 0.5;
+    double steer = phi;
+
 
     // velocity
     double vp = 0.5;
-    double vi = 0.00001;
+    double vi = 0.00005;
     double dv = 0;
 
     // s.v + lerp(v0, v1, how_far)
@@ -540,7 +578,7 @@ State2D StanleyController::ForwardDrive(const State2D &s) {
     if (reverse_mode)
         dv = -dv;
 
-    if (s.coming_to_stop && 1.0 == how_far) {
+    if (coming_to_stop && 0.99 <= how_far) {
 
         last_cusp = next_index;
 
@@ -586,46 +624,7 @@ State2D StanleyController::ReverseDrive(const State2D &s) {
 // path following simulation
 StateArrayPtr StanleyController::FollowPathSimulation(astar::StateArrayPtr path) {
 
-    if (0 < path->states.size()) {
-
-        // syntactic sugar
-        std::vector<State2D> &input(path->states);
-
-        // the previous and the next poses indexes
-        unsigned int prev = 0, next = 1;
-
-        // the current position
-        State2D current = path->states.front();
-
-        // the goal
-        State2D goal = path->states.back();
-
-        // the closest state in the current path
-        State2D closest;
-
-        // the resulting command array
-        StateArrayPtr commands = new StateArray();
-
-        // the direct access
-        std::vector<State2D> &cmds(commands->states);
-
-        // push the current pose to the commands vector
-        cmds.push_back(current);
-
-        // get the next car state
-        current = vehicle_model.NextState(current);
-
-        // get the closest point in the current front path
-
-
-        while (current != goal) {
-
-            // set the time step
-            current.t = dt;
-
-        }
-    }
-    return new StateArray();
+    return path;
 
 }
 
@@ -687,13 +686,13 @@ StateArrayPtr StanleyController::FollowPath(const State2D &start) {
         }
 
         // update the car pose
-        car = NextState(car);
+        car = vehicle_model.NextState(car);
 
     }
 
     // reset the current state
 
-    return new command_array();
+    return command_array;
 
 }
 
@@ -704,13 +703,148 @@ StateArrayPtr StanleyController::BuildAndFollowPath(astar::StateArrayPtr input_p
 
         consolidated_path = ConsolidateStateList(input_path);
 
-        return FollowPathSimulation(input_path->states.front());
+        return FollowPathSimulation(input_path);
 
     }
 
     consolidated_path = false;
 
     return new StateArray();
+
+}
+
+//
+StateArrayPtr StanleyController::RebuildCommandList(const astar::State2D &start, astar::StateArrayPtr path) {
+
+    //
+    consolidated_path = ConsolidateStateList(path);
+
+    car = start;
+
+    astar::StateArrayPtr commands = new StateArray();
+
+    std::vector<astar::State2D> &command_path(commands->states);
+
+    // get the map
+    unsigned int h = grid.GetHeight();
+    unsigned int w = grid.GetWidth();
+
+    unsigned char *map = grid.GetGridMap();
+
+    // create a image
+    cv::Mat image(w, h, CV_8UC1, map);
+
+    // draw a new window
+    cv::namedWindow("Stanley", cv::WINDOW_AUTOSIZE);
+
+    // draw each point
+    for (unsigned int i = 0; i < path->states.size(); ++i) {
+
+        // get the currnt point
+        astar::GridCellIndex index(grid.PoseToIndex(path->states[i].position));
+
+        // convert to opencv point
+        cv::Point p1(index.col - 1, h - index.row - 1);
+        cv::Point p2(index.col + 1, h - index.row + 1);
+
+        cv::rectangle(image, p1, p2, cv::Scalar(0, 0, 0), 1);
+
+        // show the image
+        cv::imshow("Stanley", image);
+
+        // draw in the windows
+        cv::waitKey(30);
+
+    }
+
+    astar::StateArrayPtr r = new StateArray();
+
+    r->states = path->states;;
+
+    double d;
+
+    int i = 0;
+    while (CSComplete != cs) {
+
+        switch(cs) {
+
+            case CSForwardDrive:
+
+                car = ForwardDrive(car);
+
+                // add the current state to the command list path
+                command_path.push_back(car);
+
+                // Ackerman model
+                car = vehicle_model.NextState(car);
+
+                // plot the distance to the goal
+                d = car.position.Distance(path->states[path->states.size() - 1].position);
+
+                i++;
+
+                if (i > path->states.size() * 2) {
+
+                    cs = CSComplete;
+
+                }
+
+                break;
+
+            case CSReverseDrive:
+
+                car = ForwardDrive(car);
+
+                // add the current state to the command list path
+                command_path.push_back(car);
+
+                // Ackerman model
+                car = vehicle_model.NextState(car);
+
+                break;
+
+            case CSStopped:
+
+                car = Stopped(car);
+
+                // Ackerman model
+                car = vehicle_model.NextState(car);
+
+                i++;
+
+                if (i > path->states.size() * 2) {
+
+                    cs = CSComplete;
+
+                }
+
+                break;
+
+            case CSStandby:
+
+                cs = CSStopped;
+
+                break;
+
+        }
+
+        // translate to opencv point format
+        GridCellIndex index(grid.PoseToIndex(car.position));
+
+        cv::Point p(index.col, h - index.row);
+
+        // draw a circle at the car position
+        cv::circle(image, p, 10, cv::Scalar(0, 0, 0), 1);
+
+        cv::imshow("Stanley", image);
+
+        cv::waitKey(30);
+
+    }
+
+    cv::destroyWindow("Stanley");
+
+    return r;
 
 }
 

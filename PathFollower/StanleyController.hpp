@@ -23,7 +23,8 @@
 #define STANLEY_METHOD_CONTROLLER_HPP
 
 #include "../Entities/State2D.hpp"
-#include "../PathFinding/VehicleModel/VehicleModel.hpp"
+#include "../VehicleModel/VehicleModel.hpp"
+#include "../GridMap/InternalGridMap.hpp"
 
 namespace astar {
 
@@ -33,14 +34,16 @@ class StanleyController {
 
     private:
 
+        const astar::InternalGridMapRef grid;
+
         // the vehicle model
-        astar::VehicleModel &vehicle_model;
+        const astar::VehicleModel &vehicle_model;
 
         // the robot state
         State2D car;
 
         // the controller state
-        ControllerState cs = CSStandby;
+        astar::ControllerState cs = CSStandby;
 
         // the way point index
         unsigned int next_waypoint;
@@ -62,13 +65,13 @@ class StanleyController {
         Vector2D<double> left, right;
 
         // the input path
-        std::vector<State2D> raw_path;
+        std::vector<astar::State2D> raw_path;
 
         // the current forward path
-        std::vector<State2D> forward_path;
+        std::vector<astar::State2D> forward_path;
 
         // the current reverse path
-        std::vector<State2D> reverse_path;
+        std::vector<astar::State2D> reverse_path;
 
         // the consolidated path flag
         bool consolidated_path;
@@ -92,7 +95,7 @@ class StanleyController {
         unsigned int last_cusp;
 
          // set the appropriated low speeds around the stopping points
-        void UpdateLowSpeedRegions(const astar::VehicleModel&);
+        void UpdateLowSpeedRegions();
 
         // get the desired command given two states
         // the first and the last states remains the same
@@ -116,10 +119,12 @@ class StanleyController {
         // travel along the path - forward
         astar::State2D ReverseDrive(const astar::State2D&);
 
+        void ShowPath(astar::StateArrayPtr);
+
     public:
 
         // basic constructor
-        StanleyController(const astar::VehicleModel&);
+        StanleyController(const astar::InternalGridMapRef grid_map, const astar::VehicleModel&);
 
         // get a Command list to follow a given path
         StateArrayPtr BuildAndFollowPath(astar::StateArrayPtr);
@@ -132,6 +137,9 @@ class StanleyController {
 
         // path following simulation
         StateArrayPtr FollowPathSimulation(astar::StateArrayPtr);
+
+        //
+        StateArrayPtr RebuildCommandList(const astar::State2D&, astar::StateArrayPtr);
 
 };
 

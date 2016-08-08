@@ -10,7 +10,8 @@ using namespace astar;
 
 // basic constructor
 HybridAstarPathFinder::HybridAstarPathFinder(int argc, char **argv) :
-    vehicle_model(), grid(), initialized_grid_map(false), gm_mutex(), path_finder(vehicle_model, grid), path_smoother(grid, vehicle_model), path(), odometry_speed(0.0),
+    vehicle_model(), grid(), initialized_grid_map(false), gm_mutex(), path_finder(vehicle_model, grid),
+    stanley_method(grid, vehicle_model), path_smoother(grid, vehicle_model), path(), odometry_speed(0.0),
     odometry_steering_angle(0.0), robot(), goal(), valid_goal(false), goal_list(),
     use_obstacle_avoider(true), activated(false), simulation_mode(false)
 {
@@ -22,6 +23,9 @@ HybridAstarPathFinder::HybridAstarPathFinder(int argc, char **argv) :
 
     // set the half width
     vehicle_model.width_2 = vehicle_model.width * 0.5;
+
+    // unlock the mutex
+    gm_mutex.unlock();
 }
 
 // PRIVATE METHODS
@@ -90,6 +94,16 @@ HybridAstarPathFinder::replan() {
             // smoooth the current path
             StateArrayPtr smooth_path = path_smoother.Smooth(grid, vehicle_model, raw_path);
 
+            // the final command list
+            StateArrayPtr commands = stanley_method.RebuildCommandList(robot, smooth_path);
+
+            //path.states = smooth_path->states;
+            path.states = smooth_path->states;
+
+            // copy the command path
+            command_path.states = commands->states;
+
+            /*
             // copy the new states to our internal version
             path.states.clear();
 
@@ -105,10 +119,14 @@ HybridAstarPathFinder::replan() {
 
             }
 
+            */
+
             // path.states = smooth_path->states;
 
             // delete the smooth path
             delete smooth_path;
+
+            delete commands;
 
             // set the returning flag
             ret = true;

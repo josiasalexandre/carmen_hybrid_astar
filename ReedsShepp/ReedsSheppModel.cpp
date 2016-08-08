@@ -24,6 +24,7 @@
 
 #include "ReedsSheppModel.hpp"
 
+#include <iostream>
 #include <limits>
 #include <cmath>
 
@@ -97,7 +98,141 @@ ReedsSheppActionSetPtr ReedsSheppModel::Solve(const Pose2D &start, const Pose2D 
 }
 
 // return a list of poses from a given action set
-StateArrayPtr ReedsSheppModel::Discretize(
+StateArrayPtr ReedsSheppModel::DiscretizeRS(
+        const Pose2D &start, ReedsSheppActionPtr action, double radcurv, double inverse_max_length)
+{
+
+    // create the pose array
+    StateArrayPtr path = new StateArray();
+
+    // get the previous pose
+    State2D prev(start);
+
+    // a reference helper
+    std::vector<State2D> &states(path->states);
+
+    // append the first pose
+    states.push_back(State2D(prev, action->gear));
+
+    // subdivide the entire arc length by the grid resolution
+    unsigned int n = ceil(action->length * radcurv * inverse_max_length);
+
+    // is it a line path?
+    if (RSStraight != action->steer) {
+
+        // it's a curve
+        // get the piece angle
+        double pieceAngle = action->length/((double) n);
+
+        // get the current phi
+        double phi = pieceAngle / 2;
+
+        // avoiding sin repetitions
+        double sinPhi = std::sin(phi);
+
+        double L = 2 * radcurv * sinPhi;
+
+        // get the x displacement
+        double dx = L * std::cos(phi);
+
+        // get the y displacement
+        double dy = L * sinPhi;
+
+        // assuming TurnLeft, is it a TurnRight?
+        if (RSTurnRight == action->steer) {
+
+            // invert the y displacement
+            dy = -dy;
+
+            // invert the pieceAngle
+            pieceAngle = -pieceAngle;
+
+        }
+
+        // we have assumed ForwardGear, is it a backward instead?
+        if (BackwardGear == action->gear) {
+
+            // invert the x displacement
+            dx = -dx;
+
+            // invert the pieceAngle
+            // if the pieceAngle was inverted because the RSTurnRight
+            // let's invert it again
+            pieceAngle = -pieceAngle;
+
+        }
+
+        // the resulting position, after the movement
+        astar::Vector2D<double> pos;
+
+        // iterate over the entire arc length
+        for (unsigned int i = 0; i < n; ++i) {
+
+            // update the position
+            pos.x = dx;
+            pos.y = dy;
+
+            // rotate the position to the correct position
+            pos.RotateZ(prev.orientation);
+
+            // update the prev State2D position
+            prev.position.Add(pos);
+
+            // update the orientation
+            prev.orientation = mrpt::math::wrapToPi<double>(prev.orientation + pieceAngle);
+
+            // update the gear
+            //prev.gear = action->gear;
+
+            // append to the pose list
+            states.push_back(prev);
+
+        }
+
+    } else {
+
+        // it's a straight line, so piece of cake
+        // get the piece arch length
+        double pieceLength = action->length * radcurv / n;
+
+        // the x displacement
+        double dx = pieceLength * std::cos(prev.orientation);
+
+        // the y displacement
+        double dy = pieceLength * std::sin(prev.orientation);
+
+        // verify the direction
+        if (BackwardGear == action->gear) {
+
+            // invert the displacements
+            dx = -dx;
+            dy = -dy;
+
+        }
+
+        // iterate over the entire arc and append the new pose
+        for (unsigned int i = 0; i < n; ++i) {
+
+            // update the new positio
+            // prev.position.Add(dx, dy);
+
+            // get the gear action
+            prev.gear = action->gear;
+
+            // append to the poses list
+            states.push_back(prev);
+
+        }
+
+    }
+
+    // return the pose list
+    return path;
+
+}
+
+// return a list of poses from a given action set
+StateArrayPtr ReedsSheppModel::DiscretizeRS(
         const Pose2D &start, ReedsSheppActionSetPtr action_set, double radcurv, double inverse_max_length)
 {
 

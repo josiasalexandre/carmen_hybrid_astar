@@ -120,13 +120,15 @@ bool InternalGridMap::isSafePlace(const std::vector<astar::Circle> &body, double
 
         GridCellIndex index(PoseToIndex(circle.position));
 
-        if (0 < index.row && height > index.row && 0 < index.col && width > index.col) {
+        if (height > index.row && width > index.col) {
 
             // get the closest obstacle from the voronoi distance map
-            obstacle_distance = voronoi.GetObstacleDistance(index.row, index.col);
+            obstacle_distance = voronoi.GetObstacleDistance(index.row, index.col) * resolution;
 
             if (obstacle_distance < circle.r * safety_factor) {
+
                 return false;
+
             }
 
         } else {
@@ -228,6 +230,9 @@ double InternalGridMap::GetObstacleDistance(const Vector2D<double> &position) {
     GridCellIndex index(PoseToIndex(position));
 
     if (height > index.row && width > index.col) {
+
+        // get the obstacle distance
+        return voronoi.GetObstacleDistance(index.row, index.col) * resolution;
 
         // get the nearest obstacle index
         GridCellIndex obstacle(voronoi.GetObstacleIndex(index.row, index.col));

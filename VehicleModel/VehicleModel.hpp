@@ -100,6 +100,15 @@ class VehicleModel {
         // the max lateral acceleration
         double max_lateral_acceleration;
 
+        // get the maximum steering command acceleration
+        double max_phi_acceleration;
+
+        // the maximum steering command speed
+        double max_phi_velocity;
+
+        // the time to change the gears
+        double change_gear_time;
+
         // PUBLIC METHODS
 
         // Configure the current vehicle model
@@ -115,7 +124,7 @@ class VehicleModel {
         astar::Pose2D NextPose(const astar::Pose2D&, double vel, double phi, double time) const;
 
         // get the next state
-        astar::State2D NextState(const astar::State2D&);
+        astar::State2D NextState(const astar::State2D&) const;
 
         // get the front axle state with respect to the rear axle pose
         astar::State2D GetFrontAxleState(const astar::State2D&) const;
@@ -127,6 +136,10 @@ class VehicleModel {
         astar::Pose2D GetCenterPosition(const astar::Pose2D&) const;
 
         // get the list of circles that represents the safe area
+        std::vector<astar::Circle> GetVehicleBodyCircles(const astar::Vector2D<double>&, double);
+
+        // get the list of circles that represents the safe area
+        // overloaded version
         std::vector<astar::Circle> GetVehicleBodyCircles(const astar::Pose2D&);
 
         // get the desired wheel angle that connects two states

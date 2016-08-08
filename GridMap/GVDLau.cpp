@@ -738,6 +738,9 @@ bool GVDLau::Update() {
         next_data = data;
         data = tmp;
 
+        // save the current map to the external file
+        Visualize("voronoi_map.pgm");
+
         // the current map has changed
         return true;
 

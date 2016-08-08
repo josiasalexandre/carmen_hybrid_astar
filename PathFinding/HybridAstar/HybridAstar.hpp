@@ -79,7 +79,7 @@ class HybridAstar {
 
         // the current grid map
         unsigned char *map;
-        unsigned w, h;
+        unsigned width, height;
 
         // PRIVATE METHODS
 
@@ -87,7 +87,7 @@ class HybridAstar {
         void RemoveAllNodes();
 
         // reconstruct the path from the goal to the start pose
-        astar::StateArrayPtr RebuildPath(HybridAstarNodePtr, const State2D&);
+        astar::StateArrayPtr RebuildPath(HybridAstarNodePtr, const State2D&, const State2D&);
 
         // get the Reeds-Shepp path to the goal and return the appropriated HybridAstarNode
         HybridAstarNodePtr GetReedsSheppChild(const astar::Pose2D&, const astar::Pose2D&);

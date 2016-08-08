@@ -15,7 +15,7 @@ HolonomicHeuristic::HolonomicHeuristic(InternalGridMapRef map) :
     largest_open(),
     closed()
 {
-    piece_angle = twopi / 16.0;
+    piece_angle = twopi / 36.0;
 }
 
 // verify if two circles overlaps with each other
@@ -148,10 +148,10 @@ HolonomicHeuristic::CircleNodePtrArrayPtr HolonomicHeuristic::GetChildren(Holono
         if (grid.isValidPoint(ncp)) {
 
             // get the child radius
-            ncr = grid.GetObstacleDistance(ncp);
+            ncr = grid.GetObstacleDistance(ncp) - 0.25;
 
             // is it a safe place?
-            if (ncr > 1.0) {
+            if (ncr > 1.5) {
 
                 // get the distance from the parent node
                 ncg = r + cn->g;
@@ -310,17 +310,21 @@ bool HolonomicHeuristic::NotExist(HolonomicHeuristic::CircleNodePtr cn) {
         // get the direct access
         Circle &c(cn->circle);
 
+        double cng = cn->g;
+
         // iterate along the circle path
         while (it != end) {
 
             // dereference
             HolonomicHeuristic::CircleNodePtr tmp = *it;
 
-            if (tmp != cn->parent && Overlap(c, tmp->circle, 0.25)) {
+            // verify if the circles are related
+            if (tmp != cn->parent && Overlap(c, tmp->circle, 0.1)) {
 
                 return false;
 
             }
+
 
             // update the iterator
             ++it;
@@ -381,16 +385,47 @@ void HolonomicHeuristic::ExploreCircleNode(CircleNodePtr cn) {
 
 }
 
+void HolonomicHeuristic::ShowCirclePath() {
+
+    //
+    cv::namedWindow("Circles", cv::WINDOW_AUTOSIZE);
+
+    unsigned int w = grid.GetWidth();
+    unsigned int h = grid.GetHeight();
+
+    unsigned char *map = grid.GetGridMap();
+
+    cv::Mat map_image(w, h, CV_8UC1, map);
+
+    // draw the circles
+    for (unsigned int i = 0; i < circle_path.circles.size(); ++i) {
+
+        astar::GridCellIndex index(grid.PoseToIndex(circle_path.circles[i]->circle.position));
+
+        // conver to cv point
+        cv::Point p(index.col, h - index.row);
+
+        cv::circle(map_image, p, circle_path.circles[i]->circle.r * 5, cv::Scalar(0.0, 0.0, 0.0), 1);
+        cv::imshow("Circles", map_image);
+        cv::waitKey(30);
+
+    }
+
+    // destroy the window
+    cv::destroyWindow("Circles");
+
+    delete [] map;
+
+}
+
 // the current search method
 bool HolonomicHeuristic::SpaceExploration() {
 
     // build the start circle
     Circle c_start(start.position, grid.GetObstacleDistance(start.position));
 
-    double goal_obstacle = grid.GetObstacleDistance(goal.position);
-
     // build the goal circle
-    Circle c_goal(goal.position, goal_obstacle);
+    Circle c_goal(goal.position, grid.GetObstacleDistance(goal.position));
 
     // the heuristic values
     double f = c_start.position.Distance(goal.position);
@@ -398,17 +433,29 @@ bool HolonomicHeuristic::SpaceExploration() {
     // build a new CircleNode
     HolonomicHeuristic::CircleNodePtr cn = new HolonomicHeuristic::CircleNode(c_start, c_start.r, 0.0, f, nullptr);
 
+    // build the goal CircleNode
+    HolonomicHeuristic::CircleNode gcn(c_goal, c_goal.r, std::numeric_limits<double>::max(), 0.0, nullptr);
+
     // add to the nearest open priority queue
     nearest_open.push(cn);
 
     // add to the largest open priority queue
     largest_open.push(cn);
 
+    unsigned int height = grid.GetHeight();
+    unsigned int width = grid.GetHeight();
+
+    unsigned char *map = grid.GetGridMap();
+
+    cv::Mat image_map(width, height, CV_8UC1, map);
+
+    cv::namedWindow("Circles", cv::WINDOW_AUTOSIZE);
+
     while (!nearest_open.empty()) {
 
         // pop the min element
         //cn = open.top();
-        cn = largest_open.top();
+        cn = nearest_open.top();
 
         // remove the top element from the queue
         nearest_open.pop();
@@ -421,54 +468,37 @@ bool HolonomicHeuristic::SpaceExploration() {
             // mark as explored, so the nearest can avoid duplicated explorations
             cn->explored = true;
 
+            astar::GridCellIndex index(grid.PoseToIndex(cn->circle.position));
+
+            cv::Point p(index.col, height - index.row);
+
+            cv::circle(image_map, p, cn->circle.r * 5, cv::Scalar(0,0,0), 1);
+
+            cv::imshow("Circles", image_map);
+
             // Process the circle node
             ExploreCircleNode(cn);
 
-        }
+            // verify the overlap case
+            if (Overlap(cn->circle, c_goal, 0.5)) {
 
-        // verify the overlap case
-        if (Overlap(cn->circle, c_goal, 0.5)) {
+                gcn.parent = cn;
 
-            // success!
-            RebuildCirclePath(cn, c_goal);
+                // success!
+                RebuildCirclePath(&gcn, c_goal);
 
-            // destroy the window
-             cv::destroyWindow("Circles");
-            //
-            unsigned int w = grid.GetWidth();
-            unsigned int h = grid.GetHeight();
+                // Show Circle Path
+                ShowCirclePath();
 
-            unsigned char *map = grid.GetGridMap();
+                // clear the open and closed sets
+                RemoveAllCircleNodes();
 
-            cv::Mat map_image(w, h, CV_8UC1, map);
-
-            // draw the circles
-            for (unsigned int i = 0; i < circle_path.circles.size(); ++i) {
-
-                astar::GridCellIndex index(grid.PoseToIndex(circle_path.circles[i]->circle.position));
-
-                // conver to cv point
-                cv::Point p(index.col, h - index.row);
-
-                cv::circle(map_image, p, circle_path.circles[i]->circle.r * 5, cv::Scalar(0.0, 0.0, 00), 1);
-
-                cv::imshow("Circles", map_image);
-
-                cv::waitKey(30);
+                return true;
 
             }
 
-            // destroy the window
-            cv::destroyWindow("Circles");
-
-            delete [] map;
-
-            // clear the open and closed sets
-            RemoveAllCircleNodes();
-
-            return true;
-
         }
+
 
         // explore the largest node set
         // get the largest node
@@ -488,9 +518,40 @@ bool HolonomicHeuristic::SpaceExploration() {
             // Process the circle node
             ExploreCircleNode(cn);
 
+            astar::GridCellIndex index = grid.PoseToIndex(cn->circle.position);
+
+            cv::Point p(index.col, height - index.row);
+
+            cv::circle(image_map, p, cn->circle.r * 5, cv::Scalar(0,0,0), 1);
+
+            cv::imshow("Circles", image_map);
+
+            // verify the overlap case
+            if (Overlap(cn->circle, c_goal, 0.5)) {
+
+                gcn.parent = cn;
+
+                // success!
+                RebuildCirclePath(&gcn, c_goal);
+
+                // Show Circle Path
+                ShowCirclePath();
+
+                // clear the open and closed sets
+                RemoveAllCircleNodes();
+
+                return true;
+
+            }
+
         }
 
+
+        cv::waitKey(30);
+
     }
+
+    cv::destroyWindow("Circles");
 
     // remove the nodes
     RemoveAllCircleNodes();

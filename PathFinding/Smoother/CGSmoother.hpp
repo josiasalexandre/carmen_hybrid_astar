@@ -54,11 +54,16 @@ class CGSmoother {
 
         // THE MINIMIZER CONTEXT ATTRIBUTES
 
+        bool first_time;
+
         // the minizer state
         CGStatus cg_status;
 
+        // the input path
+        astar::StateArrayPtr input_path;
+
         // the solution vector
-        astar::StateArrayPtr x;
+        astar::Vector2DArrayPtr<double> x;
 
         // the cost function evaluated at x
         double fx;
@@ -70,7 +75,7 @@ class CGSmoother {
         double gx_norm;
 
         // the solution vector at the next position
-        astar::StateArrayPtr x1;
+        astar::Vector2DArrayPtr<double> x1;
 
         // the cost function evaluated at x1
         double fx1;
@@ -81,26 +86,26 @@ class CGSmoother {
         // the gradient norm - Evaluated at the second point x1
         double gx1_norm;
 
-        // the best solution so far
-        astar::StateArrayPtr bestx;
+        // the nest trial solution
+        astar::Vector2DArrayPtr<double> trialx;
 
         // the best solution function value
-        double bestfx;
+        double ftrialx;
 
         // the best solution gradient
-        astar::Vector2DArrayPtr<double> bestgx;
+        astar::Vector2DArrayPtr<double> gtrialx;
 
         // the best solution gradient norm
-        double bestgx_norm;
+        double gtrialx_norm;
 
         // the displacement between the next and previous gradient
         std::vector<astar::Vector2D<double>> gx1mgx;
 
-        // the displacement between the next and the previous position
-        std::vector<astar::Vector2D<double>> x1mx;
-
-        // the difference between the old and the new path
+        // the norm of the displacement vector between the old and the best new path
         double x1mx_norm;
+
+        // the norm of the displacement vector between the old and the the trial path
+        double trialxmx_norm;
 
         // the direction vector (Krylov Space)
         std::vector<astar::Vector2D<double>> s;
@@ -143,11 +148,14 @@ class CGSmoother {
 
         // PRIVATE METHODS
 
+        // verify if a given path is unsafe
+        bool UnsafePath(astar::Vector2DArrayPtr<double>);
+
         // get the greater number considering the absolute values
         double ABSMax(double a, double b, double c);
 
         // the main function to be minimized
-        double CostFunction(astar::StateArrayPtr);
+        void CostFunction();
 
         // get the obstacle and voronoi contribution
         astar::Vector2D<double> GetObstacleAndVoronoiDerivatives(const astar::Vector2D<double>&, const astar::Vector2D<double>&, const astar::Vector2D<double>&);
@@ -165,10 +173,43 @@ class CGSmoother {
                 const astar::Vector2D<double>&, const astar::Vector2D<double>&, const astar::Vector2D<double>&, const astar::Vector2D<double>&, const astar::Vector2D<double>&);
 
         // build the cost function gradient evaluated at a given input path and returns the gradient's norm
-        double ComputeGradient(astar::StateArrayPtr const path, std::vector<astar::Vector2D<double>> &gradient);
+        void ComputeGradient();
 
         // take a fixed step at the current direction vector (s)
         void TakeStep(double factor);
+
+        // Evaluate the function at the given point
+        inline void EvaluateF(
+                const astar::Vector2D<double> &xim1,
+                const astar::Vector2D<double> &xi,
+                const astar::Vector2D<double> &xip1,
+                double &obstacle,
+                double &potential,
+                double &smooth,
+                double &curvature
+                );
+
+        // Evaluate the obstacle, potential field and curvature gradient contributions
+        inline void EvaluateG(
+                const astar::Vector2D<double> &xim1,
+                const astar::Vector2D<double> &xi,
+                const astar::Vector2D<double> &xip1,
+                astar::Vector2D<double> &gradient
+                );
+
+        // Evaluate the function and the obstacle/potential field gradients
+        inline void EvaluateFG(
+                const astar::Vector2D<double> &xim1,
+                const astar::Vector2D<double> &xi,
+                const astar::Vector2D<double> &xip1,
+                double &obstacle,
+                double &potential,
+                double &smooth,
+                double &curvature,
+                astar::Vector2D<double> &gradient
+                );
+
+
 
         // custom function to evaluate the cost function and the update the gradient at the same time
         // it uses the x1 as the input array
@@ -204,6 +245,9 @@ class CGSmoother {
 
         // interpolate a given path
         astar::StateArrayPtr Interpolate(astar::StateArrayPtr);
+
+        // copy the current solution to the input path
+        void InputPathUpdate(astar::Vector2DArrayPtr<double>, astar::StateArrayPtr);
 
         // show the current path in the map
         void ShowPath(astar::StateArrayPtr, bool plot_locked = true);

@@ -44,7 +44,7 @@ HybridAstar::HybridAstar(
     discovered(),
     invalid(),
     map(nullptr),
-    w(), h()
+    width(), height()
 {
 
     // define common window
@@ -103,7 +103,7 @@ void HybridAstar::RemoveAllNodes() {
 
 // rebuild an entire path given a node
 // reconstruct the path from the goal to the start state
-StateArrayPtr HybridAstar::RebuildPath(HybridAstarNodePtr n, const State2D &goal)
+StateArrayPtr HybridAstar::RebuildPath(HybridAstarNodePtr n, const State2D &start, const State2D &goal)
 {
     // create the list
     StateListPtr nodes = new StateList();
@@ -123,7 +123,7 @@ StateArrayPtr HybridAstar::RebuildPath(HybridAstarNodePtr n, const State2D &goal
     unsigned char *map2 = grid.GetGridMap();
 
     // draw the current map
-    cv::Mat final_map(w, h, CV_8UC1, map2);
+    cv::Mat final_map(width, height, CV_8UC1, map2);
 
     double inverse_resolution = grid.GetInverseResolution();
 
@@ -145,21 +145,20 @@ StateArrayPtr HybridAstar::RebuildPath(HybridAstarNodePtr n, const State2D &goal
             astar::GridCellIndex index(grid.PoseToIndex(s.position));
 
             // convert to the opencv format
-            cv::Point p1(index.col - 1, h - index.row - 1);
-            cv::Point p2(index.col + 1, h - index.row + 1);
+            cv::Point p1(index.col - 1, height - index.row - 1);
+            cv::Point p2(index.col + 1, height - index.row + 1);
 
             // draw a single square
             cv::rectangle(final_map, p1, p2, cv::Scalar(0.0, 0.0, 0.0), -1);
 
             // show the imgae
             cv::imshow("Astar", final_map);
-
             cv::waitKey(30);
 
-        } else if (nullptr != n->action_set) {
+        } else {
 
             // get the subpath provided by the action set discretization
-            StateArrayPtr subpath = ReedsSheppModel::Discretize(n->parent->pose, n->action_set, vehicle.min_turn_radius, inverse_resolution);
+            StateArrayPtr subpath = ReedsSheppModel::DiscretizeRS(n->parent->pose, n->action_set, vehicle.min_turn_radius, 0.3);
 
             // get the path size
             subpathSize = subpath->states.size();
@@ -174,15 +173,14 @@ StateArrayPtr HybridAstar::RebuildPath(HybridAstarNodePtr n, const State2D &goal
                 astar::GridCellIndex index(grid.PoseToIndex(subpath->states[i].position));
 
                 // convert to the opencv format
-                cv::Point p1(index.col - 1, h - index.row - 1);
-                cv::Point p2(index.col + 1, h - index.row + 1);
+                cv::Point p1(index.col - 1, height - index.row - 1);
+                cv::Point p2(index.col + 1, height - index.row + 1);
 
                 // draw a single square
                 cv::rectangle(final_map, p1, p2, cv::Scalar(0.0, 0.0, 0.0), -1);
 
                 // show the imgae
                 cv::imshow("Astar", final_map);
-
                 cv::waitKey(30);
 
             }
@@ -236,6 +234,9 @@ StateArrayPtr HybridAstar::RebuildPath(HybridAstarNodePtr n, const State2D &goal
     // save the endpoint speed to the final state
     if (0 < out.size()) {
 
+        out.front().phi = start.phi;
+        out.front().v = start.v;
+
         out.back().v = goal.v;
 
     }
@@ -260,7 +261,7 @@ HybridAstarNodePtr HybridAstar::GetReedsSheppChild(const Pose2D &start, const Po
         bool safe = true;
 
         // get the states in the Reeds-Shepp curve
-        StateArrayPtr path = rs.Discretize(start, action_set, vehicle.min_turn_radius, inverse_resolution);
+        StateArrayPtr path = rs.DiscretizeRS(start, action_set, vehicle.min_turn_radius, inverse_resolution);
 
         // a reference helper, just in case
         std::vector<State2D> &states(path->states);
@@ -384,14 +385,14 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMapRef grid_map, const State2D &
 
     // get the current grid map
     map = grid.GetGridMap();
-    w = grid.GetWidth();
-    h = grid.GetHeight();
+    width = grid.GetWidth();
+    height = grid.GetHeight();
 
     // get the grid map resolution
     double resolution = grid.GetResolution();
 
     // draw the current map
-    cv::Mat final_map(w, h, CV_8UC1, map);
+    cv::Mat final_map(width, height, CV_8UC1, map);
 
     // show the image
     cv::imshow("Astar", final_map);
@@ -414,7 +415,7 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMapRef grid_map, const State2D &
 
     // the available space around the vehicle
     // provides the total length between the current state and the node's children
-    double length = 0.0;
+    double length = start.v * start.t;
 
     // the simple case of length
     // length = grid_map.resolution
@@ -449,7 +450,7 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMapRef grid_map, const State2D &
         if (goal_pose == n->pose) {
 
             // rebuild the entire path
-            StateArrayPtr resulting_path = RebuildPath(n, goal);
+            StateArrayPtr resulting_path = RebuildPath(n, start, goal);
 
             // clear all opened and expanded nodes
             RemoveAllNodes();
