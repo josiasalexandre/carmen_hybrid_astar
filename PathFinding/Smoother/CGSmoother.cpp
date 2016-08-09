@@ -97,93 +97,21 @@ void astar::CGSmoother::CostFunction() {
     // the partial values
     double obstacle = 0.0, potential = 0.0, curvature = 0.0, smooth = 0.0;
 
-    // some helpers
-    astar::Vector2D<double> dxi, dxip1;
-
-    // nearest obstacle distance
-    double obst_distance;
-
-    // nearest voronoi distance
-    double voro_distance;
-
-    // get the third last limit
-    unsigned int limit = dim - 1;
-
-    astar::Vector2D<double> tmp(0.0, 0.0);
-
-    // reset the gx1 gradient norm
-    gtrialx_norm = 0.0;
-
     // the tmp solution direct access
     std::vector<astar::Vector2D<double>> &trialxs(trialx->vs);
 
-    // the gradient direct access
-    std::vector<astar::Vector2D<double>> &gradient(gtrialx->vs);
-
-    double d;
-    unsigned int i;
-
+    // iterate from the second element till the second last
     // and get the individual derivatives
     // the first and last points should no be modified
-    for (i = 1; i < limit; ++i) {
+    for (unsigned int i = 1; i < dim; ++i) {
 
-        if (!locked_positions[i]) {
+        astar::Vector2D<double> &xim1(trialxs[i-1]), &xi(trialxs[i]), &xip1(trialxs[i+1]);
 
-            // get the position references
-            astar::Vector2D<double> &xim2(trialxs[i-2]), &xim1(trialxs[i-1]),
-                    &xi(trialxs[i]), &xip1(trialxs[i+1]), &xip2(trialxs[i+2]);
-
-            // THE FUNCTION VALUE
-            // update the obstacle and potential field terms
-            // get the nearest obstacle distance
-            obst_distance = grid.GetObstacleDistance(xi);
-
-            // the obstacle and potential field terms are updated only when dmax >= obst_distance
-            // otherwise we consider the term += 0.0;
-            if (dmax >= obst_distance) {
-
-                d = (dmax - obst_distance) * (dmax - obst_distance);
-
-                // update the obstacle term
-                obstacle += d;
-
-                // get the nearest voronoi edge distance
-                voro_distance = grid.GetVoronoiDistance(xi);
-
-                // update the Voronoi potential field term
-                // can it become a Nan?
-                //potential += grid.GetPathCost(xi);
-                potential += (alpha / (alpha  + obst_distance)) * (voro_distance / (obst_distance  + voro_distance)) * ((d - vorodmax*vorodmax)* inverse_vorodmax2);
-
-            }
-
-            // get the current displacement
-            dxi.x = xi.x - xim1.x;
-            dxi.y = xi.y - xim1.y;
-
-            // get the next displacement
-            dxip1.x = xip1.x - xi.x;
-            dxip1.y = xip1.y - xim1.y;
-
-            // update the curvature term
-            curvature += std::pow((std::fabs(std::atan2(dxip1.y, dxip1.x) - std::atan2(dxi.y, dxi.x)) / dxi.Norm() - kmax), 2);
-
-            // update the smooth term
-            tmp.x = xip1.x - 2.0 * xi.x + xim1.x;
-            tmp.y = xip1.y - 2.0 * xi.y + xim1.y;
-
-            smooth += tmp.Norm2();
-
-        }
-
-        // reset the tmp and tmp1 vectors
-        tmp.x = 0.0;
-        tmp.y = 0.0;
+        // evaluate the current point
+        EvaluateF(xim1, xi, xip1, obstacle, potential, smooth, curvature);
 
     }
 
-    // set the euclidean norm final touch
-    // gx_norm = std::sqrt(gx_norm); It's no the euclidean version
     //fx1 = ws*smooth + wo*obstacle + wp*potential + ;
     ftrialx = wo*obstacle + wp*potential + wk*curvature + ws*smooth;
 

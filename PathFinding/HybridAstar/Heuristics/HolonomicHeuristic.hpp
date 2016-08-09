@@ -12,7 +12,6 @@
 #include "../../../Entities/Circle.hpp"
 #include "../../../PriorityQueue/PriorityQueue.hpp"
 
-
 namespace astar {
 
 class HolonomicHeuristic {
@@ -152,13 +151,6 @@ class HolonomicHeuristic {
 
                 // the vector of circle nodes
                 std::vector<CircleNodePtr> circles;
-
-                // basic destructor
-                ~CircleNodePtrArray() {
-
-                    circles.clear();
-
-                }
 
         };
 

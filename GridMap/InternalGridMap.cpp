@@ -234,14 +234,6 @@ double InternalGridMap::GetObstacleDistance(const Vector2D<double> &position) {
         // get the obstacle distance
         return voronoi.GetObstacleDistance(index.row, index.col) * resolution;
 
-        // get the nearest obstacle index
-        GridCellIndex obstacle(voronoi.GetObstacleIndex(index.row, index.col));
-
-        // get the displacement
-        double dx = position.x - (origin.x + ((double) obstacle.col) * resolution);
-        double dy = position.y - (origin.y + ((double) obstacle.row) * resolution);
-
-        return std::sqrt(dx*dx + dy*dy);
     }
 
     return 0.0;

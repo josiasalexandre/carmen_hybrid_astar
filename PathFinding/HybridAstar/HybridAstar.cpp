@@ -158,7 +158,7 @@ StateArrayPtr HybridAstar::RebuildPath(HybridAstarNodePtr n, const State2D &star
         } else {
 
             // get the subpath provided by the action set discretization
-            StateArrayPtr subpath = ReedsSheppModel::DiscretizeRS(n->parent->pose, n->action_set, vehicle.min_turn_radius, 0.3);
+            StateArrayPtr subpath = ReedsSheppModel::DiscretizeRS(n->parent->pose, n->action_set, vehicle.min_turn_radius, inverse_resolution);
 
             // get the path size
             subpathSize = subpath->states.size();
@@ -492,78 +492,76 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMapRef grid_map, const State2D &
                 c = grid_map.PoseToCell(child->pose);
 
                 // we must avoid node->cell = nullptr inside the HybridAstarNode
-                if (nullptr != c && ExploredNode != c->status) {
+                //if (nullptr != c && ExploredNode != c->status) {
 
-                    if (nullptr != child->action) {
+                if (nullptr != child->action) {
 
-                        double path_cost = PathCost(n->action->gear, child->pose, gear, length);
-                        // we a have a valid action, conventional expanding
-                        tentative_g = n->g + path_cost;
+                    double path_cost = PathCost(n->action->gear, child->pose, gear, length);
+                    // we a have a valid action, conventional expanding
+                    tentative_g = n->g + path_cost;
 
-                    } else if (0 < child->action_set->Size()) {
+                } else if (0 < child->action_set->Size()) {
 
-                        double action_path_cost = child->action_set->CalculateCost(vehicle.min_turn_radius, reverse_factor, gear_switch_cost);
+                    double action_path_cost = child->action_set->CalculateCost(vehicle.min_turn_radius, reverse_factor, gear_switch_cost);
 
-                        // we have a valid action set, it was a Reeds-Shepp analytic expanding
-                        tentative_g = n->g + action_path_cost;
+                    // we have a valid action set, it was a Reeds-Shepp analytic expanding
+                    tentative_g = n->g + action_path_cost;
 
-                    } else {
+                } else {
 
-                        // we don't have any valid action, it's a bad error
-                        // add to the invalid nodes set
-                        invalid.push_back(child);
+                    // we don't have any valid action, it's a bad error
+                    // add to the invalid nodes set
+                    invalid.push_back(child);
 
-                        // jump to the next iteration
-                        continue;
-                        // throw std::exception();
+                    // jump to the next iteration
+                    continue;
+                    // throw std::exception();
 
-                    }
+                }
 
-                    // update the heuristic contribution
-                    double h = heuristic.GetHeuristicValue(child->pose, goal_pose);
+                // update the heuristic contribution
+                double h = heuristic.GetHeuristicValue(child->pose, goal_pose);
 
-                    tentative_f = tentative_g + h;
+                tentative_f = tentative_g + h;
 
-                    // update the cost
-                    child->g = tentative_g;
+                // update the cost
+                child->g = tentative_g;
 
-                    // update the total value -> g cost plus heuristic value
-                    child->f = tentative_f;
+                // update the total value -> g cost plus heuristic value
+                child->f = tentative_f;
 
-                    // set the parent
-                    child->parent = n;
+                // set the parent
+                child->parent = n;
 
-                    // is it a not opened node?
-                    if (UnknownNode == c->status) {
+                // is it a not opened node?
+                if (UnknownNode == c->status) {
 
-                        // the cell is empty and doesn't have any node
+                    // the cell is empty and doesn't have any node
 
-                        // set the cell pointer
-                        child->cell = c;
+                    // set the cell pointer
+                    child->cell = c;
 
-                        // update the cell pointer
-                        c->node = child;
+                    // update the cell pointer
+                    c->node = child;
 
-                        // update the cell status
-                        c->status = OpenedNode;
+                    // update the cell status
+                    c->status = OpenedNode;
 
-                        // add to the open set
-                        child->handle = open.Add(child, tentative_f);
+                    // add to the open set
+                    child->handle = open.Add(child, tentative_f);
 
-                    } else if (tentative_f < c->node->f) {
+                } else if (tentative_f < c->node->f) {
 
-                        // the cell has a node but the current child is a better one
+                    // the cell has a node but the current child is a better one
 
-                        // update the node at the cell
-                        HybridAstarNodePtr current = c->node;
+                    // update the node at the cell
+                    HybridAstarNodePtr current = c->node;
 
-                        // the old node is updated but not the corresponding Handle/Key in the priority queue
-                        current->UpdateValues(*child);
+                    // the old node is updated but not the corresponding Handle/Key in the priority queue
+                    current->UpdateValues(*child);
 
-                        // decrease the key at the priority queue
-                        open.DecreaseKey(current->handle, tentative_f);
-
-                    }
+                    // decrease the key at the priority queue
+                    open.DecreaseKey(current->handle, tentative_f);
 
                 }
 

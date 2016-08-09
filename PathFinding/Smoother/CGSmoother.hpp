@@ -210,7 +210,6 @@ class CGSmoother {
                 );
 
 
-
         // custom function to evaluate the cost function and the update the gradient at the same time
         // it uses the x1 as the input array
         // the resulting cost value is saved in the internal fx1 variable

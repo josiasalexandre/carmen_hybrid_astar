@@ -256,11 +256,14 @@ StateArrayPtr ReedsSheppModel::DiscretizeRS(
         // get the end pointer
         std::vector<ReedsSheppAction>::iterator end = action_set->actions.end();
 
+        // avoiding a lot of computations
+        double coefficient = radcurv * inverse_max_length;
+
         // get the iterator
         for (std::vector<ReedsSheppAction>::iterator it = action_set->actions.begin();  it != end; ++it) {
 
             // subdivide the entire arc length by the grid resolution
-            unsigned int n = ceil(it->length * radcurv * inverse_max_length);
+            unsigned int n = ceil(it->length);
 
             // is it a line path?
             if (RSStraight != it->steer) {
@@ -277,10 +280,10 @@ StateArrayPtr ReedsSheppModel::DiscretizeRS(
 
                 double L = 2 * radcurv * sinPhi;
 
-                // get the x displacement
+                // get the x displacement considering a constant rate
                 double dx = L * std::cos(phi);
 
-                // get the y displacement
+                // get the y displacement considering a constante rate
                 double dy = L * sinPhi;
 
                 // assuming TurnLeft, is it a TurnRight?
