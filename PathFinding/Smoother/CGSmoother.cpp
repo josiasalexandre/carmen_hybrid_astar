@@ -650,23 +650,25 @@ void astar::CGSmoother::EvaluateFunctionAndGradient() {
 
     astar::Vector2D<double> &lxim1(trialxs[0]), &lxi(trialxs[1]), &lxip1(trialxs[2]), &lxip2(trialxs[3]);
 
-    // evaluate the second point
-    EvaluateFG(lxim1, lxi, lxip1, obstacle, potential, smooth, curvature, gradient[1]);
-
-    // the boundary
-    // set up the smooth path derivatives contribution
-    gradient[1].x += ws * (-2.0 * lxim1.x + 5.0 * lxi.x - 4.0 * lxip1.x + lxip2.x);
-    gradient[1].y += ws * (-2.0 * lxim1.y + 5.0 * lxi.y - 4.0 * lxip1.y + lxip2.y);
-
     if (locked_positions[1]) {
 
-        gradient[1].x = 0.0;
-        gradient[1].y = 0.0;
+        // evaluate the second point
+        EvaluateF(lxim1, lxi, lxip1, obstacle, potential, smooth, curvature);
+
+    } else {
+
+        // evaluate the second point
+        EvaluateFG(lxim1, lxi, lxip1, obstacle, potential, smooth, curvature, gradient[1]);
+
+        // the boundary
+        // set up the smooth path derivatives contribution
+        gradient[1].x += ws * (-2.0 * lxim1.x + 5.0 * lxi.x - 4.0 * lxip1.x + lxip2.x);
+        gradient[1].y += ws * (-2.0 * lxim1.y + 5.0 * lxi.y - 4.0 * lxip1.y + lxip2.y);
+
+        // update the gradient norm
+        gtrialx_norm += gradient[1].Norm2();
 
     }
-
-    // update the gradient norm
-    gtrialx_norm += gradient[1].Norm2();
 
     unsigned int i;
 
@@ -682,24 +684,25 @@ void astar::CGSmoother::EvaluateFunctionAndGradient() {
         // get the position references
         astar::Vector2D<double> &xim2(trialxs[i-2]), &xim1(trialxs[i-1]), &xi(trialxs[i]), &xip1(trialxs[i+1]), &xip2(trialxs[i+2]);
 
-        // evaluate the current point
-        EvaluateFG(xim1, xi, xip1, obstacle, potential, smooth, curvature, gradient[i]);
-
-        // the custom smooth formula
-        // set up the smooth path derivatives contribution
-        gradient[i].x += ws * (xim2.x - 4.0 * xim1.x + 6.0 * xi.x - 4.0 * xip1.x + xip2.x);
-        gradient[i].y += ws * (xim2.y - 4.0 * xim1.y + 6.0 * xi.y - 4.0 * xip1.y + xip2.y);
-
         if (locked_positions[i]) {
 
-            gradient[i].x = 0.0;
-            gradient[i].y = 0.0;
+            // evaluate the current point
+            EvaluateF(xim1, xi, xip1, obstacle, potential, smooth, curvature);
+
+        } else {
+
+            // evaluate the current point
+            EvaluateFG(xim1, xi, xip1, obstacle, potential, smooth, curvature, gradient[i]);
+
+            // the custom smooth formula
+            // set up the smooth path derivatives contribution
+            gradient[i].x += ws * (xim2.x - 4.0 * xim1.x + 6.0 * xi.x - 4.0 * xip1.x + xip2.x);
+            gradient[i].y += ws * (xim2.y - 4.0 * xim1.y + 6.0 * xi.y - 4.0 * xip1.y + xip2.y);
+
+            // update the gradient norm
+            gtrialx_norm += gradient[i].Norm2();
 
         }
-
-        // update the gradient norm
-        gtrialx_norm += gradient[i].Norm2();
-
 
     }
 
@@ -710,23 +713,25 @@ void astar::CGSmoother::EvaluateFunctionAndGradient() {
     // shadow
     astar::Vector2D<double> &rxim2(trialxs[i-2]), &rxim1(trialxs[i-1]), &rxi(trialxs[i]), &rxip1(trialxs[i+1]);
 
-    // evaluate the second point
-    // the
-    EvaluateFG(rxim1, rxi, rxip1, obstacle, potential, smooth, curvature, gradient[i]);
-
-    // set up the smooth path derivatives contribution
-    gradient[i].x += ws * (rxim2.x - 4.0 * rxim1.x + 5.0 * rxi.x - 2.0 * rxip1.x);
-    gradient[i].y += ws * (rxim2.y - 4.0 * rxim1.y + 5.0 * rxi.y - 2.0 * rxip1.y);
-
     if (locked_positions[i]) {
 
-        gradient[i].x = 0.0;
-        gradient[i].y = 0.0;
+        // evaluate the second last point
+        EvaluateF(rxim1, rxi, rxip1, obstacle, potential, smooth, curvature);
+
+    } else {
+
+        // evaluate the second point
+        // the
+        EvaluateFG(rxim1, rxi, rxip1, obstacle, potential, smooth, curvature, gradient[i]);
+
+        // set up the smooth path derivatives contribution
+        gradient[i].x += ws * (rxim2.x - 4.0 * rxim1.x + 5.0 * rxi.x - 2.0 * rxip1.x);
+        gradient[i].y += ws * (rxim2.y - 4.0 * rxim1.y + 5.0 * rxi.y - 2.0 * rxip1.y);
+
+        // update the gradient norm
+        gtrialx_norm += gradient[i].Norm2();
 
     }
-
-    // update the gradient norm
-    gtrialx_norm += gradient[i].Norm2();
 
     // set the euclidean norm final touch
     gtrialx_norm = std::sqrt(gtrialx_norm);

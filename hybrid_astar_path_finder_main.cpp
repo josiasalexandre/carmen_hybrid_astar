@@ -118,7 +118,6 @@ publish_hybrid_astar_path()
         motion_commands[i].v = states[i].v;
         motion_commands[i].phi = states[i].phi;
         motion_commands[i].time = states[i].t;
-
     }
 
     ackerman_msg.timestamp = carmen_get_time();

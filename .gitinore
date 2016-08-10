@@ -11,4 +11,4 @@ heuristic
 heuristic_loader
 vehicle
 vector
-
+*.txt

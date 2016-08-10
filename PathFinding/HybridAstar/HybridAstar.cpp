@@ -79,7 +79,7 @@ void HybridAstar::RemoveAllNodes() {
         discovered.pop_back();
 
         // delete the node
-        delete(tmp);
+        delete tmp;
 
     }
 
@@ -93,7 +93,7 @@ void HybridAstar::RemoveAllNodes() {
         invalid.pop_back();
 
         // delete the node
-        delete(tmp);
+        delete tmp;
 
     }
 
@@ -340,6 +340,9 @@ HybridAstarNodeArrayPtr HybridAstar::GetChidlren(const Pose2D &start, const Pose
             if (nullptr == tmp) {
 
                 std::cout << "Erro Memória!!\n";
+
+                throw std::exception();
+
             }
 
             // append to the children list
@@ -480,9 +483,10 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMapRef grid_map, const State2D &
 
             // reference, just a syntactic sugar
             std::vector<HybridAstarNodePtr> &nodes(children->nodes);
+            std::vector<HybridAstarNodePtr>::iterator end = nodes.end();
 
             // iterate over the current node's children
-            for (std::vector<HybridAstarNodePtr>::iterator it = nodes.begin(); it != nodes.end(); ++it) {
+            for (std::vector<HybridAstarNodePtr>::iterator it = nodes.begin(); it != end; ++it) {
 
                 // avoid a lot of indirect access
                 HybridAstarNodePtr child = *it;
@@ -492,76 +496,85 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMapRef grid_map, const State2D &
                 c = grid_map.PoseToCell(child->pose);
 
                 // we must avoid node->cell = nullptr inside the HybridAstarNode
-                //if (nullptr != c && ExploredNode != c->status) {
+                if (nullptr != c) {
 
-                if (nullptr != child->action) {
+                    if (nullptr != child->action) {
 
-                    double path_cost = PathCost(n->action->gear, child->pose, gear, length);
-                    // we a have a valid action, conventional expanding
-                    tentative_g = n->g + path_cost;
+                        // we a have a valid action, conventional expanding
+                        tentative_g = n->g + PathCost(n->action->gear, child->pose, gear, length);
 
-                } else if (0 < child->action_set->Size()) {
+                    } else if (0 < child->action_set->Size()) {
 
-                    double action_path_cost = child->action_set->CalculateCost(vehicle.min_turn_radius, reverse_factor, gear_switch_cost);
+                        // we have a valid action set, it was a Reeds-Shepp analytic expanding
+                        tentative_g = n->g + child->action_set->CalculateCost(vehicle.min_turn_radius, reverse_factor, gear_switch_cost);
 
-                    // we have a valid action set, it was a Reeds-Shepp analytic expanding
-                    tentative_g = n->g + action_path_cost;
+                    } else {
 
-                } else {
+                        // we don't have any valid action, it's a bad error
+                        // add to the invalid nodes set
+                        invalid.push_back(child);
 
-                    // we don't have any valid action, it's a bad error
-                    // add to the invalid nodes set
-                    invalid.push_back(child);
+                        // jump to the next iteration
+                        continue;
+                        // throw std::exception();
 
-                    // jump to the next iteration
-                    continue;
-                    // throw std::exception();
+                    }
 
-                }
+                    // update the heuristic contribution
+                    tentative_f = tentative_g + heuristic.GetHeuristicValue(child->pose, goal_pose);;
 
-                // update the heuristic contribution
-                double h = heuristic.GetHeuristicValue(child->pose, goal_pose);
+                    // update the cost
+                    child->g = tentative_g;
 
-                tentative_f = tentative_g + h;
+                    // update the total value -> g cost plus heuristic value
+                    child->f = tentative_f;
 
-                // update the cost
-                child->g = tentative_g;
+                    // set the parent
+                    child->parent = n;
 
-                // update the total value -> g cost plus heuristic value
-                child->f = tentative_f;
+                    // is it a not opened node?
+                    if (UnknownNode == c->status) {
 
-                // set the parent
-                child->parent = n;
+                        // the cell is empty and doesn't have any node
 
-                // is it a not opened node?
-                if (UnknownNode == c->status) {
+                        // set the cell pointer
+                        child->cell = c;
 
-                    // the cell is empty and doesn't have any node
+                        // update the cell pointer
+                        c->node = child;
 
-                    // set the cell pointer
-                    child->cell = c;
+                        // update the cell status
+                        c->status = OpenedNode;
 
-                    // update the cell pointer
-                    c->node = child;
+                        // add to the open set
+                        child->handle = open.Add(child, tentative_f);
 
-                    // update the cell status
-                    c->status = OpenedNode;
+                    } else if (tentative_f < c->node->f) {
 
-                    // add to the open set
-                    child->handle = open.Add(child, tentative_f);
+                        // the cell has a node but the current child is a better one
 
-                } else if (tentative_f < c->node->f) {
+                        // update the node at the cell
+                        HybridAstarNodePtr current = c->node;
 
-                    // the cell has a node but the current child is a better one
+                        // the old node is updated but not the corresponding Handle/Key in the priority queue
+                        current->UpdateValues(*child);
 
-                    // update the node at the cell
-                    HybridAstarNodePtr current = c->node;
+                        if (OpenedNode == c->status) {
 
-                    // the old node is updated but not the corresponding Handle/Key in the priority queue
-                    current->UpdateValues(*child);
+                            // decrease the key at the priority queue
+                            open.DecreaseKey(current->handle, tentative_f);
 
-                    // decrease the key at the priority queue
-                    open.DecreaseKey(current->handle, tentative_f);
+                        } else if (ExploredNode == c->status) {
+
+                            // the cell has an explored node, let's revive it
+                            current->handle = open.Add(current, tentative_f);
+
+                            // reset the cell status
+                            c->status = OpenedNode;
+
+                        }
+
+                    }
 
                 }
 

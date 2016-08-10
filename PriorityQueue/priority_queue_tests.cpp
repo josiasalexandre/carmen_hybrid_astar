@@ -38,11 +38,16 @@ int main() {
     int i = 1;
     while(!priority_queue.isEmpty()) {
 
-    	priority_queue.DeleteMin();
+        priority_queue.DeleteMin();
 
         i += 1;
 
+        std::cout << " " << i;
+
     }
+
+    // return 2;
+
     std::cout << std::endl << "Lets see the priority queue: " << priority_queue.GetN() << std::endl;
     std::cout << std::endl << "Let's back the numbers to the PriorityQueue..." << std::endl;
     for (unsigned int i = 0; i < 200000; i++) {
@@ -56,16 +61,16 @@ int main() {
 
     for (unsigned int i= 0 ; i < 2000; i++) {
 
-    	// get a random index
-		unsigned int index = rand()%20000;
-		if (numbers[index] != UINT_MAX) {
-			std::cout << "Let's try to decrease the key to the " << index + 1  << "º element: " << numbers[index] << std::endl;
-			priority_queue.DecreaseKey(handles[index], -1);
-			numbers[index] = UINT_MAX;
+        // get a random index
+        unsigned int index = rand()%20000;
+        if (numbers[index] != UINT_MAX) {
+            std::cout << "Let's try to decrease the key to the " << index + 1  << "º element: " << numbers[index] << std::endl;
+            priority_queue.DecreaseKey(handles[index], -1);
+            numbers[index] = UINT_MAX;
 
-			std::cout << "Let's see the new min element: " << priority_queue.DeleteMin() << std::endl;
+            std::cout << "Let's see the new min element: " << priority_queue.DeleteMin() << std::endl;
 
-		}
+        }
 
 
     }

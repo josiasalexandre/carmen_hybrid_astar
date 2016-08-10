@@ -5,6 +5,7 @@
 #include <vector>
 #include <cmath>
 #include <limits>
+#include <exception>
 
 #include "PriorityQueueNode.hpp"
 
@@ -40,12 +41,13 @@ class PriorityQueue {
         // PRIVATE METHODS
 
         // get the heap max degree
-        int GetMaxDegree() {
+        inline int GetMaxDegree() {
 
             int oa;
             int i;
             int b;
-            int a = (int) D;
+
+            int a = (int) (N + 1);
 
             oa = a;
             b = ASTAR_CEIL_LOG_INT_BITS / 2;
@@ -69,22 +71,23 @@ class PriorityQueue {
         // make sure we have enough memmory to reorganize the heap
         void CheckCons() {
 
-            int degree = GetMaxDegree();
-
             if (-1 == D || N > ( 1 << D)) {
 
-                // update the degree value
-                D = std::max(degree, 8);
+                // the old degree value
+                int old_degree = D;
 
-                if (A.size() != D) {
+                // update the degree value
+                D = std::max(GetMaxDegree(), 8);
+
+                if (D != old_degree) {
 
                     // resize it
                     A.clear();
 
-                    A.resize(D, nullptr);
+                    A.resize(D + 1, nullptr);
 
+                    return;
                 }
-
 
             }
 
@@ -168,16 +171,16 @@ class PriorityQueue {
         }
 
         // Remove a node from the root list
-        void RemoveNodeFromRootList(astar::PriorityQueueNodePtr<T> node) {
+        void RemoveNodeFromRootList(astar::PriorityQueueNodePtr<T> x) {
 
-            if (node->left == node) {
+            if (x->left == x) {
 
                 // we are empty
                 root = nullptr;
 
             } else {
 
-                root = RemoveNode(node);
+                root = RemoveNode(x);
 
             }
 
@@ -222,27 +225,23 @@ class PriorityQueue {
             // remove the min from the root list
             RemoveNodeFromRootList(z);
 
+            // set the min node to nullptr
+            min = nullptr;
+
             // decrement the node counter
             N -= 1;
 
-            if (0 == N) {
-
-                min = nullptr;
-
-            } else {
-
-                min = z->right;
+            if (0 != N) {
 
                 // we are not empty
                 Consolidate();
 
             }
 
-            // get the min value
             T element = z->element;
 
             // remove the z node
-            delete(z);
+            delete z;
 
             // return the min value
             return element;
@@ -252,10 +251,8 @@ class PriorityQueue {
         // swap two nodes
         void SwapNodes(astar::PriorityQueueNode<T> **a, astar::PriorityQueueNode<T> **b) {
 
-            // a helper node
-            astar::PriorityQueueNode<T> *c = *a;
-
             // swapping
+            astar::PriorityQueueNode<T> *c = *a;
             *a = *b;
             *b = c;
 
@@ -348,7 +345,7 @@ class PriorityQueue {
             // pointer to the node
             astar::PriorityQueueNodePtr<T> y = nullptr;
 
-            // get the
+            // the degree from a given node
             unsigned int d;
 
             // iterate over the entire root list
@@ -393,11 +390,8 @@ class PriorityQueue {
 
             }
 
-            // set the min node as nullptr
-            min = nullptr;
-
             // move the array to the root list
-            for (unsigned int i = 0; i < D; i++) {
+            for (unsigned int i = 0; i < A.size(); i++) {
 
                 if (nullptr != A[i]) {
 
@@ -439,6 +433,7 @@ class PriorityQueue {
 
             }
 
+            // remove the child nodes
             if (nullptr != x->child) {
 
                 // get the root child address
@@ -453,7 +448,7 @@ class PriorityQueue {
             }
 
             // remove the current node
-            delete(x);
+            delete x;
 
         }
 
@@ -516,7 +511,7 @@ class PriorityQueue {
         }
 
         // update the heap after a decrease key
-        void DecreaseKey(astar::PriorityQueueNode<T> *x, double Key) {
+        void DecreaseKey(astar::PriorityQueueNodePtr<T> x, double Key) {
 
             if (nullptr != x && Key < x->Key) {
 
@@ -526,7 +521,7 @@ class PriorityQueue {
                 // build a new fibonacci heap node
                 astar::PriorityQueueNodePtr<T> y = x->parent;
 
-                if (nullptr != y && Key < y->Key) {
+                if (nullptr != y && Key <= y->Key) {
 
                     // cut the node
                     Cut(x, y);
@@ -571,31 +566,13 @@ class PriorityQueue {
 
             if (nullptr != root) {
 
-                // get the current root
-                astar::PriorityQueueNodePtr<T> tmp = root->right;
-
-                while (tmp != root) {
-
-                    // remove the node from the root list
-                    tmp->right->left = tmp->left;
-                    tmp->left->right = tmp->right;
-
-                    // udpate the tmp
-                    tmp->left = tmp->right = tmp;
-
-                    // destroy the sub tree
-                    DestroySubTree(tmp);
-
-                    tmp = root->right;
-
-                }
-
-                // remove the current root
-                delete root;
+                // Remove the entire subtree
+                DestroySubTree(root);
 
                 root = nullptr;
                 min = nullptr;
 
+                // reset the heap variables
                 N = 0;
                 D = -1;
                 A.clear();
