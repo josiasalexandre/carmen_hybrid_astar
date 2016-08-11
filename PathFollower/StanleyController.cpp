@@ -530,12 +530,6 @@ State2D StanleyController::ForwardDrive(const State2D &s) {
     double dist = front_axle.position.Distance(closest_point.position);
     double d_theta = mrpt::math::wrapToPi<double>(s.orientation - desired_heading + (reverse_mode ? M_PI : 0));
 
-    if (0.8 < std::fabs(d_theta)) {
-
-        std::cout << "Wrong!\n";
-
-    }
-
     if (reverse_mode) {
 
         d_theta = -d_theta;

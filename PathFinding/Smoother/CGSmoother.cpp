@@ -1523,104 +1523,47 @@ astar::StateArrayPtr astar::CGSmoother::Interpolate(astar::StateArrayPtr path) {
     // the resulting path
     astar::StateArrayPtr interpolated_path = new StateArray();
 
-    // direct access
-    std::vector<astar::State2D> &input(path->states);
-    std::vector<astar::State2D> &output(interpolated_path->states);
+    if (4 <= path->states.size()) {
 
-    // get the iterators
-    std::vector<astar::State2D>::iterator end = input.end();
-    std::vector<astar::State2D>::iterator current = input.begin();
-    std::vector<astar::State2D>::iterator next = current;
-    ++next;
+        // direct access
+        std::vector<astar::State2D> &input(path->states);
+        std::vector<astar::State2D> &output(interpolated_path->states);
 
-    // the grid resolution
-    double resolution = grid.GetResolution();
-    double resolution_factor =  resolution * 2.1;
+        // get the input path size
+        unsigned int path_size = input.size();
+        unsigned int n = path_size / 4;
+        unsigned int m = path_size % 4;
 
-    // invert the resolution, avoiding a lot o divisions
-    double inverse_resolution = 1.0/resolution;
+        // the interpolated points
+        astar::Vector2DArrayPtr<double> bezier = nullptr;
 
-    // helpers
-    unsigned int n;
-    double d, dx, dy;
+        for (unsigned int i = 0; i < path_size; i += 4) {
 
-    // the tmp state
-    astar::State2D tmp;
+            // the four points to be interpolated
+            astar::Vector2D<double> &a(input[i].position), &b(input[i+1].position), &c(input[i+2].position), &d(input[i+3].position);
 
-    // clear the locked positions vector
-    locked_positions.clear();
+            for (double t = 0.1; t < 1.0; t += 0.1) {
 
-    bool cst;
+                // Draw the current points
+                bezier = BuildBezierCurve(a, b, c, d, t);
 
-    // iterate over almost the entire input path and interpolate between the given positions
-    // the reeds shepp action set is already interpolated
-    while (next != end) {
-
-        // push back the current one
-        // copy the current state
-        tmp = *current;
-
-        // set the coming to stop flag to false
-        tmp.coming_to_stop = false;
-
-        // add the current state to the output path
-        output.push_back(tmp);
-
-        // lock this point
-        locked_positions.push_back(true);
-
-        // get the distance between the current and the next poses
-        d = current->position.Distance(next->position);
-
-        // verify the distance between the poses
-        if (resolution_factor < d) {
-
-            // interpolate the current and the next states
-            n = std::floor(d * inverse_resolution);
-
-            // get the x and y step lengths
-            dx = (next->position.x - current->position.x) / ((double) n);
-            dy = (next->position.y - current->position.y) / ((double) n);
-
-            for (unsigned int i = 0; i < n-2; ++i) {
-
-                // update the tmp position
-                tmp.position.x += dx;
-                tmp.position.y += dy;
-
-                // add the interpolated point to the output path
-                output.push_back(tmp);
-
-                // unlock this point
-                locked_positions.push_back(false);
+                // append the interpolated points to the interpolated path
 
             }
 
-            // get the coming to stop flag
-            tmp.coming_to_stop = current->coming_to_stop;
-
-            // get the next position
-            tmp.position.x += dx;
-            tmp.position.y += dy;
-
-            // add the last interpolated element
-            output.push_back(tmp);
-
-            // unlock this point
-            locked_positions.push_back(false);
-
         }
 
-        // update the iterators
-        current = next;
-        ++next;
+        // add the last state
+
+        // lock this position
+        locked_positions.push_back(true);
+
+    } else {
+
+        interpolated_path->states = path->states;
+
     }
 
-    // add the last state
-    output.push_back(*current);
-
-    // lock this position
-    locked_positions.push_back(true);
 
     return interpolated_path;
 
