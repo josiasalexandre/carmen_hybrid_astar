@@ -54,8 +54,6 @@ class CGSmoother {
 
         // THE MINIMIZER CONTEXT ATTRIBUTES
 
-        bool first_time;
-
         // the minizer state
         CGStatus cg_status;
 
@@ -145,6 +143,11 @@ class CGSmoother {
 
         // the solution progress tolerance
         double xtol;
+
+        // the Interpolation context attributes
+
+        // register the stopping points
+        std::vector<unsigned int> stopping_points;
 
         // PRIVATE METHODS
 
@@ -242,14 +245,32 @@ class CGSmoother {
         // the Polak-Ribiere Conjugate Gradient Method With Moré-Thuente Line Search
         void ConjugateGradientPR(astar::StateArrayPtr path, bool locked = false);
 
-        // interpolate a given path
-        astar::StateArrayPtr Interpolate(astar::StateArrayPtr);
-
         // copy the current solution to the input path
         void InputPathUpdate(astar::Vector2DArrayPtr<double>, astar::StateArrayPtr);
 
         // show the current path in the map
         void ShowPath(astar::StateArrayPtr, bool plot_locked = true);
+
+        // get a bezier point given four points and the time
+        inline astar::Vector2D<double> GetBezierPoint(std::vector<astar::Vector2D<double>> &points, double t);
+
+        // build a set of control points between the states
+        void BuildBezierControlPoints(
+                const std::vector<astar::State2D>&,
+                std::vector<astar::Vector2D<double>> &p1,
+                std::vector<astar::Vector2D<double>> &p2,
+                unsigned int, unsigned int);
+
+        // build a bezier curve passing through a set of states
+        void DrawBezierCurve(
+                const std::vector<astar::State2D>&,
+                std::vector<astar::State2D> &,
+                const std::vector<astar::Vector2D<double>> &p1,
+                const std::vector<astar::Vector2D<double>> &p2,
+                unsigned int, unsigned int);
+
+        // interpolate a given path
+        astar::StateArrayPtr Interpolate(astar::StateArrayPtr);
 
     public:
 

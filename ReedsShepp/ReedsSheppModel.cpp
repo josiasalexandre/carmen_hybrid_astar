@@ -263,7 +263,7 @@ StateArrayPtr ReedsSheppModel::DiscretizeRS(
         for (std::vector<ReedsSheppAction>::iterator it = action_set->actions.begin();  it != end; ++it) {
 
             // subdivide the entire arc length by the grid resolution
-            unsigned int n = ceil(it->length);
+            unsigned int n = ceil(it->length * coefficient);
 
             // is it a line path?
             if (RSStraight != it->steer) {
@@ -341,7 +341,7 @@ StateArrayPtr ReedsSheppModel::DiscretizeRS(
 
                 // it's a straight line, so piece of cake
                 // get the piece arch length
-                double pieceLength = it->length * radcurv / n;
+                double pieceLength = it->length * radcurv / ((double) n);
 
                 // the x displacement
                 double dx = pieceLength * std::cos(prev.orientation);

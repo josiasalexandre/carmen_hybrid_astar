@@ -6,10 +6,10 @@
 
 astar::CGSmoother::CGSmoother(astar::InternalGridMapRef map, astar::VehicleModelRef vehicle_) :
     wo(0.1), ws(4.0), wp(0.5), wk(4.0), dmax(5.0), vorodmax(20),
-    alpha(0.2), grid(map), vehicle(vehicle_), kmax(0.22), first_time(true), input_path(nullptr),
+    alpha(0.2), grid(map), vehicle(vehicle_), kmax(0.22), input_path(nullptr),
     cg_status(astar::CGIddle), fx(), gx_norm(), fx1(), gx1_norm(), ftrialx(), x1mx_norm(), gtrialx_norm(), trialxmx_norm(), s(), s_norm(), sg(),
     locked_positions(), max_iterations(300), dim(0), step(0.01), default_step_length(1.0), stepmax(1e06), stepmin(1e-12),
-    ftol(1e-04), gtol(0.99999), xtol(1e-06)
+    ftol(1e-04), gtol(0.99999), xtol(1e-06), stopping_points(0)
 {
 
     // update the inverse dmax
@@ -455,9 +455,6 @@ void astar::CGSmoother::TakeStep(double factor) {
     std::vector<astar::Vector2D<double>> &current(x->vs);
     std::vector<astar::Vector2D<double>> &next(trialx->vs);
 
-    // input path direct access
-    std::vector<astar::State2D> &input(input_path->states);
-
     // reset the dx norm
     trialxmx_norm = 0.0;
 
@@ -466,8 +463,7 @@ void astar::CGSmoother::TakeStep(double factor) {
 
         if (!locked_positions[i]) {
 
-            // see the plus signal: the factor should be negative
-            // the factor value is equal to -step/ s_norm
+            // the factor value is equal to step/ s_norm
             // the s vector is not normalized, so ...
             next[i].x = current[i].x + factor * s[i].x;
             next[i].y = current[i].y + factor * s[i].y;
@@ -1265,7 +1261,7 @@ bool astar::CGSmoother::Setup(astar::StateArrayPtr path, bool locked) {
         input_path = path;
 
         // set the kmax value
-        kmax = first_time ? 1.0/(vehicle.min_turn_radius * 1.25) : 0.02;
+        kmax = 1.0/vehicle.min_turn_radius;
 
         // get the input path size and store the problem's dimension
         dim = path->states.size();
@@ -1304,8 +1300,11 @@ bool astar::CGSmoother::Setup(astar::StateArrayPtr path, bool locked) {
 
         if (!locked) {
 
+            // clear the cusps vector
+            stopping_points.clear();
+
             // reset the lock vector size
-            locked_positions.resize(dim, true);
+            locked_positions.resize(dim, false);
 
             // direct access
             std::vector<astar::State2D> &states(path->states);
@@ -1313,20 +1312,33 @@ bool astar::CGSmoother::Setup(astar::StateArrayPtr path, bool locked) {
             // set the index acess limit
             unsigned int limit = dim - 1;
 
+            // reset the first and last elements
+            locked_positions[0] = true;
+            locked_positions[limit] = true;
+
             // lock the stoping points
             for (unsigned int i = 1; i < limit; ++i) {
 
-                locked_positions[i] = states[i].gear != states[i-1].gear;
+                if (states[i].gear != states[i-1].gear) {
+
+                    locked_positions[i] = true;
+
+                    // set the coming to stop flag
+                    states[i-1].coming_to_stop = true;
+
+                    // add the current index to the cusp vector
+                    stopping_points.push_back(i);
+
+                }
 
             }
 
+            // set the last index as a cusp
+            // for bezier interpolation purpose
+            stopping_points.push_back(limit);
+
         }
 
-        // evaluate the cost function at the given position
-        // ftrialx = CostFunction(trialx);
-
-        // evaluate the first gradient
-        // gtrialx_norm = ComputeGradient(trialx, gtrialx->vs);
 
         // evaluate the function and the gradient at the same time
         EvaluateFunctionAndGradient();
@@ -1517,58 +1529,6 @@ void astar::CGSmoother::ConjugateGradientPR(astar::StateArrayPtr path, bool lock
 
 }
 
-// interpolate a given path
-astar::StateArrayPtr astar::CGSmoother::Interpolate(astar::StateArrayPtr path) {
-
-    // the resulting path
-    astar::StateArrayPtr interpolated_path = new StateArray();
-
-    if (4 <= path->states.size()) {
-
-        // direct access
-        std::vector<astar::State2D> &input(path->states);
-        std::vector<astar::State2D> &output(interpolated_path->states);
-
-        // get the input path size
-        unsigned int path_size = input.size();
-        unsigned int n = path_size / 4;
-        unsigned int m = path_size % 4;
-
-        // the interpolated points
-        astar::Vector2DArrayPtr<double> bezier = nullptr;
-
-        for (unsigned int i = 0; i < path_size; i += 4) {
-
-            // the four points to be interpolated
-            astar::Vector2D<double> &a(input[i].position), &b(input[i+1].position), &c(input[i+2].position), &d(input[i+3].position);
-
-            for (double t = 0.1; t < 1.0; t += 0.1) {
-
-                // Draw the current points
-                bezier = BuildBezierCurve(a, b, c, d, t);
-
-                // append the interpolated points to the interpolated path
-
-            }
-
-        }
-
-        // add the last state
-
-        // lock this position
-        locked_positions.push_back(true);
-
-    } else {
-
-        interpolated_path->states = path->states;
-
-    }
-
-
-    return interpolated_path;
-
-}
-
 // copy the current solution to the input path
 void astar::CGSmoother::InputPathUpdate(astar::Vector2DArrayPtr<double> solution, astar::StateArrayPtr output) {
 
@@ -1609,7 +1569,8 @@ void astar::CGSmoother::ShowPath(astar::StateArrayPtr path, bool plot_locked) {
             continue;
 
         }
-        // get the currnt point
+
+        // get the current point
         astar::GridCellIndex index(grid.PoseToIndex(path->states[i].position));
 
         // convert to opencv point
@@ -1633,6 +1594,281 @@ void astar::CGSmoother::ShowPath(astar::StateArrayPtr path, bool plot_locked) {
 
 }
 
+// get a bezier point given four points and the time
+// using cubic bezier interpolation
+astar::Vector2D<double> astar::CGSmoother::GetBezierPoint(std::vector<astar::Vector2D<double>> &points, double t) {
+
+    for (unsigned int index = 3; 0 < index; --index) {
+
+        for (unsigned int i = 0; i < index; ++i) {
+
+            points[i].x = (1-t) * points[i].x + t * points[i+1].x;
+            points[i].y = (1-t) * points[i].y + t * points[i+1].y;
+
+        }
+
+    }
+
+    return points[0];
+
+}
+
+// build a bezier curve passing through a set of states
+void astar::CGSmoother::BuildBezierControlPoints(
+    const std::vector<astar::State2D> &input,
+    std::vector<astar::Vector2D<double>> &p1,
+    std::vector<astar::Vector2D<double>> &p2,
+    unsigned int start,
+    unsigned int end) {
+
+    // the dimension
+    unsigned int n = end - start;
+
+    astar::Vector2D<double> tmp(0.0, 0.0);
+
+    // resize the control points
+    p1.resize(n, tmp);
+    p2.resize(n, tmp);
+
+    // the matriz diagonals
+    std::vector<astar::Vector2D<double>> a(n);
+    std::vector<astar::Vector2D<double>> b(n);
+    std::vector<astar::Vector2D<double>> c(n);
+
+    // the right hand side vector
+    std::vector<astar::Vector2D<double>> rhs(n);
+
+    // left most segment
+    a[0].x = 0.0;
+    a[0].y = 0.0;
+
+    b[0].x = 2.0;
+    b[0].y = 2.0;
+
+    c[0].x = 1.0;
+    c[0].y = 1.0;
+
+    rhs[0].x = input[0].position.x  + 2.0 * input[1].position.x;
+    rhs[0].y = input[0].position.y  + 2.0 * input[1].position.y;
+
+    // the internal limti index
+    unsigned int internal_limit = n - 1;
+
+    // internal segments
+    for (unsigned int i = 1; i < internal_limit; ++i) {
+
+        a[i].x = 1.0;
+        a[i].y = 1.0;
+
+        b[i].x = 4.0;
+        b[i].y = 4.0;
+
+        c[i].x = 1.0;
+        c[i].y = 1.0;
+
+        rhs[i].x = 4.0 * input[i].position.x + 2.0 * input[i+1].position.x;
+        rhs[i].y = 4.0 * input[i].position.y + 2.0 * input[i+1].position.y;
+
+    }
+
+    // right most segment
+    a[internal_limit].x = 2.0;
+    a[internal_limit].y = 2.0;
+
+    b[internal_limit].x = 7.0;
+    b[internal_limit].y = 7.0;
+
+    c[internal_limit].x = 0.0;
+    c[internal_limit].y = 0.0;
+
+    rhs[internal_limit].x = 8.0 * input[internal_limit].position.x + input[n].position.x;
+    rhs[internal_limit].y = 8.0 * input[internal_limit].position.y + input[n].position.y;
+
+    // now we have a Ax = b system
+    // It's a tridiagonal system, let's use the Thomas algorithm (from Wikipedia)
+    for (unsigned int i = 1; i < n; ++i) {
+
+        double mx = a[i].x/b[i-1].x;
+        double my = a[i].y/b[i-1].y;
+
+        b[i].x = b[i].x - mx * c[i - 1].x;
+        b[i].y = b[i].y - my * c[i - 1].y;
+
+        rhs[i].x = rhs[i].x - mx*rhs[i-1].x;
+        rhs[i].y = rhs[i].y - my*rhs[i-1].y;
+    }
+
+    // set the last p1 point value
+    p1[internal_limit].x = rhs[internal_limit].x/b[internal_limit].x;
+    p1[internal_limit].y = rhs[internal_limit].y/b[internal_limit].y;
+
+    // backward substitution
+    for (int i = ((int) n) - 2; i >= 0; --i) {
+
+        p1[i].x = (rhs[i].x - c[i].x * p1[i+1].x) / b[i].x;
+        p1[i].y = (rhs[i].y - c[i].y * p1[i+1].y) / b[i].y;
+
+    }
+
+    // we have the left control points, now compute the right ones
+    for (unsigned int i = 0; i < internal_limit; ++i) {
+
+        p2[i].x = 2.0 * input[i+1].position.x - p1[i+1].x;
+        p2[i].y = 2.0 * input[i+1].position.y - p1[i+1].y;
+
+    }
+
+    // update the last one
+    p2[internal_limit].x = 0.5 * (input[n].position.x + p1[internal_limit].x);
+    p2[internal_limit].y = 0.5 * (input[n].position.y + p1[internal_limit].y);
+
+}
+
+// build a bezier curve passing through a set of states
+void astar::CGSmoother::DrawBezierCurve(
+                const std::vector<astar::State2D> &input,
+                std::vector<astar::State2D> &output,
+                const std::vector<astar::Vector2D<double>> &p1,
+                const std::vector<astar::Vector2D<double>> &p2,
+                unsigned int start, unsigned int end) {
+
+    //
+    unsigned int limit = end - start;
+
+    // get the grid resoluiton
+    double resolution = grid.GetResolution();
+    double inverse_resolution = grid.GetInverseResolution();
+    double resolution_factor = resolution;
+    double res2 = std::pow(0.8 * resolution, 2);
+
+    // the four points to tbe interpolated
+    std::vector<astar::Vector2D<double>> piece(4);
+
+    for (unsigned int i = 0; i < limit; ++i) {
+
+        // direct access
+        const astar::Vector2D<double> &left(input[i].position), &right(input[i+1].position);
+
+        // a tmp helper
+        astar::State2D tmp(input[i]);
+
+        // set the coming to stop flag
+        tmp.coming_to_stop = false;
+
+        // push the current point to the output path
+        output.push_back(tmp);
+
+        // this is a locked point
+        locked_positions.push_back(true);
+
+        // get the distance betweeng the left and right points
+        double d = left.Distance(right);
+
+        if (resolution_factor < d) {
+
+            // copy the points
+            piece[0].x = left.x;
+            piece[0].y = left.y;
+
+            piece[1].x = p1[i].x;
+            piece[1].y = p1[i].y;
+
+            piece[2].x = p2[i].x;
+            piece[2].y = p2[i].y;
+
+            piece[3].x = right.x;
+            piece[3].y = right.y;
+
+            // draw the curve between the points
+            double time_step = resolution/d;
+            double t = time_step;
+
+            // iterate over time [0, 1] and compute the points in the interval
+            while (t < 1.0) {
+
+                // draw the points
+                tmp.position = GetBezierPoint(piece, t);
+
+                if (res2 < tmp.position.Distance2(output.back().position)) {
+
+                    // unset the coming to stop flag to false
+                    tmp.coming_to_stop = false;
+
+                    // push to the output vector
+                    output.push_back(tmp);
+
+                    // unlocked point
+                    locked_positions.push_back(false);
+
+                }
+
+                // update the time value
+                t += time_step;
+
+            }
+
+            // update the last inserted state
+            output.back().coming_to_stop = input[i].coming_to_stop;
+
+        }
+
+    }
+
+}
+
+// interpolate a given path
+astar::StateArrayPtr astar::CGSmoother::Interpolate(astar::StateArrayPtr path) {
+
+    // the resulting path
+    astar::StateArrayPtr interpolated_path = new StateArray();
+
+    if (3 <= path->states.size()) {
+
+        // direct access
+        std::vector<astar::State2D> &input(path->states);
+        std::vector<astar::State2D> &output(interpolated_path->states);
+
+        // clear the locked points vector
+        locked_positions.clear();
+
+        // how many stops?
+        unsigned int stops = stopping_points.size();
+
+        // the start index
+        unsigned int start = 0;
+
+        for (unsigned int i = 0; i < stops; ++i) {
+
+            // get the upper limit
+            unsigned int end = stopping_points[i];
+
+            // the control points
+            std::vector<astar::Vector2D<double>> p1, p2;
+
+            // compute and build the bezier control points
+            BuildBezierControlPoints(input, p1, p2, start, end);
+
+            // interpolate the subpath
+            // add the interpolated states to the output vector
+            DrawBezierCurve(input, output, p1, p2, start, end);
+
+            // update the start index to the next iteration
+            start = end;
+
+        }
+
+    } else {
+
+        // copy the input states
+        interpolated_path->states = path->states;
+
+    }
+
+
+    return interpolated_path;
+
+}
+
 // the main smooth function
 astar::StateArrayPtr astar::CGSmoother::Smooth(astar::InternalGridMapRef grid_, astar::VehicleModelRef vehicle_, astar::StateArrayPtr raw_path) {
 
@@ -1652,17 +1888,11 @@ astar::StateArrayPtr astar::CGSmoother::Smooth(astar::InternalGridMapRef grid_, 
     astar::StateArrayPtr interpolated_path = Interpolate(raw_path);
 
     // get the map
-    //ShowPath(interpolated_path);
-
-    first_time = false;
-
-    // set the weights
+    ShowPath(interpolated_path);
 
     // minimize again the interpolated path
     // conjugate gradient based on the Polak-Ribiere formula
-    ConjugateGradientPR(interpolated_path);
-
-    first_time = true;
+    ConjugateGradientPR(interpolated_path, true);
 
     // get the map
     //ShowPath(interpolated_path, false);
