@@ -51,21 +51,27 @@ bool astar::CGSmoother::UnsafePath(astar::Vector2DArrayPtr<double> path) {
     std::vector<astar::Vector2D<double>> &positions(path->vs);
     std::vector<astar::State2D> &poses(input_path->states);
 
+    // upper index limit
+    unsigned int limit = dim - 1;
+
     double safety = vehicle.safety_factor;
 
-    for (unsigned int i = 0; i < dim; ++i) {
+    for (unsigned int i = 1; i < limit; ++i) {
 
-        if (!grid.isSafePlace(vehicle.GetVehicleBodyCircles(positions[i], poses[i].orientation), safety)) {
+        if (!locked_positions[i]) {
 
-            // lock the current point
-            locked_positions[i] = true;
+            if (!grid.isSafePlace(vehicle.GetVehicleBodyCircles(positions[i], poses[i].orientation), safety)) {
 
-            // reset the point to the A* result
-            positions[i] = poses[i].position;
+                // lock the current point
+                locked_positions[i] = true;
 
-            // set the unsafe flag
-            unsafe = false;
+                // reset the point to the A* result
+                positions[i] = poses[i].position;
 
+                // set the unsafe flag
+                unsafe = false;
+
+            }
         }
 
     }
@@ -83,6 +89,7 @@ double astar::CGSmoother::ABSMax(double a, double b, double c) {
     if (a > b) {
 
         return (a > c) ? a : c;
+
     } else {
 
         return (b > c) ? b : c;
@@ -100,10 +107,12 @@ void astar::CGSmoother::CostFunction() {
     // the tmp solution direct access
     std::vector<astar::Vector2D<double>> &trialxs(trialx->vs);
 
+    unsigned int limit = dim - 1;
+
     // iterate from the second element till the second last
     // and get the individual derivatives
     // the first and last points should no be modified
-    for (unsigned int i = 1; i < dim; ++i) {
+    for (unsigned int i = 1; i < limit; ++i) {
 
         astar::Vector2D<double> &xim1(trialxs[i-1]), &xi(trialxs[i]), &xip1(trialxs[i+1]);
 
@@ -449,11 +458,11 @@ void astar::CGSmoother::ComputeGradient() {
 // take a step at the current direction vector (s)
 void astar::CGSmoother::TakeStep(double factor) {
 
-    // get the limit
-    unsigned int limit = dim - 1;
-
     std::vector<astar::Vector2D<double>> &current(x->vs);
     std::vector<astar::Vector2D<double>> &next(trialx->vs);
+
+    // get the limit
+    unsigned int limit = dim - 1;
 
     // reset the dx norm
     trialxmx_norm = 0.0;
@@ -487,8 +496,7 @@ void astar::CGSmoother::EvaluateF(
     double &obstacle,
     double &potential,
     double &smooth,
-    double &curvature
-    ) {
+    double &curvature) {
 
     //
     astar::Vector2D<double> dxi, dxip1, tmp;
@@ -569,8 +577,7 @@ void astar::CGSmoother::EvaluateFG(
     double &potential,
     double &smooth,
     double &curvature,
-    astar::Vector2D<double> &gradient
-    ) {
+    astar::Vector2D<double> &gradient) {
 
     //
     astar::Vector2D<double> dxi, dxip1;
@@ -1339,7 +1346,6 @@ bool astar::CGSmoother::Setup(astar::StateArrayPtr path, bool locked) {
 
         }
 
-
         // evaluate the function and the gradient at the same time
         EvaluateFunctionAndGradient();
 
@@ -1397,10 +1403,10 @@ void astar::CGSmoother::UpdateConjugateDirection(std::vector<astar::Vector2D<dou
     sg = 0.0;
 
     // the limit index
-    unsigned int limit = dim - 2;
+    unsigned int limit = dim - 1;
 
     // assuming the dimension is valid
-    for (unsigned int i = 2; i < limit; ++i) {
+    for (unsigned int i = 1; i < limit; ++i) {
 
         s[i].x = gamma*s[i].x - gradient[i].x;
         s[i].y = gamma*s[i].y - gradient[i].y;
@@ -1432,6 +1438,7 @@ void astar::CGSmoother::ConjugateGradientPR(astar::StateArrayPtr path, bool lock
 
     }
 
+    // optimize
     // the main conjugate gradient process
     do {
 
@@ -1739,7 +1746,7 @@ void astar::CGSmoother::DrawBezierCurve(
     double resolution = grid.GetResolution();
     double inverse_resolution = grid.GetInverseResolution();
     double resolution_factor = resolution;
-    double res2 = std::pow(0.8 * resolution, 2);
+    double res2 = std::pow(resolution, 2);
 
     // the four points to tbe interpolated
     std::vector<astar::Vector2D<double>> piece(4);
@@ -1789,7 +1796,7 @@ void astar::CGSmoother::DrawBezierCurve(
                 // draw the points
                 tmp.position = GetBezierPoint(piece, t);
 
-                if (res2 < tmp.position.Distance2(output.back().position)) {
+                if (res2 < tmp.position.Distance2(output.back().position) && res2 < tmp.position.Distance2(right)) {
 
                     // unset the coming to stop flag to false
                     tmp.coming_to_stop = false;

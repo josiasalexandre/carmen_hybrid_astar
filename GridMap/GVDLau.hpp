@@ -82,7 +82,7 @@ class GVDLau {
         int DistanceSquared(const astar::GridCellIndexRef, const astar::GridCellIndexRef);
 
         // verify if a given cell is occupied, wich means that the nearest obstacle is the given cell
-        inline bool isOccupied(const astar::GridCellIndexRef);
+        inline bool isOccupied(const astar::GridCellIndexRef) const;
 
         // verify if a given cell is occupied, wich means that the nearest obstacle is the given cell
         // overloaded version

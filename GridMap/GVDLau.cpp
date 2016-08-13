@@ -66,7 +66,7 @@ int GVDLau::DistanceSquared(const astar::GridCellIndexRef a, const astar::GridCe
 }
 
 // verify if a given cell is occupied, wich means that the nearest obstacle is the given cell
-bool GVDLau::isOccupied(const astar::GridCellIndexRef index) {
+bool GVDLau::isOccupied(const astar::GridCellIndexRef index) const {
 
     if (isValidIndex(index)) {
 

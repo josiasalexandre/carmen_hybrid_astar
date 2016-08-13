@@ -73,8 +73,7 @@ class Vector2DArray {
 
                 for (unsigned int i = 0; i < size; ++i) {
 
-                    dot += a[i].x * b[i].x;
-                    dot += a[i].y * b[i].y;
+                    dot += a[i].x * b[i].x + a[i].y * b[i].y;
 
                 }
 
