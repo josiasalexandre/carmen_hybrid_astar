@@ -26,13 +26,13 @@ void Pose2D::operator=(const Pose2D &pose) {
 // equals to operator overloading
 bool Pose2D::operator==(const Pose2D &pose) {
 
-    return (0.0001 > position.Distance2(pose.position) && 0.001 > std::fabs(pose.orientation - orientation));
+    return (0.0001 > position.Distance2(pose.position) && 0.1 > std::fabs(pose.orientation - orientation));
 
 }
 
 // differet operator overloading
 bool Pose2D::operator!=(const Pose2D &pose) {
 
-    return (0.0001 < std::fabs(position.Distance2(position)) || 0.001 < std::fabs(pose.orientation - orientation));
+    return (0.0001 < std::fabs(position.Distance2(position)) || 0.1 < std::fabs(pose.orientation - orientation));
 
 }

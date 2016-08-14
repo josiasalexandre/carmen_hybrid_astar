@@ -5,10 +5,10 @@
 #include <opencv2/imgproc/imgproc.hpp>
 
 astar::CGSmoother::CGSmoother(astar::InternalGridMapRef map, astar::VehicleModelRef vehicle_) :
-    wo(0.1), ws(4.0), wp(0.5), wk(4.0), dmax(5.0), vorodmax(20),
+    wo(0.1), ws(8.0), wp(0.5), wk(8.0), dmax(5.0), vorodmax(20),
     alpha(0.2), grid(map), vehicle(vehicle_), kmax(0.22), input_path(nullptr),
     cg_status(astar::CGIddle), fx(), gx_norm(), fx1(), gx1_norm(), ftrialx(), x1mx_norm(), gtrialx_norm(), trialxmx_norm(), s(), s_norm(), sg(),
-    locked_positions(), max_iterations(300), dim(0), start(0), end(0), step(0.01), default_step_length(1.0), stepmax(1e06), stepmin(1e-12),
+    locked_positions(), max_iterations(400), dim(0), step(0.01), default_step_length(1.0), stepmax(1e06), stepmin(1e-12),
     ftol(1e-04), gtol(0.99999), xtol(1e-06), stopping_points(0)
 {
 
@@ -56,17 +56,17 @@ bool astar::CGSmoother::UnsafePath(astar::Vector2DArrayPtr<double> path) {
 
     double safety = vehicle.safety_factor;
 
-    for (unsigned int i = 1, j = start + 1; i < limit; ++i, ++j) {
+    for (unsigned int i = 1; i < limit; ++i) {
 
         if (!locked_positions[i]) {
 
-            if (!grid.isSafePlace(vehicle.GetVehicleBodyCircles(positions[i], poses[j].orientation), safety)) {
+            if (!grid.isSafePlace(vehicle.GetVehicleBodyCircles(positions[i], poses[i].orientation), safety)) {
 
                 // lock the current point
                 locked_positions[i] = true;
 
                 // reset the point to the A* result
-                positions[i] = poses[j].position;
+                positions[i] = poses[i].position;
 
                 // set the unsafe flag
                 unsafe = false;
@@ -1268,18 +1268,13 @@ void astar::CGSmoother::BreakPath(astar::StateArrayPtr raw_path) {
     // get the path dimension
     unsigned int size = states.size();
 
-    // get the upper limit index
-    unsigned int limit = size - 1;
-
     // reset the stoppig points vector
     stopping_points.clear();
 
     unsigned int i = 1;
 
-    // separate the resolutions
-
     // the first part is the A* simple expanded nodes
-    while (i < size && -1.0 != states[i].t) {
+    while (i < size) {
 
         if (states[i-1].gear != states[i].gear) {
 
@@ -1296,33 +1291,8 @@ void astar::CGSmoother::BreakPath(astar::StateArrayPtr raw_path) {
 
     }
 
-    // separate
-    stopping_points.push_back(i-1);
-
-    if (i < limit) {
-
-        // now we have the Reeds-Shepp analytically expanded nodes
-        while (i < limit) {
-
-            if (states[i-1].gear != states[i].gear) {
-
-                // set the coming to stop flag
-                states[i-1].coming_to_stop = true;
-
-                // set the stopping point index
-                stopping_points.push_back(i);
-
-            }
-
-            // update the counter
-            i += 1;
-
-        }
-
-        // append the last index limit
-        stopping_points.push_back(limit);
-
-    }
+    // add the last stop point
+    stopping_points.push_back(size - 1);
 
 }
 
@@ -1336,8 +1306,7 @@ bool astar::CGSmoother::Setup(astar::StateArrayPtr path, bool locked) {
     kmax = 1.0/vehicle.min_turn_radius;
 
     // get the input path size and store the problem's dimension
-    dim = (end - start) + 1;
-    // dim = path->states.size();
+    dim = path->states.size();
 
     // tmp vector
     astar::Vector2D<double> tmp(0.0, 0.0);
@@ -1347,12 +1316,6 @@ bool astar::CGSmoother::Setup(astar::StateArrayPtr path, bool locked) {
     x1->vs.resize(dim, tmp);
     trialx->vs.resize(dim, tmp);
 
-    // resize the locked positions vector
-    locked_positions.resize(dim, false);
-
-    // lock the first and last positions
-    locked_positions[0] = locked_positions[dim - 1] = true;
-
     // direct access
     std::vector<astar::State2D> &states(path->states);
     std::vector<astar::Vector2D<double>> &xs(x->vs);
@@ -1360,14 +1323,33 @@ bool astar::CGSmoother::Setup(astar::StateArrayPtr path, bool locked) {
     std::vector<astar::Vector2D<double>> &trialxs(trialx->vs);
 
     // copy the input positions
-    for (unsigned int i = 0, j = start; i < dim; ++i, ++j) {
+    // and lock the stopping points
+    for (unsigned int i = 0; i < dim; ++i) {
 
-        xs[i] = states[j].position;
+        xs[i] = states[i].position;
         x1s[i] = xs[i];
         trialxs[i] = xs[i];
 
     }
 
+    if (!locked) {
+
+        // resize the locked positions vector
+        locked_positions.resize(dim, false);
+
+        // the last valid index
+        unsigned int limit = dim - 1;
+
+        for (unsigned int i = 1; i < limit; ++i) {
+
+            locked_positions[i] = states[i-1].gear != states[i].gear;
+
+        }
+
+        // lock the first and last positions
+        locked_positions[0] = locked_positions[limit] = true;
+
+    }
 
     // update the dx norm
     trialxmx_norm = x1mx_norm = std::numeric_limits<double>::max();
@@ -1460,8 +1442,20 @@ void astar::CGSmoother::UpdateConjugateDirection(std::vector<astar::Vector2D<dou
     sg /= s_norm;
 }
 
-// the main loop iteration
-void astar::CGSmoother::Iterate() {
+// the Polak-Ribiere Conjugate Gradient Method With More-Thuente Line Search
+void astar::CGSmoother::ConjugateGradientPR(astar::StateArrayPtr path, bool locked) {
+
+    // first step, setup the optimization process
+    // the gradient is the first direction
+    if (!Setup(path, locked)) {
+
+        // could not start the minimizer
+        // we should make shure the old process is finished
+        std::cout << "Could not start the optimization process!!\n";
+
+        return;
+
+    }
 
     // optimize
     // the main conjugate gradient process
@@ -1556,48 +1550,6 @@ void astar::CGSmoother::Iterate() {
     // copy the resulting path back
     InputPathUpdate(x, input_path);
 
-}
-
-// the Polak-Ribiere Conjugate Gradient Method With More-Thuente Line Search
-void astar::CGSmoother::ConjugateGradientPR(astar::StateArrayPtr path, bool locked) {
-
-    // configure the stopping points
-    BreakPath(path);
-
-    // how many subpaths
-    unsigned int pieces = stopping_points.size();
-
-    // reset the bottom limit index
-    start = 0;
-
-    // iterate over the subpaths
-    for (unsigned int i = 0; i < pieces; ++i) {
-
-        // get the upper limit index
-        end = stopping_points[i];
-
-        // first step, setup the optimization process
-        // the gradient is the first direction
-        if (!Setup(path, locked)) {
-
-            // could not start the minimizer
-            // we should make shure the old process is finished
-            std::cout << "Could not start the optimization process!!\n";
-
-            return;
-
-        }
-
-        // iterate!
-        Iterate();
-
-        // we can verify the cg_status here
-
-        // update the bottom limit index
-        start = end;
-
-    }
-
     // unset the status
     cg_status = astar::CGIddle;
 
@@ -1610,11 +1562,11 @@ void astar::CGSmoother::InputPathUpdate(astar::Vector2DArrayPtr<double> solution
     std::vector<astar::State2D> &states(output->states);
     std::vector<astar::Vector2D<double>> &xs(solution->vs);
 
-    for (unsigned int i = 0, j = start; i < dim; ++i, ++j) {
+    for (unsigned int i = 0; i < dim; ++i) {
 
         // set the new position
-        states[j].position.x = xs[i].x;
-        states[j].position.y = xs[i].y;
+        states[i].position.x = xs[i].x;
+        states[i].position.y = xs[i].y;
 
     }
 
@@ -1893,12 +1845,12 @@ astar::StateArrayPtr astar::CGSmoother::Interpolate(astar::StateArrayPtr path) {
 
     if (3 <= path->states.size()) {
 
+        // break the path into subpieces
+        BreakPath(path);
+
         // direct access
         std::vector<astar::State2D> &input(path->states);
         std::vector<astar::State2D> &output(interpolated_path->states);
-
-        // clear the locked points vector
-        locked_positions.clear();
 
         // how many stops?
         unsigned int stops = stopping_points.size();
@@ -1965,7 +1917,7 @@ astar::StateArrayPtr astar::CGSmoother::Smooth(astar::InternalGridMapRef grid_, 
 
     // minimize again the interpolated path
     // conjugate gradient based on the Polak-Ribiere formula
-    ConjugateGradientPR(interpolated_path, true);
+    ConjugateGradientPR(interpolated_path);
 
     // get the map
     ShowPath(interpolated_path, false);

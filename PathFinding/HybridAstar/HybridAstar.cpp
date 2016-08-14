@@ -166,6 +166,12 @@ StateArrayPtr HybridAstar::RebuildPath(HybridAstarNodePtr n, const State2D &star
             // get the path size
             subpathSize = sub.size();
 
+            if (0.001 > std::fabs(sub[sub.size() - 1].orientation - goal.orientation)) {
+
+                std::cout << "ReedsSheppDiscretization error!\n";
+
+            }
+
             // prepend the resulting subpath to the current path
             for (int i = subpathSize - 1; i > 0; i--) {
 
@@ -272,6 +278,17 @@ HybridAstarNodePtr HybridAstar::GetReedsSheppChild(const Pose2D &start, const Po
         // a reference helper, just in case
         std::vector<State2D> &states(path->states);
 
+        if (0.1 < std::fabs(states[states.size() - 1].orientation - goal.orientation)) {
+
+            astar::State2D &s(states[states.size() - 1]);
+
+            std::cout << "ReedsSheppDiscretization error!\n";
+            std::cout << "The start: " << start.position.x << ", " << start.position.y << " and " << start.orientation << "\n";
+            std::cout << "The goal: " << goal.position.x << ", " << goal.position.y << " and " << goal.orientation << "\n";
+            std::cout << "ReedsShepp: " << s.position.x << ", " << s.position.y << " and " << s.orientation << "\n";
+
+        }
+
         // get the states end pointer
         std::vector<State2D>::iterator end = states.end();
 
@@ -360,23 +377,28 @@ HybridAstarNodeArrayPtr HybridAstar::GetChidlren(const Pose2D &start, const Pose
 
     // expanding Reeds-Shepp curves now
 
-    // Reeds-Shepp curve threshold value
-    // double threshold = heuristic.GetHeuristicValue(start, goal);
-    double threshold = heuristic.GetHeuristicValue(start, goal);
-    double inverseThreshold = 10.0/(threshold*threshold);
+    if (astar::ForwardGear == gear) {
 
-    // quadratic falloff
-    if (10.0 > threshold || inverseThreshold > rand()) {
+        // Reeds-Shepp curve threshold value
+        // double threshold = heuristic.GetHeuristicValue(start, goal);
+        double threshold = heuristic.GetHeuristicValue(start, goal);
+        double inverseThreshold = 10.0/(threshold*threshold);
 
-        // the a new HybridAstarNode based on ReedsSheppModel
-        HybridAstarNodePtr rsNode = GetReedsSheppChild(start, goal);
+        // quadratic falloff
+        if (10.0 > threshold || inverseThreshold > rand()) {
 
-        if (nullptr != rsNode) {
+            // the a new HybridAstarNode based on ReedsSheppModel
+            HybridAstarNodePtr rsNode = GetReedsSheppChild(start, goal);
 
-            // append to the children list
-            nodes.push_back(rsNode);
+            if (nullptr != rsNode) {
+
+                // append to the children list
+                nodes.push_back(rsNode);
+
+            }
 
         }
+
     }
 
     return children;
@@ -422,6 +444,9 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMapRef grid_map, const State2D &
     // find the current cell
     GridMapCellPtr c = grid_map.PoseToCell(start_pose);
 
+    // the goal cell
+    GridMapCellPtr gc = grid_map.PoseToCell(goal_pose);
+
     // the available space around the vehicle
     // provides the total length between the current state and the node's children
     double length = start.v * start.t;
@@ -450,8 +475,16 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMapRef grid_map, const State2D &
     // from the start to the goal
     double tentative_f;
 
+    bool got_rs_node = false;
+    bool error = false;
+
+    int last_open = 1;
+    int size_open = 1;
+
     // the actual A* algorithm
     while(!open.isEmpty()) {
+
+        size_open = (int) open.GetN();
 
         n = open.DeleteMin();
 
@@ -476,7 +509,7 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMapRef grid_map, const State2D &
         double obst = grid_map.GetObstacleDistance(n->pose.position);
         double voro_dist = grid_map.GetVoronoiDistance(n->pose.position);
 
-        length = std::max(resolution, 0.5 * (obst + voro_dist));
+        length = std::max(resolution, 0.25 * (obst + voro_dist));
 
         // iterate over the gears
         for (unsigned int i = 0; i < NumGears; i++) {
@@ -493,6 +526,8 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMapRef grid_map, const State2D &
 
             // iterate over the current node's children
             for (std::vector<HybridAstarNodePtr>::iterator it = nodes.begin(); it != end; ++it) {
+
+                got_rs_node = false;
 
                 // avoid a lot of indirect access
                 HybridAstarNodePtr child = *it;
@@ -513,6 +548,8 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMapRef grid_map, const State2D &
 
                         // we have a valid action set, it was a Reeds-Shepp analytic expanding
                         tentative_g = n->g + child->action_set->CalculateCost(vehicle.min_turn_radius, reverse_factor, gear_switch_cost);
+
+                        got_rs_node = true;
 
                     } else {
 
@@ -541,8 +578,6 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMapRef grid_map, const State2D &
                     // is it a not opened node?
                     if (UnknownNode == c->status) {
 
-                        // the cell is empty and doesn't have any node
-
                         // set the cell pointer
                         child->cell = c;
 
@@ -557,26 +592,36 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMapRef grid_map, const State2D &
 
                     } else if (tentative_f < c->node->f) {
 
-                        // the cell has a node but the current child is a better one
+                        if ((c == gc && 0.1 > std::fabs(goal_pose.orientation - child->pose.orientation)) || c != gc) {
 
-                        // update the node at the cell
-                        HybridAstarNodePtr current = c->node;
+                            if(got_rs_node) {
 
-                        // the old node is updated but not the corresponding Handle/Key in the priority queue
-                        current->UpdateValues(*child);
+                                double a = 2.0;
 
-                        if (OpenedNode == c->status) {
+                                a = 3;
 
-                            // decrease the key at the priority queue
-                            open.DecreaseKey(current->handle, tentative_f);
+                            }
+                            // update the node at the cell
+                            HybridAstarNodePtr current = c->node;
 
-                        } else if (ExploredNode == c->status) {
+                            // the old node is updated but not the corresponding Handle/Key in the priority queue
+                            current->UpdateValues(*child);
 
-                            // the cell has an explored node, let's revive it
-                            current->handle = open.Add(current, tentative_f);
+                            if (OpenedNode == c->status) {
 
-                            // reset the cell status
-                            c->status = OpenedNode;
+                                // decrease the key at the priority queue
+                                open.DecreaseKey(current->handle, tentative_f);
+
+
+                            } else if (ExploredNode == c->status) {
+
+                                // the cell has an explored node, let's revive it
+                                current->handle = open.Add(current, tentative_f);
+
+                                // reset the cell status
+                                c->status = OpenedNode;
+
+                            }
 
                         }
 
@@ -591,6 +636,23 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMapRef grid_map, const State2D &
 
             // delete the children vector
             delete children;
+
+        }
+
+        last_open = (int) open.GetN();
+
+        if (last_open < size_open && size_open > 1) {
+
+            std::cout << "Wrong! Error with the priority queue!\n";
+        }
+
+        if (0 == open.GetN() && got_rs_node) {
+
+            error = true;
+
+        } else if (open.isEmpty()) {
+
+            std::cout << "Error!\n";
 
         }
 

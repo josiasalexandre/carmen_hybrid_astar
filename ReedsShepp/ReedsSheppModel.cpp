@@ -42,7 +42,7 @@ ReedsSheppActionSetPtr ReedsSheppModel::Solve(const Pose2D &start, const Pose2D 
     position.RotateZ(-start.orientation);
 
     // get the angle difference
-    double orientation = mrpt::math::angDistance<double>(goal.orientation, start.orientation);
+    double orientation = mrpt::math::wrapToPi<double>(goal.orientation - start.orientation);
 
     // the sin of the orientation
     double sin_orientation = std::sin(orientation);

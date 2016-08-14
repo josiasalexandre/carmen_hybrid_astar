@@ -13,7 +13,7 @@ HybridAstarNode::HybridAstarNode(
         double cost,
         double heuristicCost,
         HybridAstarNode *p
-    ) : pose(_pose), action(rsAction), action_set(0), g(cost), f(heuristicCost), parent(p), cell(c), handle(nullptr)
+    ) : pose(_pose), action(rsAction), action_set(nullptr), g(cost), f(heuristicCost), parent(p), cell(c), handle(nullptr)
 {
     // update the cell values
     if (nullptr != cell) {
@@ -100,17 +100,31 @@ void HybridAstarNode::UpdateValues(const astar::HybridAstarNode &n) {
 
             action = new ReedsSheppAction(*(n.action));
 
+            // remove the action_set
+            delete action_set;
+
+            // reset to nullptr
+            action_set = nullptr;
+
         } else {
 
             // the steering action
             *action = *(n.action);
         }
 
+
     } else if (nullptr != n.action_set) {
 
         if (nullptr == action_set) {
 
+            // build a new action set
             action_set = new ReedsSheppActionSet(*(n.action_set));
+
+            // delete the current action
+            delete action;
+
+            // reset the action pointer to null
+            action = nullptr;
 
         } else {
 
