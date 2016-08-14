@@ -8,7 +8,7 @@ astar::CGSmoother::CGSmoother(astar::InternalGridMapRef map, astar::VehicleModel
     wo(0.1), ws(4.0), wp(0.5), wk(4.0), dmax(5.0), vorodmax(20),
     alpha(0.2), grid(map), vehicle(vehicle_), kmax(0.22), input_path(nullptr),
     cg_status(astar::CGIddle), fx(), gx_norm(), fx1(), gx1_norm(), ftrialx(), x1mx_norm(), gtrialx_norm(), trialxmx_norm(), s(), s_norm(), sg(),
-    locked_positions(), max_iterations(300), dim(0), step(0.01), default_step_length(1.0), stepmax(1e06), stepmin(1e-12),
+    locked_positions(), max_iterations(300), dim(0), start(0), end(0), step(0.01), default_step_length(1.0), stepmax(1e06), stepmin(1e-12),
     ftol(1e-04), gtol(0.99999), xtol(1e-06), stopping_points(0)
 {
 
@@ -56,17 +56,17 @@ bool astar::CGSmoother::UnsafePath(astar::Vector2DArrayPtr<double> path) {
 
     double safety = vehicle.safety_factor;
 
-    for (unsigned int i = 1; i < limit; ++i) {
+    for (unsigned int i = 1, j = start + 1; i < limit; ++i, ++j) {
 
         if (!locked_positions[i]) {
 
-            if (!grid.isSafePlace(vehicle.GetVehicleBodyCircles(positions[i], poses[i].orientation), safety)) {
+            if (!grid.isSafePlace(vehicle.GetVehicleBodyCircles(positions[i], poses[j].orientation), safety)) {
 
                 // lock the current point
                 locked_positions[i] = true;
 
                 // reset the point to the A* result
-                positions[i] = poses[i].position;
+                positions[i] = poses[j].position;
 
                 // set the unsafe flag
                 unsafe = false;
@@ -1259,137 +1259,174 @@ int astar::CGSmoother::MTLineSearch(double lambda) {
 
 }
 
-// setup the first iteration and configure the containers
-bool astar::CGSmoother::Setup(astar::StateArrayPtr path, bool locked) {
+// configure the stopping points and break the path into subpaths
+void astar::CGSmoother::BreakPath(astar::StateArrayPtr raw_path) {
 
-    if (astar::CGIddle == cg_status) {
+    // states direct access
+    std::vector<astar::State2D> &states(raw_path->states);
 
-        // get the reference to the input path
-        input_path = path;
+    // get the path dimension
+    unsigned int size = states.size();
 
-        // set the kmax value
-        kmax = 1.0/vehicle.min_turn_radius;
+    // get the upper limit index
+    unsigned int limit = size - 1;
 
-        // get the input path size and store the problem's dimension
-        dim = path->states.size();
+    // reset the stoppig points vector
+    stopping_points.clear();
 
-        // tmp vector
-        astar::Vector2D<double> tmp(0.0, 0.0);
+    unsigned int i = 1;
 
-        // resize the solution vectors
-        x->vs.resize(dim, tmp);
-        x1->vs.resize(dim, tmp);
-        trialx->vs.resize(dim, tmp);
+    // separate the resolutions
 
-        // copy the input positions
-        for (unsigned int i = 0; i < dim; ++i) {
+    // the first part is the A* simple expanded nodes
+    while (i < size && -1.0 != states[i].t) {
 
-            x->vs[i] = path->states[i].position;
-            x1->vs[i] = path->states[i].position;
-            trialx->vs[i] = path->states[i].position;
+        if (states[i-1].gear != states[i].gear) {
 
-        }
+            // set the coming to stop flag
+            states[i-1].coming_to_stop = true;
 
-        // update the dx norm
-        trialxmx_norm = x1mx_norm = std::numeric_limits<double>::max();
-
-        // reset the gradient at x
-        gx->vs.resize(dim, tmp);
-
-        // reset the gradient at x1
-        gx1->vs.resize(dim, tmp);
-
-        // reset the gradient displacement
-        gx1mgx.resize(dim, tmp);
-
-        // resize the trial position gradient
-        gtrialx->vs.resize(dim, tmp);
-
-        if (!locked) {
-
-            // clear the cusps vector
-            stopping_points.clear();
-
-            // reset the lock vector size
-            locked_positions.resize(dim, false);
-
-            // direct access
-            std::vector<astar::State2D> &states(path->states);
-
-            // set the index acess limit
-            unsigned int limit = dim - 1;
-
-            // reset the first and last elements
-            locked_positions[0] = true;
-            locked_positions[limit] = true;
-
-            // lock the stoping points
-            for (unsigned int i = 1; i < limit; ++i) {
-
-                if (states[i].gear != states[i-1].gear) {
-
-                    locked_positions[i] = true;
-
-                    // set the coming to stop flag
-                    states[i-1].coming_to_stop = true;
-
-                    // add the current index to the cusp vector
-                    stopping_points.push_back(i);
-
-                }
-
-            }
-
-            // set the last index as a cusp
-            // for bezier interpolation purpose
-            stopping_points.push_back(limit);
+            // set the stopping point index
+            stopping_points.push_back(i);
 
         }
 
-        // evaluate the function and the gradient at the same time
-        EvaluateFunctionAndGradient();
-
-        // minima?
-        if (0.0 == gtrialx_norm) {
-
-            // already a solution, local minima
-            return false;
-
-        }
-
-        // reset the direction vector
-        s.resize(dim, tmp);
-        for (unsigned int i = 0; i < dim; ++i) {
-
-            s[i].x = -gtrialx->vs[i].x;
-            s[i].y = -gtrialx->vs[i].y;
-
-        }
-
-        // multiply the current direction with the inverse gradient
-        // it's the directional derivative along s
-        sg = astar::Vector2DArray<double>::DotProduct(s, gtrialx->vs) / gtrialx_norm;
-
-        fx = fx1 = ftrialx;
-        gx_norm = gx1_norm = s_norm = gtrialx_norm;
-
-        // flip the gradients
-        astar::Vector2DArrayPtr<double> vs = gtrialx;
-        gtrialx = gx;
-        gx = vs;
-
-        // reset the tolerances
-        ftol = xtol = 1e-04;
-        gtol = 0.001;
-
-        // start the minimizer
-        cg_status = astar::CGContinue;
-
-        return true;
+        // update the i counter
+        i += 1;
 
     }
 
-    return false;
+    // separate
+    stopping_points.push_back(i-1);
+
+    if (i < limit) {
+
+        // now we have the Reeds-Shepp analytically expanded nodes
+        while (i < limit) {
+
+            if (states[i-1].gear != states[i].gear) {
+
+                // set the coming to stop flag
+                states[i-1].coming_to_stop = true;
+
+                // set the stopping point index
+                stopping_points.push_back(i);
+
+            }
+
+            // update the counter
+            i += 1;
+
+        }
+
+        // append the last index limit
+        stopping_points.push_back(limit);
+
+    }
+
+}
+
+// setup the first iteration and configure the containers
+bool astar::CGSmoother::Setup(astar::StateArrayPtr path, bool locked) {
+
+    // get the reference to the input path
+    input_path = path;
+
+    // set the kmax value
+    kmax = 1.0/vehicle.min_turn_radius;
+
+    // get the input path size and store the problem's dimension
+    dim = (end - start) + 1;
+    // dim = path->states.size();
+
+    // tmp vector
+    astar::Vector2D<double> tmp(0.0, 0.0);
+
+    // resize the solution vectors
+    x->vs.resize(dim, tmp);
+    x1->vs.resize(dim, tmp);
+    trialx->vs.resize(dim, tmp);
+
+    // resize the locked positions vector
+    locked_positions.resize(dim, false);
+
+    // lock the first and last positions
+    locked_positions[0] = locked_positions[dim - 1] = true;
+
+    // direct access
+    std::vector<astar::State2D> &states(path->states);
+    std::vector<astar::Vector2D<double>> &xs(x->vs);
+    std::vector<astar::Vector2D<double>> &x1s(x1->vs);
+    std::vector<astar::Vector2D<double>> &trialxs(trialx->vs);
+
+    // copy the input positions
+    for (unsigned int i = 0, j = start; i < dim; ++i, ++j) {
+
+        xs[i] = states[j].position;
+        x1s[i] = xs[i];
+        trialxs[i] = xs[i];
+
+    }
+
+
+    // update the dx norm
+    trialxmx_norm = x1mx_norm = std::numeric_limits<double>::max();
+
+    // reset the gradient at x
+    gx->vs.resize(dim, tmp);
+
+    // reset the gradient at x1
+    gx1->vs.resize(dim, tmp);
+
+    // reset the gradient displacement
+    gx1mgx.resize(dim, tmp);
+
+    // resize the trial position gradient
+    gtrialx->vs.resize(dim, tmp);
+
+    // evaluate the function and the gradient at the same time
+    EvaluateFunctionAndGradient();
+
+    // minima?
+    if (0.0 == gtrialx_norm) {
+
+        // set the status to success
+        cg_status = astar::CGSuccess;
+
+        // already a solution, local minima
+        return false;
+
+    }
+
+    // reset the direction vector
+    s.resize(dim, tmp);
+    for (unsigned int i = 0; i < dim; ++i) {
+
+        s[i].x = -gtrialx->vs[i].x;
+        s[i].y = -gtrialx->vs[i].y;
+
+    }
+
+    // multiply the current direction with the inverse gradient
+    // it's the directional derivative along s
+    sg = astar::Vector2DArray<double>::DotProduct(s, gtrialx->vs) / gtrialx_norm;
+
+    fx = fx1 = ftrialx;
+    gx_norm = gx1_norm = s_norm = gtrialx_norm;
+
+    // flip the gradients
+    astar::Vector2DArrayPtr<double> vs = gtrialx;
+    gtrialx = gx;
+    gx = vs;
+
+    // reset the tolerances
+    ftol = xtol = 1e-04;
+    gtol = 0.001;
+
+    // set the status to continue
+    cg_status = astar::CGContinue;
+
+    return true;
 
 }
 
@@ -1423,20 +1460,8 @@ void astar::CGSmoother::UpdateConjugateDirection(std::vector<astar::Vector2D<dou
     sg /= s_norm;
 }
 
-// the Polak-Ribiere Conjugate Gradient Method With More-Thuente Line Search
-void astar::CGSmoother::ConjugateGradientPR(astar::StateArrayPtr path, bool locked) {
-
-    // first step, setup the optmization process
-    // the gradient is the first direction
-    if (!Setup(path, locked)) {
-
-        // could not start the minimizer
-        // we should make shure the old process is finished
-        std::cout << "Could not start the optimization process!!\n";
-
-        return;
-
-    }
+// the main loop iteration
+void astar::CGSmoother::Iterate() {
 
     // optimize
     // the main conjugate gradient process
@@ -1529,9 +1554,51 @@ void astar::CGSmoother::ConjugateGradientPR(astar::StateArrayPtr path, bool lock
     } while (UnsafePath(x));
 
     // copy the resulting path back
-    InputPathUpdate(x, path);
+    InputPathUpdate(x, input_path);
 
-    // set the cg status to iddle
+}
+
+// the Polak-Ribiere Conjugate Gradient Method With More-Thuente Line Search
+void astar::CGSmoother::ConjugateGradientPR(astar::StateArrayPtr path, bool locked) {
+
+    // configure the stopping points
+    BreakPath(path);
+
+    // how many subpaths
+    unsigned int pieces = stopping_points.size();
+
+    // reset the bottom limit index
+    start = 0;
+
+    // iterate over the subpaths
+    for (unsigned int i = 0; i < pieces; ++i) {
+
+        // get the upper limit index
+        end = stopping_points[i];
+
+        // first step, setup the optimization process
+        // the gradient is the first direction
+        if (!Setup(path, locked)) {
+
+            // could not start the minimizer
+            // we should make shure the old process is finished
+            std::cout << "Could not start the optimization process!!\n";
+
+            return;
+
+        }
+
+        // iterate!
+        Iterate();
+
+        // we can verify the cg_status here
+
+        // update the bottom limit index
+        start = end;
+
+    }
+
+    // unset the status
     cg_status = astar::CGIddle;
 
 }
@@ -1543,11 +1610,11 @@ void astar::CGSmoother::InputPathUpdate(astar::Vector2DArrayPtr<double> solution
     std::vector<astar::State2D> &states(output->states);
     std::vector<astar::Vector2D<double>> &xs(solution->vs);
 
-    for (unsigned int i = 0; i < dim; ++i) {
+    for (unsigned int i = 0, j = start; i < dim; ++i, ++j) {
 
         // set the new position
-        states[i].position.x = xs[i].x;
-        states[i].position.y = xs[i].y;
+        states[j].position.x = xs[i].x;
+        states[j].position.y = xs[i].y;
 
     }
 
@@ -1629,7 +1696,7 @@ void astar::CGSmoother::BuildBezierControlPoints(
     unsigned int end) {
 
     // the dimension
-    unsigned int n = end - start;
+    unsigned int n = (end - start);
 
     astar::Vector2D<double> tmp(0.0, 0.0);
 
@@ -1655,14 +1722,14 @@ void astar::CGSmoother::BuildBezierControlPoints(
     c[0].x = 1.0;
     c[0].y = 1.0;
 
-    rhs[0].x = input[0].position.x  + 2.0 * input[1].position.x;
-    rhs[0].y = input[0].position.y  + 2.0 * input[1].position.y;
+    rhs[0].x = input[start].position.x  + 2.0 * input[start + 1].position.x;
+    rhs[0].y = input[start].position.y  + 2.0 * input[start + 1].position.y;
 
     // the internal limti index
     unsigned int internal_limit = n - 1;
 
     // internal segments
-    for (unsigned int i = 1; i < internal_limit; ++i) {
+    for (unsigned int i = 1, j = start + 1; i < internal_limit; ++i, ++j) {
 
         a[i].x = 1.0;
         a[i].y = 1.0;
@@ -1673,8 +1740,8 @@ void astar::CGSmoother::BuildBezierControlPoints(
         c[i].x = 1.0;
         c[i].y = 1.0;
 
-        rhs[i].x = 4.0 * input[i].position.x + 2.0 * input[i+1].position.x;
-        rhs[i].y = 4.0 * input[i].position.y + 2.0 * input[i+1].position.y;
+        rhs[i].x = 4.0 * input[j].position.x + 2.0 * input[j+1].position.x;
+        rhs[i].y = 4.0 * input[j].position.y + 2.0 * input[j+1].position.y;
 
     }
 
@@ -1688,8 +1755,8 @@ void astar::CGSmoother::BuildBezierControlPoints(
     c[internal_limit].x = 0.0;
     c[internal_limit].y = 0.0;
 
-    rhs[internal_limit].x = 8.0 * input[internal_limit].position.x + input[n].position.x;
-    rhs[internal_limit].y = 8.0 * input[internal_limit].position.y + input[n].position.y;
+    rhs[internal_limit].x = 8.0 * input[end - 1].position.x + input[end].position.x;
+    rhs[internal_limit].y = 8.0 * input[end - 1].position.y + input[end].position.y;
 
     // now we have a Ax = b system
     // It's a tridiagonal system, let's use the Thomas algorithm (from Wikipedia)
@@ -1739,9 +1806,6 @@ void astar::CGSmoother::DrawBezierCurve(
                 const std::vector<astar::Vector2D<double>> &p2,
                 unsigned int start, unsigned int end) {
 
-    //
-    unsigned int limit = end - start;
-
     // get the grid resoluiton
     double resolution = grid.GetResolution();
     double inverse_resolution = grid.GetInverseResolution();
@@ -1751,7 +1815,7 @@ void astar::CGSmoother::DrawBezierCurve(
     // the four points to tbe interpolated
     std::vector<astar::Vector2D<double>> piece(4);
 
-    for (unsigned int i = 0; i < limit; ++i) {
+    for (unsigned int i = start; i < end; ++i) {
 
         // direct access
         const astar::Vector2D<double> &left(input[i].position), &right(input[i+1].position);
@@ -1764,9 +1828,6 @@ void astar::CGSmoother::DrawBezierCurve(
 
         // push the current point to the output path
         output.push_back(tmp);
-
-        // this is a locked point
-        locked_positions.push_back(true);
 
         // get the distance betweeng the left and right points
         double d = left.Distance(right);
@@ -1796,16 +1857,17 @@ void astar::CGSmoother::DrawBezierCurve(
                 // draw the points
                 tmp.position = GetBezierPoint(piece, t);
 
+
                 if (res2 < tmp.position.Distance2(output.back().position) && res2 < tmp.position.Distance2(right)) {
+
+                    // reset the t value
+                    tmp.t = 0.0;
 
                     // unset the coming to stop flag to false
                     tmp.coming_to_stop = false;
 
                     // push to the output vector
                     output.push_back(tmp);
-
-                    // unlocked point
-                    locked_positions.push_back(false);
 
                 }
 
@@ -1864,6 +1926,9 @@ astar::StateArrayPtr astar::CGSmoother::Interpolate(astar::StateArrayPtr path) {
 
         }
 
+        // add the last element
+        output.push_back(input.back());
+
     } else {
 
         // copy the input states
@@ -1890,8 +1955,9 @@ astar::StateArrayPtr astar::CGSmoother::Smooth(astar::InternalGridMapRef grid_, 
     ShowPath(raw_path);
 
     // now, interpolate the entire path
-    //astar::StateArrayPtr interpolated_path = new astar::StateArray();
-    //interpolated_path->states = raw_path->states;
+    // astar::StateArrayPtr interpolated_path = new astar::StateArray();
+    // interpolated_path->states = raw_path->states;
+    // return interpolated_path;
     astar::StateArrayPtr interpolated_path = Interpolate(raw_path);
 
     // get the map
@@ -1902,7 +1968,7 @@ astar::StateArrayPtr astar::CGSmoother::Smooth(astar::InternalGridMapRef grid_, 
     ConjugateGradientPR(interpolated_path, true);
 
     // get the map
-    //ShowPath(interpolated_path, false);
+    ShowPath(interpolated_path, false);
 
     // return the new interpolated path
     return interpolated_path;

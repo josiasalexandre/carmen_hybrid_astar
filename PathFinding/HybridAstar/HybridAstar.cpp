@@ -160,17 +160,20 @@ StateArrayPtr HybridAstar::RebuildPath(HybridAstarNodePtr n, const State2D &star
             // get the subpath provided by the action set discretization
             StateArrayPtr subpath = ReedsSheppModel::DiscretizeRS(n->parent->pose, n->action_set, vehicle.min_turn_radius, inverse_resolution);
 
+            // direct access
+            std::vector<astar::State2D> sub(subpath->states);
+
             // get the path size
-            subpathSize = subpath->states.size();
+            subpathSize = sub.size();
 
             // prepend the resulting subpath to the current path
             for (int i = subpathSize - 1; i > 0; i--) {
 
                 // save the current state to the list
-                states.push_front(subpath->states[i]);
+                states.push_front(sub[i]);
 
                 // convert the current position to row and col
-                astar::GridCellIndex index(grid.PoseToIndex(subpath->states[i].position));
+                astar::GridCellIndex index(grid.PoseToIndex(sub[i].position));
 
                 // convert to the opencv format
                 cv::Point p1(index.col - 1, height - index.row - 1);
@@ -184,6 +187,9 @@ StateArrayPtr HybridAstar::RebuildPath(HybridAstarNodePtr n, const State2D &star
                 cv::waitKey(30);
 
             }
+
+            // a special flag to be used inside the cg smoother
+            states.front().t = -1.0;
 
         }
 

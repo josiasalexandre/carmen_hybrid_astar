@@ -123,6 +123,12 @@ class CGSmoother {
         // the problem dimension
         unsigned int dim;
 
+        // the bottom limit index
+        unsigned int start;
+
+        // the upper limit index
+        unsigned int end;
+
         // the next step size
         double step;
 
@@ -236,11 +242,17 @@ class CGSmoother {
         // based on the minpack and derivates codes
         int MTLineSearch(double lambda);
 
+        // configure the stopping points and break the path into subpaths
+        void BreakPath(astar::StateArrayPtr raw_path);
+
         // setup the first iteration
         bool Setup(astar::StateArrayPtr raw_path, bool locked);
 
         // update the conjugate direction -> s(i+1) = -gradient + gamma * s(i)
         void UpdateConjugateDirection(std::vector<astar::Vector2D<double>> &s, const std::vector<astar::Vector2D<double>> &gradient, double gamma);
+
+        // the main iteration loop
+        inline void Iterate();
 
         // the Polak-Ribiere Conjugate Gradient Method With Moré-Thuente Line Search
         void ConjugateGradientPR(astar::StateArrayPtr path, bool locked = false);
