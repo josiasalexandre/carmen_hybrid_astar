@@ -194,9 +194,6 @@ StateArrayPtr HybridAstar::RebuildPath(HybridAstarNodePtr n, const State2D &star
 
             }
 
-            // a special flag to be used inside the cg smoother
-            states.front().t = -1.0;
-
         }
 
         // move to the parent node
@@ -475,16 +472,8 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMapRef grid_map, const State2D &
     // from the start to the goal
     double tentative_f;
 
-    bool got_rs_node = false;
-    bool error = false;
-
-    int last_open = 1;
-    int size_open = 1;
-
     // the actual A* algorithm
     while(!open.isEmpty()) {
-
-        size_open = (int) open.GetN();
 
         n = open.DeleteMin();
 
@@ -527,8 +516,6 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMapRef grid_map, const State2D &
             // iterate over the current node's children
             for (std::vector<HybridAstarNodePtr>::iterator it = nodes.begin(); it != end; ++it) {
 
-                got_rs_node = false;
-
                 // avoid a lot of indirect access
                 HybridAstarNodePtr child = *it;
 
@@ -548,8 +535,6 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMapRef grid_map, const State2D &
 
                         // we have a valid action set, it was a Reeds-Shepp analytic expanding
                         tentative_g = n->g + child->action_set->CalculateCost(vehicle.min_turn_radius, reverse_factor, gear_switch_cost);
-
-                        got_rs_node = true;
 
                     } else {
 
@@ -594,13 +579,6 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMapRef grid_map, const State2D &
 
                         if ((c == gc && 0.1 > std::fabs(goal_pose.orientation - child->pose.orientation)) || c != gc) {
 
-                            if(got_rs_node) {
-
-                                double a = 2.0;
-
-                                a = 3;
-
-                            }
                             // update the node at the cell
                             HybridAstarNodePtr current = c->node;
 
@@ -611,7 +589,6 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMapRef grid_map, const State2D &
 
                                 // decrease the key at the priority queue
                                 open.DecreaseKey(current->handle, tentative_f);
-
 
                             } else if (ExploredNode == c->status) {
 
@@ -636,23 +613,6 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMapRef grid_map, const State2D &
 
             // delete the children vector
             delete children;
-
-        }
-
-        last_open = (int) open.GetN();
-
-        if (last_open < size_open && size_open > 1) {
-
-            std::cout << "Wrong! Error with the priority queue!\n";
-        }
-
-        if (0 == open.GetN() && got_rs_node) {
-
-            error = true;
-
-        } else if (open.isEmpty()) {
-
-            std::cout << "Error!\n";
 
         }
 
