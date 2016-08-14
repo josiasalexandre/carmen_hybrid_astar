@@ -125,7 +125,7 @@ StateArrayPtr HybridAstar::RebuildPath(HybridAstarNodePtr n, const State2D &star
     // draw the current map
     cv::Mat final_map(width, height, CV_8UC1, map2);
 
-    double inverse_resolution = grid.GetInverseResolution();
+    double inverse_resolution = 1.0; // grid.GetInverseResolution();
 
     // building the path
     while(nullptr != n) {
@@ -509,7 +509,7 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMapRef grid_map, const State2D &
         double obst = grid_map.GetObstacleDistance(n->pose.position);
         double voro_dist = grid_map.GetVoronoiDistance(n->pose.position);
 
-        length = std::max(resolution, 0.25 * (obst + voro_dist));
+        length = std::max(resolution, 0.5 * (obst + voro_dist));
 
         // iterate over the gears
         for (unsigned int i = 0; i < NumGears; i++) {

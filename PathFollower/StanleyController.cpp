@@ -755,8 +755,6 @@ StateArrayPtr StanleyController::RebuildCommandList(const astar::State2D &start,
 
     r->states = path->states;
 
-    return r;
-
     double d;
 
     int i = 0;
