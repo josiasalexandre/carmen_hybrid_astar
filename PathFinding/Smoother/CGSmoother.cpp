@@ -5,7 +5,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 
 astar::CGSmoother::CGSmoother(astar::InternalGridMapRef map, astar::VehicleModelRef vehicle_) :
-    wo(0.1), ws(4.0), wp(0.5), wk(4.0), dmax(5.0), vorodmax(20),
+    wo(0.002), ws(4.0), wp(0.2), wk(4.0), dmax(5.0), vorodmax(20),
     alpha(0.2), grid(map), vehicle(vehicle_), kmax(0.22), input_path(nullptr),
     cg_status(astar::CGIddle), fx(), gx_norm(), fx1(), gx1_norm(), ftrialx(), x1mx_norm(), gtrialx_norm(), trialxmx_norm(), s(), s_norm(), sg(),
     locked_positions(), max_iterations(400), dim(0), start(0), end(0), step(0.01), default_step_length(1.0), stepmax(1e06), stepmin(1e-12),
@@ -462,13 +462,13 @@ void astar::CGSmoother::TakeStep(double factor) {
     std::vector<astar::Vector2D<double>> &next(trialx->vs);
 
     // get the limit
-    unsigned int limit = dim - 1;
+    unsigned int limit = dim - 2;
 
     // reset the dx norm
     trialxmx_norm = 0.0;
 
     // update the current position
-    for (unsigned int i = 1; i < limit; ++i) {
+    for (unsigned int i = 2; i < limit; ++i) {
 
         if (!locked_positions[i]) {
 
@@ -647,9 +647,10 @@ void astar::CGSmoother::EvaluateFunctionAndGradient() {
     // the gradient direct access
     std::vector<astar::Vector2D<double>> &gradient(gtrialx->vs);
 
+    /*
     // reset the first gradient value
-    gradient[1].x = 0.0;
-    gradient[1].y = 0.0;
+    gradient[2].x = 0.0;
+    gradient[2].y = 0.0;
 
     astar::Vector2D<double> &lxim1(trialxs[0]), &lxi(trialxs[1]), &lxip1(trialxs[2]), &lxip2(trialxs[3]);
 
@@ -672,6 +673,7 @@ void astar::CGSmoother::EvaluateFunctionAndGradient() {
         gtrialx_norm += gradient[1].Norm2();
 
     }
+    */
 
     unsigned int i;
 
@@ -709,6 +711,7 @@ void astar::CGSmoother::EvaluateFunctionAndGradient() {
 
     }
 
+    /*
     // reset the second last gradient value
     gradient[i].x = 0.0;
     gradient[i].y = 0.0;
@@ -735,6 +738,7 @@ void astar::CGSmoother::EvaluateFunctionAndGradient() {
         gtrialx_norm += gradient[i].Norm2();
 
     }
+    */
 
     // set the euclidean norm final touch
     gtrialx_norm = std::sqrt(gtrialx_norm);
@@ -1950,10 +1954,10 @@ astar::StateArrayPtr astar::CGSmoother::Smooth(astar::InternalGridMapRef grid_, 
 
     // minimize again the interpolated path
     // conjugate gradient based on the Polak-Ribiere formula
-    // ConjugateGradientPR(interpolated_path);
+    ConjugateGradientPR(interpolated_path);
 
     // get the map
-    // ShowPath(interpolated_path, false);
+    ShowPath(interpolated_path, false);
 
     // return the new interpolated path
     return interpolated_path;
