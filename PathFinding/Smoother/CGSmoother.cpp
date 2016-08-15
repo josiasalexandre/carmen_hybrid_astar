@@ -1773,12 +1773,12 @@ void astar::CGSmoother::BuildBezierControlPoints(
     }
 
     // we have the left control points, now compute the right ones
-    for (unsigned int i = 0; i < internal_limit; ++i) {
+    for (unsigned int i = 0, j = start + 1; i < internal_limit; ++i, ++j) {
 
         ip1 = i+1;
 
-        p2[i].x = 2.0 * input[ip1].position.x - p1[ip1].x;
-        p2[i].y = 2.0 * input[ip1].position.y - p1[ip1].y;
+        p2[i].x = 2.0 * input[j].position.x - p1[ip1].x;
+        p2[i].y = 2.0 * input[j].position.y - p1[ip1].y;
 
     }
 
