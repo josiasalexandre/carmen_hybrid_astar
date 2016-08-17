@@ -80,6 +80,12 @@ class HybridAstarPathFinder {
         // voronoi thread update
         void voronoi_update_2(carmen_grid_mapping_message *msg);
 
+        // verify if the robot is closer enough to the path
+        bool RobotIsLost();
+
+        // verify if a given path is valid
+        bool isValidPath(astar::StateArrayRef path);
+
     public:
 
         // the internal map represetation

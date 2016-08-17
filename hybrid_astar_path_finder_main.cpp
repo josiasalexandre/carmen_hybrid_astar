@@ -31,7 +31,8 @@ void save_to_file(astar::StateArrayPtr states) {
 
         for (unsigned int i = 0; i < msg.size(); ++i) {
 
-            fprintf(F, "%lf %lf\n", msg[i].position.x, msg[i].position.y);
+            // fprintf(F, "%lf %lf\n", msg[i].position.x, msg[i].position.y);
+            fprintf(F, "%lf ", msg[i].phi);
         }
 
         fclose(F);
@@ -55,44 +56,9 @@ publish_hybrid_astar_path()
 
     unsigned int p_size = states.size();
 
-    // publish the current data
-    //carmen_hybrid_astar_publish_path_message(&msg);
+    // save the current command list
     save_to_file(path);
 
-    // remove the current resulting path
-    delete path;
-
-    /*
-    // build a new message
-    carmen_hybrid_astar_path_message_t msg;
-    msg.path_length = p_size;
-    msg.path = new carmen_ackerman_path_point_t[p_size];
-
-    // get the direct access
-    carmen_ackerman_path_point_p carmen_path = msg.path;
-
-    if (0 < p_size)
-    {
-        for (unsigned int i = 0;  i < p_size; i++)
-        {
-            // some helpers
-            carmen_ackerman_path_point_t &current(carmen_path[i]);
-
-            astar::State2D &state(states[i]);
-
-            // copy all the values
-            current.x = state.position.x;
-            current.y = state.position.y;
-            current.theta = state.orientation;
-            current.v = state.v;
-            current.phi = state.phi;
-            current.time = state.t;
-        }
-
-    }
-    */
-
-    /*
     IPC_RETURN_TYPE err;
     static int first_time = 1;
     if (first_time)
@@ -107,13 +73,15 @@ publish_hybrid_astar_path()
 
     carmen_robot_ackerman_motion_command_message ackerman_msg;
     ackerman_msg.num_motion_commands = p_size;
-    ackerman_msg.motion_command = new carmen_ackerman_motion_command_t[p_size];
+    ackerman_msg.motion_command = nullptr;
+
+    ackerman_msg.motion_command = new carmen_ackerman_motion_command_t[1];
 
     // direct access
     carmen_ackerman_motion_command_p motion_commands = ackerman_msg.motion_command;
 
     // copy the commands
-    for (unsigned int i = 0; i < p_size; ++i) {
+    for (unsigned int i = 0; i < 1; ++i) {
 
         motion_commands[i].v = states[i].v;
         motion_commands[i].phi = states[i].phi;
@@ -123,15 +91,14 @@ publish_hybrid_astar_path()
     ackerman_msg.timestamp = carmen_get_time();
     ackerman_msg.host = carmen_get_host();
 
-
     err = IPC_publishData(CARMEN_ROBOT_ACKERMAN_MOTION_COMMAND_NAME, &ackerman_msg);
-    carmen_test_ipc(err, "Could not publish",
-            CARMEN_ROBOT_ACKERMAN_MOTION_COMMAND_NAME);
-
+    carmen_test_ipc(err, "Could not publish", CARMEN_ROBOT_ACKERMAN_MOTION_COMMAND_NAME);
 
     // remove the temp data
     delete [] ackerman_msg.motion_command;
-    */
+
+    // remove the current resulting path
+    delete path;
 
 }
 

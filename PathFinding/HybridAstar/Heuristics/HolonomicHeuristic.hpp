@@ -185,13 +185,16 @@ class HolonomicHeuristic {
         void RemoveAllCircleNodes();
 
         // rebuild the circle array
-        void RebuildCirclePath(CircleNodePtr cn, astar::CircleRef c_goal);
+        void RebuildCirclePath(CircleNodePtr cn);
 
         // try to find a circle node inside the closed set
         bool NotExist(CircleNodePtr cn);
 
         // explore a given circle node
         void ExploreCircleNode(CircleNodePtr cn);
+
+        // process a given node
+        bool ProcessNode(CircleNodeRef goal, CircleNodePtr cn);
 
         // the current search method
         bool SpaceExploration();

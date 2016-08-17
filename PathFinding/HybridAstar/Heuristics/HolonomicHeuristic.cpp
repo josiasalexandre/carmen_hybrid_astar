@@ -221,7 +221,7 @@ void HolonomicHeuristic::RemoveAllCircleNodes() {
 }
 
 // rebuild the circle array
-void HolonomicHeuristic::RebuildCirclePath(HolonomicHeuristic::CircleNodePtr cn, astar::CircleRef c_goal) {
+void HolonomicHeuristic::RebuildCirclePath(HolonomicHeuristic::CircleNodePtr cn) {
 
     // get the direct access
     std::vector<HolonomicHeuristic::CircleNodePtr> &circles(circle_path.circles);
@@ -233,7 +233,7 @@ void HolonomicHeuristic::RebuildCirclePath(HolonomicHeuristic::CircleNodePtr cn,
     std::list<CircleNodePtr> l;
 
     // build the goal CircleNode
-    tmp = new CircleNode(c_goal, c_goal.r, 0.0, 0.0, cn);
+    tmp = new CircleNode(*cn);
 
     // append to the list
     l.push_front(tmp);
@@ -265,8 +265,6 @@ void HolonomicHeuristic::RebuildCirclePath(HolonomicHeuristic::CircleNodePtr cn,
 
         while (it != end) {
 
-            // get the distance between the
-
             // build the next circle
             child_c_node = new HolonomicHeuristic::CircleNode(*(*it));
 
@@ -284,6 +282,8 @@ void HolonomicHeuristic::RebuildCirclePath(HolonomicHeuristic::CircleNodePtr cn,
         }
 
         // delete the last element in the list
+        // the last circle was allocated inside this method
+        // so it'll not be removed by the RemoveAllCircleNodes() method
         tmp = l.back();
         l.pop_back();
         delete tmp;
@@ -385,6 +385,40 @@ void HolonomicHeuristic::ExploreCircleNode(CircleNodePtr cn) {
 
 }
 
+// process a given node
+bool HolonomicHeuristic::ProcessNode(CircleNodeRef goal, CircleNodePtr cn) {
+
+    // append to the closed set
+    closed.push_back(cn);
+
+    // mark as explored, so the nearest can avoid duplicated explorations
+    cn->explored = true;
+
+    // get the adjacent circles
+    ExploreCircleNode(cn);
+
+    // verify the overlap case
+    if (Overlap(cn->circle, goal.circle, 0.5)) {
+
+        goal.parent = cn;
+
+        // success!
+        RebuildCirclePath(&goal);
+
+        // Show Circle Path
+        // ShowCirclePath();
+
+        // clear the open and closed sets
+        RemoveAllCircleNodes();
+
+        return true;
+
+    }
+
+    return false;
+
+}
+
 void HolonomicHeuristic::ShowCirclePath() {
 
     //
@@ -407,7 +441,7 @@ void HolonomicHeuristic::ShowCirclePath() {
 
         cv::circle(map_image, p, circle_path.circles[i]->circle.r * 5, cv::Scalar(0.0, 0.0, 0.0), 1);
         cv::imshow("Circles", map_image);
-        cv::waitKey(30);
+        cv::waitKey(100);
 
     }
 
@@ -421,7 +455,7 @@ void HolonomicHeuristic::ShowCirclePath() {
 // the current search method
 bool HolonomicHeuristic::SpaceExploration() {
 
-    // build the start circle
+    // set the start circle
     Circle c_start(start.position, grid.GetObstacleDistance(start.position));
 
     // build the goal circle
@@ -434,7 +468,7 @@ bool HolonomicHeuristic::SpaceExploration() {
     HolonomicHeuristic::CircleNodePtr cn = new HolonomicHeuristic::CircleNode(c_start, c_start.r, 0.0, f, nullptr);
 
     // build the goal CircleNode
-    HolonomicHeuristic::CircleNode gcn(c_goal, c_goal.r, std::numeric_limits<double>::max(), 0.0, nullptr);
+    HolonomicHeuristic::CircleNode gcn(c_goal, c_goal.r, 0.0, 0.0, nullptr);
 
     // add to the nearest open priority queue
     nearest_open.push(cn);
@@ -442,15 +476,9 @@ bool HolonomicHeuristic::SpaceExploration() {
     // add to the largest open priority queue
     largest_open.push(cn);
 
-    unsigned int height = grid.GetHeight();
-    unsigned int width = grid.GetHeight();
+    // reset the status
 
-    unsigned char *map = grid.GetGridMap();
-
-    cv::Mat image_map(width, height, CV_8UC1, map);
-
-    cv::namedWindow("Circles", cv::WINDOW_AUTOSIZE);
-
+    // the main loop
     while (!nearest_open.empty()) {
 
         // pop the min element
@@ -462,43 +490,16 @@ bool HolonomicHeuristic::SpaceExploration() {
 
         if (!cn->explored) {
 
-            // append to the closed set
-            closed.push_back(cn);
-
-            // mark as explored, so the nearest can avoid duplicated explorations
-            cn->explored = true;
-
-            astar::GridCellIndex index(grid.PoseToIndex(cn->circle.position));
-
-            cv::Point p(index.col, height - index.row);
-
-            cv::circle(image_map, p, cn->circle.r * 5, cv::Scalar(0,0,0), 1);
-
-            cv::imshow("Circles", image_map);
-
-            // Process the circle node
-            ExploreCircleNode(cn);
-
-            // verify the overlap case
-            if (Overlap(cn->circle, c_goal, 0.5)) {
-
-                gcn.parent = cn;
-
-                // success!
-                RebuildCirclePath(&gcn, c_goal);
-
-                // Show Circle Path
-                ShowCirclePath();
-
-                // clear the open and closed sets
-                RemoveAllCircleNodes();
+            // process the current circle node
+            // if it's a valid path to the goal it will return true
+            // otherwise we got a false value
+            if (ProcessNode(gcn, cn)) {
 
                 return true;
 
             }
 
         }
-
 
         // explore the largest node set
         // get the largest node
@@ -509,36 +510,10 @@ bool HolonomicHeuristic::SpaceExploration() {
 
         if (!cn->explored) {
 
-            // append to the closed set
-            closed.push_back(cn);
-
-            // mark as explored, so the nearest can avoid duplicated explorations
-            cn->explored = true;
-
-            // Process the circle node
-            ExploreCircleNode(cn);
-
-            astar::GridCellIndex index = grid.PoseToIndex(cn->circle.position);
-
-            cv::Point p(index.col, height - index.row);
-
-            cv::circle(image_map, p, cn->circle.r * 5, cv::Scalar(0,0,0), 1);
-
-            cv::imshow("Circles", image_map);
-
-            // verify the overlap case
-            if (Overlap(cn->circle, c_goal, 0.5)) {
-
-                gcn.parent = cn;
-
-                // success!
-                RebuildCirclePath(&gcn, c_goal);
-
-                // Show Circle Path
-                ShowCirclePath();
-
-                // clear the open and closed sets
-                RemoveAllCircleNodes();
+            // process the current circle node
+            // if it's a valid path to the goal it will return true
+            // otherwise we got a false value
+            if (ProcessNode(gcn, cn)) {
 
                 return true;
 
@@ -546,12 +521,7 @@ bool HolonomicHeuristic::SpaceExploration() {
 
         }
 
-
-        cv::waitKey(30);
-
     }
-
-    cv::destroyWindow("Circles");
 
     // remove the nodes
     RemoveAllCircleNodes();

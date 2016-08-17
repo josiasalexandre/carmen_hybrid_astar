@@ -6,7 +6,7 @@ MODULE_COMMENT = Hybrid A* with path optimization
 
 
 LINK = g++
-CXXFLAGS = -std=c++0x -O0 -g
+CXXFLAGS = -std=c++11 -O0 -g
 CFLAGS += -O0 -g
 
 # Application specific include directories.
@@ -37,8 +37,8 @@ path_finder: hybrid_astar_path_finder_main.o libhybrid_astar_interface.a Entitie
 pf_clear :
 	rm */*.o */*/*.o */*/*/*.o path_finder
 
-gvd.o :
-	g++ -std=c++0x -O3 -W -Wall -pedantic -c GridMap/GVDLau.cpp -o GridMap/GVDLau.o
+gvd.o:
+	g++ -std=c++11 -O3 -W -Wall -pedantic -c GridMap/GVDLau.cpp -o GridMap/GVDLau.o
 	
 
 include ../Makefile.rules

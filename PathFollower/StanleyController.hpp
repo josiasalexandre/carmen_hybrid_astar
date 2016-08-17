@@ -138,8 +138,11 @@ class StanleyController {
         // path following simulation
         StateArrayPtr FollowPathSimulation(astar::StateArrayPtr);
 
-        //
+        // consolidate the input path  and build a new command list
         StateArrayPtr RebuildCommandList(const astar::State2D&, astar::StateArrayPtr);
+
+        // get the next command
+        StateArrayPtr GetCommandList(const astar::State2D&);
 
 };
 

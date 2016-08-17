@@ -626,10 +626,10 @@ void astar::CGSmoother::EvaluateFG(
 
 }
 
-// custom function to evaluate the cost function and the update the gradient at the same time
-// it uses the x1 as the input array
-// the resulting cost value is saved in the internal fx1 variable
-// the gradient vector gx1 is updated and the gradient norm is saved in gx1_norm
+// custom method to evaluate the cost function and the gradient at the same time
+// it uses the trialx as the input array
+// the resulting cost value is saved in the internal ftrialx variable
+// the gradient vector gtrialx is updated and the it's norm is saved in the gtrialx_norm variable
 void astar::CGSmoother::EvaluateFunctionAndGradient() {
 
     // the partial values
@@ -646,34 +646,6 @@ void astar::CGSmoother::EvaluateFunctionAndGradient() {
 
     // the gradient direct access
     std::vector<astar::Vector2D<double>> &gradient(gtrialx->vs);
-
-    /*
-    // reset the first gradient value
-    gradient[2].x = 0.0;
-    gradient[2].y = 0.0;
-
-    astar::Vector2D<double> &lxim1(trialxs[0]), &lxi(trialxs[1]), &lxip1(trialxs[2]), &lxip2(trialxs[3]);
-
-    if (locked_positions[1]) {
-
-        // evaluate the second point
-        EvaluateF(lxim1, lxi, lxip1, obstacle, potential, smooth, curvature);
-
-    } else {
-
-        // evaluate the second point
-        EvaluateFG(lxim1, lxi, lxip1, obstacle, potential, smooth, curvature, gradient[1]);
-
-        // the boundary
-        // set up the smooth path derivatives contribution
-        gradient[1].x += ws * (-2.0 * lxim1.x + 5.0 * lxi.x - 4.0 * lxip1.x + lxip2.x);
-        gradient[1].y += ws * (-2.0 * lxim1.y + 5.0 * lxi.y - 4.0 * lxip1.y + lxip2.y);
-
-        // update the gradient norm
-        gtrialx_norm += gradient[1].Norm2();
-
-    }
-    */
 
     unsigned int i;
 
@@ -710,35 +682,6 @@ void astar::CGSmoother::EvaluateFunctionAndGradient() {
         }
 
     }
-
-    /*
-    // reset the second last gradient value
-    gradient[i].x = 0.0;
-    gradient[i].y = 0.0;
-
-    // shadow
-    astar::Vector2D<double> &rxim2(trialxs[i-2]), &rxim1(trialxs[i-1]), &rxi(trialxs[i]), &rxip1(trialxs[i+1]);
-
-    if (locked_positions[i]) {
-
-        // evaluate the second last point
-        EvaluateF(rxim1, rxi, rxip1, obstacle, potential, smooth, curvature);
-
-    } else {
-
-        // evaluate the second point
-        // the
-        EvaluateFG(rxim1, rxi, rxip1, obstacle, potential, smooth, curvature, gradient[i]);
-
-        // set up the smooth path derivatives contribution
-        gradient[i].x += ws * (rxim2.x - 4.0 * rxim1.x + 5.0 * rxi.x - 2.0 * rxip1.x);
-        gradient[i].y += ws * (rxim2.y - 4.0 * rxim1.y + 5.0 * rxi.y - 2.0 * rxip1.y);
-
-        // update the gradient norm
-        gtrialx_norm += gradient[i].Norm2();
-
-    }
-    */
 
     // set the euclidean norm final touch
     gtrialx_norm = std::sqrt(gtrialx_norm);
@@ -1569,7 +1512,7 @@ void astar::CGSmoother::ConjugateGradientPR(astar::StateArrayPtr path, bool lock
 
             // could not start the minimizer
             // we should make shure the old process is finished
-            std::cout << "Could not start the optimization process!!\n";
+            std::cout << "Could not start the optimization process, Maybe it's a local minima!!\n";
 
             return;
 
@@ -1937,11 +1880,14 @@ astar::StateArrayPtr astar::CGSmoother::Smooth(astar::InternalGridMapRef grid_, 
     grid = grid_;
     vehicle = vehicle_;
 
+    // show the map
+    // ShowPath(raw_path);
+
     // conjugate gradient based on the Polak-Ribiere formula
     ConjugateGradientPR(raw_path);
 
-    // get the map
-    ShowPath(raw_path);
+    // show the map
+    // ShowPath(raw_path);
 
     // now, interpolate the entire path
     // astar::StateArrayPtr interpolated_path = new astar::StateArray();
@@ -1949,15 +1895,15 @@ astar::StateArrayPtr astar::CGSmoother::Smooth(astar::InternalGridMapRef grid_, 
     // return interpolated_path;
     astar::StateArrayPtr interpolated_path = Interpolate(raw_path);
 
-    // get the map
-    ShowPath(interpolated_path);
+    // show the map
+    // ShowPath(interpolated_path);
 
     // minimize again the interpolated path
     // conjugate gradient based on the Polak-Ribiere formula
     ConjugateGradientPR(interpolated_path);
 
-    // get the map
-    ShowPath(interpolated_path, false);
+    // show the map
+    // ShowPath(interpolated_path, false);
 
     // return the new interpolated path
     return interpolated_path;

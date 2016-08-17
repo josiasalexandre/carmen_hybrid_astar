@@ -86,45 +86,40 @@ HybridAstarPathFinder::replan() {
 
     if (valid_goal) {
 
-        // find the path to the goal
-        StateArrayPtr raw_path = path_finder.FindPath(grid, robot, goal);
+        if (path.states.empty()) {
 
-        if (0 < raw_path->states.size()) {
+            // find the path to the goal
+            StateArrayPtr raw_path = path_finder.FindPath(grid, robot, goal);
 
-            // smoooth the current path
-            StateArrayPtr smooth_path = path_smoother.Smooth(grid, vehicle_model, raw_path);
+            if (0 < raw_path->states.size()) {
 
-            // the final command list
-            StateArrayPtr commands = stanley_method.RebuildCommandList(robot, smooth_path);
+                // smoooth the current path
+                StateArrayPtr smooth_path = path_smoother.Smooth(grid, vehicle_model, raw_path);
 
-            //path.states = smooth_path->states;
-            path.states = smooth_path->states;
+                // the final command list
+                StateArrayPtr commands = stanley_method.RebuildCommandList(robot, smooth_path);
 
-            // copy the command path
-            command_path.states = commands->states;
+                //path.states = smooth_path->states;
+                path.states = commands->states;
 
-            /*
-            // copy the new states to our internal version
-            path.states.clear();
+                delete smooth_path;
+                delete commands;
 
-            for (unsigned int i = 0; i < smooth_path->states.size(); ++i) {
-
-                // get the state
-                State2D tmp(smooth_path->states[i]);
-
-                std::cout << "Position: " << tmp.position.x << ", " << tmp.position.y << "\n";
-
-                // append to the path vector
-                path.states.push_back(tmp);
+                // set the returning flag
+                ret = true;
 
             }
 
-            */
+            // delete the raw path
+            delete raw_path;
 
-            // path.states = smooth_path->states;
+        } else {
 
-            // delete the smooth path
-            delete smooth_path;
+            // the final command list
+            StateArrayPtr commands = stanley_method.GetCommandList(robot);
+
+            // copy to the internal path
+            path.states = commands->states;
 
             delete commands;
 
@@ -132,9 +127,6 @@ HybridAstarPathFinder::replan() {
             ret = true;
 
         }
-
-        // delete the raw path
-        delete raw_path;
 
     }
 

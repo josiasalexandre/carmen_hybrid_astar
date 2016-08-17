@@ -84,7 +84,7 @@ void StanleyController::UpdateLowSpeedRegions() {
         // reset the indexes
         prev = next = current_stop;
 
-        // got the right
+        // go to the right
         next += 1;
         if (raw_path_size > next) {
 
@@ -388,61 +388,74 @@ Pose2D StanleyController::FindClosesPoint(const astar::State2D &s, const astar::
 // the correct action at some stopping point
 State2D StanleyController::Stopped(const State2D &s) {
 
-    double phi_error;
+    double phi, phi_error, d_phi_error, ddphi;
     double desired_heading;
+
     ControllerState next_controller_state;
 
     State2D state(s);
 
+    bool reverse_mode = BackwardGear == raw_path[prev_waypoint].gear;
+
     // syntactic sugar
-    std::vector<State2D> &states = (ForwardGear == forward_path[prev_waypoint].gear) ? forward_path : reverse_path;
+    std::vector<State2D> &the_path = reverse_mode ? reverse_path : forward_path;
+
+    State2D &next(the_path[next_waypoint]);
+    State2D &prev(the_path[prev_waypoint]);
 
     if (raw_path_last_index == next_waypoint && raw_path_last_index == prev_waypoint) {
 
-        desired_heading = s.orientation;
+        phi = s.phi;
 
         // mission complete
         next_controller_state = CSComplete;
 
     } else {
 
-        State2D &next(states[next_waypoint]);
-        State2D &prev(states[prev_waypoint]);
+        Vector2D<double> prev_point(prev.position);
+        Vector2D<double> next_point(next.position);
 
-        Vector2D<double> heading = next.position - prev.position;
+        desired_heading = std::atan2(next_point.y - prev_point.y, next_point.x - prev_point.x);
 
-        desired_heading = std::atan2(heading.y, heading.x);
-
-        next_controller_state = (ForwardGear == prev.gear) ? CSForwardDrive : CSReverseDrive;
-
-    }
-
-    // BUG?????
-    double dtheta = mrpt::math::wrapToPi<double>(s.orientation - desired_heading);
-    phi_error = -dtheta - s.phi;
-
-    if (std::fabs(phi_error) > vehicle_model.max_wheel_deflection) {
-
-        state.phi = (0 < phi_error) ? vehicle_model.max_wheel_deflection : -vehicle_model.max_wheel_deflection;
+        // set the next state as forward
+        next_controller_state = CSForwardDrive;
 
     }
 
-    if (0.001 > std::fabs(phi_error) || 0.1 > std::fabs(state.phi - vehicle_model.max_wheel_deflection)) {
+    phi_error = -mrpt::math::wrapToPi(s.orientation - desired_heading) - s.phi;
+
+    // clamp th
+    // reusing the phi variable
+    phi = phi_error * 8.0 + d_phi_error * 0.5;
+
+    // clamp to -1:1
+    phi = std::max(-1.0, std::min(1.0, phi));
+
+    // get the steering motor speed
+    phi = s.phi + dt * (phi * vehicle_model.max_phi_velocity -s.phi/ vehicle_model.max_wheel_deflection * s.v * 0.01);
+
+    if (std::fabs(phi) > vehicle_model.max_wheel_deflection) {
+
+        phi = (0 < phi) ? vehicle_model.max_wheel_deflection : -vehicle_model.max_wheel_deflection;
+
+    }
+
+    if (0.002 > std::fabs(phi_error) || 0.1 > std::fabs(mrpt::math::wrapToPi<double>(std::fabs(state.phi) - vehicle_model.max_wheel_deflection))) {
 
         // start to move
         cs = next_controller_state;
 
         // what is desired speed?
-        states[prev_waypoint].v = states[next_waypoint].v;
+        prev.v = next.v;
+
+        // reset the prev wheel angle error
+        prev_wheel_angle_error = 0.0;
 
     }
 
-    phi_error *= 8.0;
-
-    // update the command values
     state.v = 0.0;
-    state.phi = std::min(phi_error * 8.0, (0 <= phi_error) ? state.phi : -state.phi);
-    state.t = (s.phi - state.phi)/vehicle_model.max_phi_velocity;
+    state.phi = phi;
+    state.t = dt;
 
     return state;
 
@@ -539,7 +552,7 @@ State2D StanleyController::ForwardDrive(const State2D &s) {
     double phi;
     double inverse_speed = (4.5 < s.v) ? 1.0/s.v: 1.0;
 
-    if (0.0 == the_path[next_index].v) {
+    if (next.coming_to_stop) {
 
         phi = std::atan(4 * k * direction * dist * inverse_speed);
 
@@ -552,9 +565,21 @@ State2D StanleyController::ForwardDrive(const State2D &s) {
     double phi_error = phi - s.phi;
     double d_phi_error = (phi_error - prev_wheel_angle_error) / dt;
     prev_wheel_angle_error = phi_error;
-    // double steer = phi_error * 8 + d_phi_error * 0.5;
-    double steer = phi;
 
+    // reusing the phi variable
+    phi = phi_error * 8.0 + d_phi_error * 0.5;
+
+    // clamp to -1:1
+    phi = std::max(-1.0, std::min(1.0, phi));
+
+    // get the steering motor speed
+    double steer = s.phi + dt * (phi * vehicle_model.max_phi_velocity -s.phi/ vehicle_model.max_wheel_deflection * s.v * 0.01);
+
+    if (std::fabs(steer) > vehicle_model.max_wheel_deflection) {
+
+        steer = (0 < steer) ? vehicle_model.max_wheel_deflection : -vehicle_model.max_wheel_deflection;
+
+    }
 
     // velocity
     double vp = 0.5;
@@ -572,7 +597,9 @@ State2D StanleyController::ForwardDrive(const State2D &s) {
     if (reverse_mode)
         dv = -dv;
 
-    if (coming_to_stop && 0.99 <= how_far) {
+    std::cout << "waypoints: " << prev_waypoint << ", " << next_waypoint << " and phi: " << steer << "\n";
+
+    if (coming_to_stop && 0.5 <= how_far) {
 
         last_cusp = next_index;
 
@@ -591,6 +618,8 @@ State2D StanleyController::ForwardDrive(const State2D &s) {
         cs = CSStopped;
 
         // update the command to stop next point
+        steer = ((double) ((int) (steer * 1000))) * 0.001;
+
         state.v = 0.0;
         state.phi = steer;
         state.t = dt;
@@ -600,6 +629,9 @@ State2D StanleyController::ForwardDrive(const State2D &s) {
     }
 
     // update the command
+    steer = ((double) ((int) (steer * 1000))) * 0.001;
+    dv = ((double) ((int) (dv * 1000))) * 0.001;
+
     state.v += dv;
     state.phi = steer;
     state.t = dt;
@@ -707,58 +739,26 @@ StateArrayPtr StanleyController::BuildAndFollowPath(astar::StateArrayPtr input_p
 
 }
 
-//
+// consolidate the input path  and build a new command list
 StateArrayPtr StanleyController::RebuildCommandList(const astar::State2D &start, astar::StateArrayPtr path) {
 
     //
     consolidated_path = ConsolidateStateList(path);
 
+    return GetCommandList(start);
+
+}
+
+// get the next command
+StateArrayPtr StanleyController::GetCommandList(const astar::State2D &start) {
+
     car = start;
-
     astar::StateArrayPtr commands = new StateArray();
-
     std::vector<astar::State2D> &command_path(commands->states);
 
-    // get the map
-    unsigned int h = grid.GetHeight();
-    unsigned int w = grid.GetWidth();
+    double total_time = 0.0;
 
-    unsigned char *map = grid.GetGridMap();
-
-    // create a image
-    cv::Mat image(w, h, CV_8UC1, map);
-
-    // draw a new window
-    cv::namedWindow("Stanley", cv::WINDOW_AUTOSIZE);
-
-    // draw each point
-    for (unsigned int i = 0; i < path->states.size(); ++i) {
-
-        // get the currnt point
-        astar::GridCellIndex index(grid.PoseToIndex(path->states[i].position));
-
-        // convert to opencv point
-        cv::Point p1(index.col - 1, h - index.row - 1);
-        cv::Point p2(index.col + 1, h - index.row + 1);
-
-        cv::rectangle(image, p1, p2, cv::Scalar(0, 0, 0), 1);
-
-        // show the image
-        cv::imshow("Stanley", image);
-
-        // draw in the windows
-        cv::waitKey(30);
-
-    }
-
-    astar::StateArrayPtr r = new StateArray();
-
-    r->states = path->states;
-
-    double d;
-
-    int i = 0;
-    while (CSComplete != cs) {
+    while (CSComplete != cs && total_time < 5.0) {
 
         switch(cs) {
 
@@ -772,16 +772,8 @@ StateArrayPtr StanleyController::RebuildCommandList(const astar::State2D &start,
                 // Ackerman model
                 car = vehicle_model.NextState(car);
 
-                // plot the distance to the goal
-                d = car.position.Distance(path->states[path->states.size() - 1].position);
-
-                i++;
-
-                if (i > path->states.size() * 2) {
-
-                    cs = CSComplete;
-
-                }
+                // get the time
+                total_time += car.t;
 
                 break;
 
@@ -795,22 +787,23 @@ StateArrayPtr StanleyController::RebuildCommandList(const astar::State2D &start,
                 // Ackerman model
                 car = vehicle_model.NextState(car);
 
+                // get the time
+                total_time += car.t;
+
                 break;
 
             case CSStopped:
 
                 car = Stopped(car);
 
+                // add the current state to the command list path
+                command_path.push_back(car);
+
+                // get the time
+                total_time += car.t;
+
                 // Ackerman model
                 car = vehicle_model.NextState(car);
-
-                i++;
-
-                if (i > path->states.size() * 2) {
-
-                    cs = CSComplete;
-
-                }
 
                 break;
 
@@ -822,23 +815,8 @@ StateArrayPtr StanleyController::RebuildCommandList(const astar::State2D &start,
 
         }
 
-        // translate to opencv point format
-        GridCellIndex index(grid.PoseToIndex(car.position));
-
-        cv::Point p(index.col, h - index.row);
-
-        // draw a circle at the car position
-        cv::circle(image, p, 10, cv::Scalar(0, 0, 0), 1);
-
-        cv::imshow("Stanley", image);
-
-        cv::waitKey(30);
-
     }
 
-    cv::destroyWindow("Stanley");
-
-    return r;
+    return commands;
 
 }
-

@@ -44,13 +44,7 @@ HybridAstar::HybridAstar(
     discovered(),
     invalid(),
     map(nullptr),
-    width(), height()
-{
-
-    // define common window
-    cv::namedWindow("Astar", cv::WINDOW_AUTOSIZE);
-
-}
+    width(), height() {}
 
 HybridAstar::~HybridAstar() {
 
@@ -119,12 +113,6 @@ StateArrayPtr HybridAstar::RebuildPath(HybridAstarNodePtr n, const State2D &star
     State2D s;
 
     double inverse_speed = 1.0/vehicle.low_speed;
-
-    unsigned char *map2 = grid.GetGridMap();
-
-    // draw the current map
-    cv::Mat final_map(width, height, CV_8UC1, map2);
-
     double inverse_resolution = 1.0; // grid.GetInverseResolution();
 
     // building the path
@@ -141,20 +129,6 @@ StateArrayPtr HybridAstar::RebuildPath(HybridAstarNodePtr n, const State2D &star
             // save the current state to the list
             states.push_front(s);
 
-            // convert the current position to row and col
-            astar::GridCellIndex index(grid.PoseToIndex(s.position));
-
-            // convert to the opencv format
-            cv::Point p1(index.col - 1, height - index.row - 1);
-            cv::Point p2(index.col + 1, height - index.row + 1);
-
-            // draw a single square
-            cv::rectangle(final_map, p1, p2, cv::Scalar(0.0, 0.0, 0.0), -1);
-
-            // show the imgae
-            cv::imshow("Astar", final_map);
-            cv::waitKey(30);
-
         } else {
 
             // get the subpath provided by the action set discretization
@@ -166,31 +140,11 @@ StateArrayPtr HybridAstar::RebuildPath(HybridAstarNodePtr n, const State2D &star
             // get the path size
             subpathSize = sub.size();
 
-            if (0.001 > std::fabs(sub[sub.size() - 1].orientation - goal.orientation)) {
-
-                std::cout << "ReedsSheppDiscretization error!\n";
-
-            }
-
             // prepend the resulting subpath to the current path
             for (int i = subpathSize - 1; i > 0; i--) {
 
                 // save the current state to the list
                 states.push_front(sub[i]);
-
-                // convert the current position to row and col
-                astar::GridCellIndex index(grid.PoseToIndex(sub[i].position));
-
-                // convert to the opencv format
-                cv::Point p1(index.col - 1, height - index.row - 1);
-                cv::Point p2(index.col + 1, height - index.row + 1);
-
-                // draw a single square
-                cv::rectangle(final_map, p1, p2, cv::Scalar(0.0, 0.0, 0.0), -1);
-
-                // show the imgae
-                cv::imshow("Astar", final_map);
-                cv::waitKey(30);
 
             }
 
@@ -250,8 +204,6 @@ StateArrayPtr HybridAstar::RebuildPath(HybridAstarNodePtr n, const State2D &star
 
     }
 
-    delete [] map2;
-
     return path;
 
 }
@@ -275,17 +227,6 @@ HybridAstarNodePtr HybridAstar::GetReedsSheppChild(const Pose2D &start, const Po
         // a reference helper, just in case
         std::vector<State2D> &states(path->states);
 
-        if (0.1 < std::fabs(states[states.size() - 1].orientation - goal.orientation)) {
-
-            astar::State2D &s(states[states.size() - 1]);
-
-            std::cout << "ReedsSheppDiscretization error!\n";
-            std::cout << "The start: " << start.position.x << ", " << start.position.y << " and " << start.orientation << "\n";
-            std::cout << "The goal: " << goal.position.x << ", " << goal.position.y << " and " << goal.orientation << "\n";
-            std::cout << "ReedsShepp: " << s.position.x << ", " << s.position.y << " and " << s.orientation << "\n";
-
-        }
-
         // get the states end pointer
         std::vector<State2D>::iterator end = states.end();
 
@@ -308,14 +249,8 @@ HybridAstarNodePtr HybridAstar::GetReedsSheppChild(const Pose2D &start, const Po
 
         if (safe) {
 
-            std::cout << "Valid RS!\n";
-
             // return the HybridAstarNode on the goal state
             return new HybridAstarNode(goal, action_set);
-
-        } else {
-
-            std::cout << "Invalid RS!\n";
 
         }
 
@@ -355,18 +290,8 @@ HybridAstarNodeArrayPtr HybridAstar::GetChidlren(const Pose2D &start, const Pose
         // verify the safety condition and the grid boundary
         if (grid.isValidPoint(child_pose.position) && grid.isSafePlace(vehicle.GetVehicleBodyCircles(child_pose), vehicle.safety_factor)) {
 
-            HybridAstarNodePtr tmp = new HybridAstarNode(child_pose, new ReedsSheppAction(steer, gear, length));
-
-            if (nullptr == tmp) {
-
-                std::cout << "Erro Memória!!\n";
-
-                throw std::exception();
-
-            }
-
             // append to the children list
-            nodes.push_back(tmp);
+            nodes.push_back(new HybridAstarNode(child_pose, new ReedsSheppAction(steer, gear, length)));
 
         }
 
@@ -411,21 +336,8 @@ StateArrayPtr HybridAstar::FindPath(InternalGridMapRef grid_map, const State2D &
     // now, all HybridAstar methods have access to the same grid pointer
     grid = grid_map;
 
-    // get the current grid map
-    map = grid.GetGridMap();
-    width = grid.GetWidth();
-    height = grid.GetHeight();
-
     // get the grid map resolution
     double resolution = grid.GetResolution();
-
-    // draw the current map
-    cv::Mat final_map(width, height, CV_8UC1, map);
-
-    // show the image
-    cv::imshow("Astar", final_map);
-
-    cv::waitKey(30);
 
     // syntactic sugar
     // ge the reference to the base class
