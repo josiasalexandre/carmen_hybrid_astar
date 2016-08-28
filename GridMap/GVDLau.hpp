@@ -9,6 +9,8 @@
 #include "../Entities/Pose2D.hpp"
 #include "../KDTree/KDTree.hpp"
 
+#include "GridMapCell.hpp"
+
 namespace astar {
 
 // Based on http://www.first-mm.eu/files/lau10iros.pdf
@@ -125,6 +127,39 @@ class GVDLau {
 
         // initialize the GVD with a given map
         void InitializeMap(unsigned int h, unsigned int w, bool **map);
+
+        // restart the GVD
+        void RestartVoronoiDiagram();
+
+        // move the voronoi diagram to the left by a given distance
+        void LeftDownShift(unsigned int distance);
+
+        // move the voronoi diagram to the left by a given distance
+        void LeftShift(unsigned int distance);
+
+        // move the voronoi diagram to the left by a given distance
+        void LeftUpShift(unsigned int distance);
+
+        // move the voronoi diagram to the right by a given distance
+        void UpShift(unsigned int distance);
+
+        // move the voronoi diagram to the right by a given distance
+        void RightUpShift(unsigned int distance);
+
+        // move the voronoi diagram to the right by a given distance
+        void RightShift(unsigned int distance);
+
+        // move the voronoi diagram to the right by a given distance
+        void RightDownShift(unsigned int distance);
+
+        // move the voronoi diagram to the left by a given distance
+        void DownShift(unsigned int distance);
+
+        // set a given cell as an obstacle
+        void SetSimpleFreeSpace(unsigned int row, unsigned int col);
+
+        // set a given cell as an obstacle
+        void SetSimpleObstacle(unsigned int row, unsigned int col);
 
         // set a given cell as an obstacle
         void SetObstacle(unsigned int row, unsigned int col);

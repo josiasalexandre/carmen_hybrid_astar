@@ -44,8 +44,21 @@ class GridMapCell {
         // the robot state
         astar::HybridAstarNodePtr node;
 
+        // the corridor flag
+        bool is_corridor;
+
         // PUBLIC METHODS
-        GridMapCell() : occupancy(0), status(astar::UnknownNode), node(nullptr) {}
+        GridMapCell() : occupancy(0), status(astar::UnknownNode), node(nullptr), is_corridor(false) {}
+
+        // the overloading operator
+        void operator=(const GridMapCell &c) {
+
+            occupancy = c.occupancy;
+            status = c.status;
+            node = nullptr;
+            is_corridor = c.is_corridor;
+
+        }
 
 };
 

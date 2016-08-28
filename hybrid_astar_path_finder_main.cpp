@@ -8,6 +8,8 @@
 #include <carmen/fused_odometry_interface.h>
 #include <carmen/map_server_interface.h>
 #include <carmen/grid_mapping_interface.h>
+#include <carmen/rddf_interface.h>
+
 #include "Entities/State2D.hpp"
 #include "Interface/hybrid_astar_interface.h"
 
@@ -54,7 +56,7 @@ publish_hybrid_astar_path()
 
     std::vector<astar::State2D> &states(path->states);
 
-    unsigned int p_size = states.size();
+    unsigned int s_size = states.size();
 
     // save the current command list
     save_to_file(path);
@@ -72,16 +74,16 @@ publish_hybrid_astar_path()
     }
 
     carmen_robot_ackerman_motion_command_message ackerman_msg;
-    ackerman_msg.num_motion_commands = p_size;
+    ackerman_msg.num_motion_commands = s_size;
     ackerman_msg.motion_command = nullptr;
 
-    ackerman_msg.motion_command = new carmen_ackerman_motion_command_t[1];
+    ackerman_msg.motion_command = new carmen_ackerman_motion_command_t[s_size];
 
     // direct access
     carmen_ackerman_motion_command_p motion_commands = ackerman_msg.motion_command;
 
     // copy the commands
-    for (unsigned int i = 0; i < 1; ++i) {
+    for (unsigned int i = 0; i < s_size; ++i) {
 
         motion_commands[i].v = states[i].v;
         motion_commands[i].phi = states[i].phi;
@@ -115,6 +117,7 @@ localize_ackerman_globalpos_message_handler(carmen_localize_ackerman_globalpos_m
     g_hybrid_astar->set_initial_state(
             msg->globalpos.x, msg->globalpos.y, msg->globalpos.theta, carmen_get_time() - msg->timestamp);
 
+    return;
     // se replan() method returns true if there's a path to the goal
     if (g_hybrid_astar->activated && g_hybrid_astar->replan())
         publish_hybrid_astar_path();
@@ -127,6 +130,7 @@ simulator_ackerman_truepos_message_handler(carmen_simulator_ackerman_truepos_mes
     g_hybrid_astar->set_initial_state(
             msg->truepose.x, msg->truepose.y, msg->truepose.theta, carmen_get_time() - msg->timestamp);
 
+    return;
     // se replan() method returns true if there's a path to the goal
     if (g_hybrid_astar->activated && g_hybrid_astar->replan())
         publish_hybrid_astar_path();
@@ -214,6 +218,12 @@ signal_handler(int sig)
 
 }
 
+void
+rddf_message_handler(carmen_rddf_road_profile_message *message)
+{
+    g_hybrid_astar->update_rddf(message);
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////
 void
 register_handlers_specific()
@@ -274,9 +284,9 @@ register_handlers()
 
     */
     carmen_behavior_selector_subscribe_goal_list_message(NULL, (carmen_handler_t) behaviour_selector_goal_list_message_handler, CARMEN_SUBSCRIBE_LATEST);
-    /*
-    // carmen_rddf_subscribe_road_profile_message(&goal_list_message, (carmen_handler_t) rddf_message_handler, CARMEN_SUBSCRIBE_LATEST);
-     */
+
+    carmen_rddf_subscribe_road_profile_message(NULL, (carmen_handler_t) rddf_message_handler, CARMEN_SUBSCRIBE_LATEST);
+
     register_handlers_specific();
 }
 

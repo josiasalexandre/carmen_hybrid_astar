@@ -108,7 +108,7 @@ class StanleyController {
         void Localize(const astar::State2D&, unsigned int&, unsigned int&);
 
         // find the closest point next to the front axle, fake or not
-        Pose2D FindClosesPoint(const astar::State2D&, const astar::State2D&, const astar::State2D&);
+        Pose2D FindClosestPoint(const astar::State2D&, const astar::State2D&, const astar::State2D&);
 
         // the stopping point action
         astar::State2D Stopped(const astar::State2D&);
@@ -143,6 +143,8 @@ class StanleyController {
 
         // get the next command
         StateArrayPtr GetCommandList(const astar::State2D&);
+
+        // verify if the robot is lost
 
 };
 

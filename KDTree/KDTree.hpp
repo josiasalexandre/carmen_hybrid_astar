@@ -325,8 +325,8 @@ class KDTree {
         }
 
         // find the nearest neighbour
-        astar::PointT<T, D> Nearest(const astar::PointT<T, D>& p)
-            {
+        astar::PointT<T, D> Nearest(const astar::PointT<T, D>& p) {
+
             // is it a valid kdtree?
             if (nullptr != root)
             {
@@ -340,7 +340,7 @@ class KDTree {
             }
 
             return null_value;
-            }
+        }
 
         // remove a point from the kdtree
         void Remove(const astar::PointT<T, D>& p)

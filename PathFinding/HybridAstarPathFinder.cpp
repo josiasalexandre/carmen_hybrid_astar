@@ -13,7 +13,7 @@ HybridAstarPathFinder::HybridAstarPathFinder(int argc, char **argv) :
     vehicle_model(), grid(), initialized_grid_map(false), gm_mutex(), path_finder(vehicle_model, grid),
     stanley_method(grid, vehicle_model), path_smoother(grid, vehicle_model), path(), odometry_speed(0.0),
     odometry_steering_angle(0.0), robot(), goal(), valid_goal(false), goal_list(),
-    use_obstacle_avoider(true), activated(false), simulation_mode(false)
+    use_obstacle_avoider(true), activated(false), simulation_mode(false), rddf(0), rddf_timestamp(-1.0)
 {
     // read all parameters
     get_parameters(argc, argv);
@@ -36,33 +36,33 @@ HybridAstarPathFinder::get_parameters(int argc, char **argv)
     simulation_mode = true;
 
     carmen_param_t planner_params_list[] = {
-        //get the motion planner parameters
-        {(char *)"astar",   (char *)"simulation_mode",                           	CARMEN_PARAM_ONOFF, &this->simulation_mode,                    		                    1, NULL},
+            //get the motion planner parameters
+            {(char *)"astar",   (char *)"simulation_mode",                           	CARMEN_PARAM_ONOFF, &this->simulation_mode,                    		                    1, NULL},
     };
 
     // vehicle parameters
     carmen_param_t vehicle_params_list[] = {
-        {(char *)"robot",   (char *)"max_steering_angle",                           CARMEN_PARAM_DOUBLE, &vehicle_model.max_wheel_deflection,                           1, NULL},
-        {(char *)"robot",   (char *)"desired_steering_command_rate",                CARMEN_PARAM_DOUBLE, &vehicle_model.steering_command_rate,                          1, NULL},
-        {(char *)"robot",   (char *)"understeer_coeficient",                        CARMEN_PARAM_DOUBLE, &vehicle_model.understeer,                                     1, NULL},
-        {(char *)"robot",   (char *)"maximum_capable_curvature",              		CARMEN_PARAM_DOUBLE, &vehicle_model.max_curvature, 	                                1, NULL},
-        {(char *)"robot",   (char *)"max_velocity",                                	CARMEN_PARAM_DOUBLE, &vehicle_model.max_velocity,                                   1, NULL},
-        {(char *)"robot",   (char *)"maximum_speed_forward",                        CARMEN_PARAM_DOUBLE, &vehicle_model.max_forward_speed,                              1, NULL},
-        {(char *)"robot",   (char *)"maximum_speed_reverse",                        CARMEN_PARAM_DOUBLE, &vehicle_model.max_backward_speed,                             1, NULL},
-        {(char *)"robot",   (char *)"length",                                       CARMEN_PARAM_DOUBLE, &vehicle_model.length,                                         1, NULL},
-        {(char *)"robot",   (char *)"width",                                        CARMEN_PARAM_DOUBLE, &vehicle_model.width,                                          1, NULL},
-        {(char *)"robot",   (char *)"distance_between_front_and_rear_axles",        CARMEN_PARAM_DOUBLE, &vehicle_model.axledist,                                       1, NULL},
-        {(char *)"robot",   (char *)"distance_between_rear_wheels",                 CARMEN_PARAM_DOUBLE, &vehicle_model.rear_wheels_dist,                               1, NULL},
-        {(char *)"robot",   (char *)"distance_between_rear_car_and_rear_wheels",    CARMEN_PARAM_DOUBLE, &vehicle_model.rear_car_wheels_dist,                           1, NULL},
-        {(char *)"robot",   (char *)"distance_between_front_car_and_front_wheels",  CARMEN_PARAM_DOUBLE, &vehicle_model.front_car_wheels_dist,                          1, NULL},
-        {(char *)"robot",   (char *)"maximum_acceleration_forward",                 CARMEN_PARAM_DOUBLE, &vehicle_model.max_forward_acceleration,                       1, NULL},
-        {(char *)"robot",   (char *)"maximum_deceleration_forward",                 CARMEN_PARAM_DOUBLE, &vehicle_model.max_forward_deceleration,                       1, NULL},
-        {(char *)"robot",   (char *)"maximum_acceleration_reverse",                 CARMEN_PARAM_DOUBLE, &vehicle_model.max_backward_acceleration,                      1, NULL},
-        {(char *)"robot",   (char *)"maximum_deceleration_reverse",                 CARMEN_PARAM_DOUBLE, &vehicle_model.max_backward_deceleration,                      1, NULL},
-        {(char *)"robot",   (char *)"desired_acceleration",                         CARMEN_PARAM_DOUBLE, &vehicle_model.desired_forward_acceleration,                   1, NULL},
-        {(char *)"robot",   (char *)"desired_decelaration_forward",                 CARMEN_PARAM_DOUBLE, &vehicle_model.desired_forward_deceleration,                   1, NULL},
-        {(char *)"robot",   (char *)"maximum_acceleration_reverse",                 CARMEN_PARAM_DOUBLE, &vehicle_model.desired_backward_acceleration,                  1, NULL},
-        {(char *)"robot",   (char *)"desired_decelaration_reverse",                 CARMEN_PARAM_DOUBLE, &vehicle_model.desired_backward_deceleration,                  1, NULL}
+            {(char *)"robot",   (char *)"max_steering_angle",                           CARMEN_PARAM_DOUBLE, &vehicle_model.max_wheel_deflection,                           1, NULL},
+            {(char *)"robot",   (char *)"desired_steering_command_rate",                CARMEN_PARAM_DOUBLE, &vehicle_model.steering_command_rate,                          1, NULL},
+            {(char *)"robot",   (char *)"understeer_coeficient",                        CARMEN_PARAM_DOUBLE, &vehicle_model.understeer,                                     1, NULL},
+            {(char *)"robot",   (char *)"maximum_capable_curvature",              		CARMEN_PARAM_DOUBLE, &vehicle_model.max_curvature, 	                                1, NULL},
+            {(char *)"robot",   (char *)"max_velocity",                                	CARMEN_PARAM_DOUBLE, &vehicle_model.max_velocity,                                   1, NULL},
+            {(char *)"robot",   (char *)"maximum_speed_forward",                        CARMEN_PARAM_DOUBLE, &vehicle_model.max_forward_speed,                              1, NULL},
+            {(char *)"robot",   (char *)"maximum_speed_reverse",                        CARMEN_PARAM_DOUBLE, &vehicle_model.max_backward_speed,                             1, NULL},
+            {(char *)"robot",   (char *)"length",                                       CARMEN_PARAM_DOUBLE, &vehicle_model.length,                                         1, NULL},
+            {(char *)"robot",   (char *)"width",                                        CARMEN_PARAM_DOUBLE, &vehicle_model.width,                                          1, NULL},
+            {(char *)"robot",   (char *)"distance_between_front_and_rear_axles",        CARMEN_PARAM_DOUBLE, &vehicle_model.axledist,                                       1, NULL},
+            {(char *)"robot",   (char *)"distance_between_rear_wheels",                 CARMEN_PARAM_DOUBLE, &vehicle_model.rear_wheels_dist,                               1, NULL},
+            {(char *)"robot",   (char *)"distance_between_rear_car_and_rear_wheels",    CARMEN_PARAM_DOUBLE, &vehicle_model.rear_car_wheels_dist,                           1, NULL},
+            {(char *)"robot",   (char *)"distance_between_front_car_and_front_wheels",  CARMEN_PARAM_DOUBLE, &vehicle_model.front_car_wheels_dist,                          1, NULL},
+            {(char *)"robot",   (char *)"maximum_acceleration_forward",                 CARMEN_PARAM_DOUBLE, &vehicle_model.max_forward_acceleration,                       1, NULL},
+            {(char *)"robot",   (char *)"maximum_deceleration_forward",                 CARMEN_PARAM_DOUBLE, &vehicle_model.max_forward_deceleration,                       1, NULL},
+            {(char *)"robot",   (char *)"maximum_acceleration_reverse",                 CARMEN_PARAM_DOUBLE, &vehicle_model.max_backward_acceleration,                      1, NULL},
+            {(char *)"robot",   (char *)"maximum_deceleration_reverse",                 CARMEN_PARAM_DOUBLE, &vehicle_model.max_backward_deceleration,                      1, NULL},
+            {(char *)"robot",   (char *)"desired_acceleration",                         CARMEN_PARAM_DOUBLE, &vehicle_model.desired_forward_acceleration,                   1, NULL},
+            {(char *)"robot",   (char *)"desired_decelaration_forward",                 CARMEN_PARAM_DOUBLE, &vehicle_model.desired_forward_deceleration,                   1, NULL},
+            {(char *)"robot",   (char *)"maximum_acceleration_reverse",                 CARMEN_PARAM_DOUBLE, &vehicle_model.desired_backward_acceleration,                  1, NULL},
+            {(char *)"robot",   (char *)"desired_decelaration_reverse",                 CARMEN_PARAM_DOUBLE, &vehicle_model.desired_backward_deceleration,                  1, NULL}
     };
 
 
@@ -73,6 +73,8 @@ HybridAstarPathFinder::get_parameters(int argc, char **argv)
 
     // do some pre-computations and update some indirect parameters
     vehicle_model.Configure();
+
+    simulation_mode = false;
 
 }
 
@@ -85,6 +87,9 @@ HybridAstarPathFinder::replan() {
     bool ret = false;
 
     if (valid_goal) {
+
+        // lock the current map
+        gm_mutex.lock();
 
         if (path.states.empty()) {
 
@@ -127,6 +132,9 @@ HybridAstarPathFinder::replan() {
             ret = true;
 
         }
+
+        // unlock the map
+        gm_mutex.unlock();
 
     }
 
@@ -276,7 +284,7 @@ HybridAstarPathFinder::voronoi_update(carmen_map_server_compact_cost_map_message
     double resolution = msg->config.resolution;
     double inverse_resolution = 1.0/resolution;
 
-    grid.InitializeGridMap(msg->config.y_size, msg->config.x_size, resolution, Vector2D<double>(x_origin, y_origin));
+    grid.UpdateGridMap(msg->config.y_size, msg->config.x_size, resolution, Vector2D<double>(x_origin, y_origin), msg->value);
 
     int *x_coord = msg->coord_x;
     int *y_coord = msg->coord_y;
@@ -295,7 +303,7 @@ HybridAstarPathFinder::voronoi_update(carmen_map_server_compact_cost_map_message
     }
 
     // update the entire grid map
-    grid.UpdateGridMap();
+    grid.ProcessVoronoiDiagram();
 
     // unlock the given mutex
     gm_mutex.unlock();
@@ -306,6 +314,7 @@ HybridAstarPathFinder::voronoi_update(carmen_map_server_compact_cost_map_message
 void
 HybridAstarPathFinder::voronoi_update_2(carmen_grid_mapping_message *msg) {
 
+    unsigned int row, col, index;
     double x_origin = msg->config.x_origin;
     double y_origin = msg->config.y_origin;
     double resolution = msg->config.resolution;
@@ -316,26 +325,107 @@ HybridAstarPathFinder::voronoi_update_2(carmen_grid_mapping_message *msg) {
     unsigned int height = msg->config.y_size;
     unsigned int size = msg->size;
 
-    int r, c;
-    grid.InitializeGridMap(msg->config.y_size, msg->config.x_size, resolution, Vector2D<double>(x_origin, y_origin));
+    grid.UpdateGridMap(msg->config.y_size, msg->config.x_size, resolution, Vector2D<double>(x_origin, y_origin), msg->complete_map);
 
-    for (unsigned int i = 0; i < size; i++) {
+    grid.UpdateCorridor(rddf, 400*inverse_resolution);
 
-        r = i % width;
-        c = i / width;
+    unsigned int c_size = grid.GetCorridorIndexes();
 
-        // let's see the row and col
-        if (val[i] > 0.4) {
-            grid.OccupyCell(r, c);
-        } else {
-            grid.ClearCell(r, c);
+    if (0 < c_size) {
+
+        astar::GridMap grid_map(grid.grid_map);
+
+        for (unsigned int row = 0; row < height; ++row) {
+
+            for (unsigned int col = 0; col < width; ++col) {
+
+                // get the cell
+                GridMapCellRef c(grid_map[row][col]);
+
+                if (c.is_corridor) {
+
+                    if (0.4 < c.occupancy) {
+
+                        grid.OccupyCell(row, col);
+
+                    } else {
+
+                        grid.SetSimpleFreeSpace(row, col);
+                        // grid.ClearCell(row, col);
+
+                    }
+
+
+                } else {
+
+                    grid.SetSimpleObstacle(row, col);
+
+                }
+            }
+
         }
+
+    } else {
+
+        astar::GridMap grid_map(grid.grid_map);
+
+        // get the robot position
+        GridCellIndex robot_position(grid.PoseToIndex(robot.position));
+
+        int rrow = (int) robot_position.row;
+        int rcol = (int) robot_position.col;
+
+        int drow, dcol, drow2, dcol2;
+
+        for (unsigned int row = 0; row < height; ++row) {
+
+            for (unsigned int col = 0; col < width; ++col) {
+
+                drow = rrow - (int) row;
+                dcol = rcol - (int) col;
+
+                drow2 = drow * drow;
+                dcol2 = dcol * dcol;
+
+                if (1600 > (drow2 + dcol2)) {
+                    GridMapCellRef c(grid_map[row][col]);
+
+                    if (0.4 < c.occupancy) {
+
+                        grid.OccupyCell(row, col);
+
+                    } else if (0 > c.occupancy) {
+
+                        grid.SetSimpleObstacle(row, col);
+                        // grid.ClearCell(row, col);
+
+                    } else {
+
+                        grid.SetSimpleFreeSpace(row, col);
+
+                    }
+                }
+
+            }
+
+        }
+
     }
 
-    // update the current grid map
-    grid.UpdateGridMap();
+    double t1 = carmen_get_time();
 
+    // process the voronoi diagram
+    grid.ProcessVoronoiDiagram();
+
+    double t2 = carmen_get_time();
+
+    std::cout << "Time: " << (t2 - t1) << " and frequency: " << 1.0/(t2 - t1) << "\n";
+
+    // set the initialized flag
     initialized_grid_map = true;
+
+    // destroy
+    // cv::destroyWindow("Smooth");
 
     // unlock the given mutex
     gm_mutex.unlock();
@@ -363,7 +453,6 @@ HybridAstarPathFinder::update_map(carmen_map_server_compact_cost_map_message *ms
 // get the general map and save it
 void
 HybridAstarPathFinder::update_map(carmen_grid_mapping_message *msg) {
-
 
     if (nullptr != msg) {
 
@@ -425,5 +514,77 @@ State2D
 HybridAstarPathFinder::get_robot_state() {
 
     return robot;
+
+}
+
+// update the rddf
+void
+HybridAstarPathFinder::update_rddf(carmen_rddf_road_profile_message *msg) {
+
+    if (rddf_timestamp != msg->timestamp && 0 < msg->number_of_poses) {
+
+        rddf_timestamp = msg->timestamp;
+
+        // lock the grid map
+        gm_mutex.lock();
+
+        // clear the rddf
+        rddf.clear();
+
+        astar::Vector2D<double> &goal_position(goal.position), current_rddf_point, prev_rddf_point;
+
+        // get the first points
+        current_rddf_point.x = prev_rddf_point.x = msg->poses[0].x;
+        current_rddf_point.y = prev_rddf_point.y = msg->poses[0].y;
+
+        // append the first point
+        rddf.push_back(current_rddf_point);
+
+        // get the msg size
+        unsigned int msg_size = msg->number_of_poses;
+
+        for (unsigned int i = 1; i < msg_size; ++i) {
+
+            // get the point
+            current_rddf_point.x = msg->poses[i].x;
+            current_rddf_point.y = msg->poses[i].y;
+
+            // verify the distance
+            if (2.0 < current_rddf_point.Distance2(prev_rddf_point)) {
+
+                // append the current point
+                rddf.push_back(current_rddf_point);
+
+                // update the prev point
+                prev_rddf_point = current_rddf_point;
+
+            }
+
+        }
+
+        // unlock the gm mutex
+        gm_mutex.unlock();
+
+        if (initialized_grid_map) {
+
+            // show the image
+            unsigned char *map = grid.GetObstacleDistanceMap();
+
+            cv::namedWindow("Obstacles", cv::WINDOW_AUTOSIZE);
+
+            unsigned int width = grid.GetWidth();
+            unsigned int height = grid.GetHeight();
+
+            // the image
+            cv::Mat image(width, height, CV_8UC1, map);
+
+            // show the image
+            cv::imshow("Obstacles", image);
+
+            cv::waitKey(30);
+
+        }
+
+    }
 
 }

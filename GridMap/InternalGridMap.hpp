@@ -1,6 +1,8 @@
 #ifndef INTERNAL_GRID_MAP_HPP
 #define INTERNAL_GRID_MAP_HPP
 
+#include <mutex>
+
 #include "GVDLau.hpp"
 #include "GridMapCell.hpp"
 #include "../Entities/State2D.hpp"
@@ -32,11 +34,11 @@ class InternalGridMap {
         // the grid map origin
         astar::Vector2D<double> origin;
 
-        // the current grid map
-        astar::GridMap grid_map;
-
         // has the grid map changed?
         bool has_changed;
+
+        // the corridor counter
+        unsigned int corridor;
 
         // the Voronoi field  map
         astar::GVDLau voronoi;
@@ -51,6 +53,9 @@ class InternalGridMap {
 
         // PUBLIC ATTRIBUTES
 
+        // the current grid map
+        astar::GridMap grid_map;
+
         // PUBLIC METHODS
 
         // basic constructor
@@ -59,11 +64,23 @@ class InternalGridMap {
         // basic destructor
         ~InternalGridMap();
 
+        // process the voronoi diagram
+        void ProcessVoronoiDiagram();
+
         // initialize the grid map given the map dimensions
-        void InitializeGridMap(unsigned int w, unsigned int h, double res, const astar::Vector2D<double> &_origin);
+        void UpdateGridMap(unsigned int w, unsigned int h, double res, const astar::Vector2D<double> &_origin, double *map);
 
         // verify if the current grid map has changed
         bool HasChanged() const;
+
+        // Expand the region around the RDDF point
+        void ExpandRegion(astar::GridCellIndex &index, unsigned int distance);
+
+        // update the corridor
+        void UpdateCorridor(const std::vector<astar::Vector2D<double>> &rddf, unsigned int distance);
+
+        // get the corridor indexes
+        unsigned int GetCorridorIndexes();
 
         // is a valid cell?
         bool isValidPoint(const astar::Vector2D<double>&);
@@ -77,14 +94,20 @@ class InternalGridMap {
         // return a cell given a pose
         GridMapCellPtr PoseToCell(const astar::Pose2D&);
 
+        // get the cell given a cell index
+        GridMapCellPtr IndexToCell(const astar::GridCellIndex &index);
+
+        // occupy a given cell
+        void SetSimpleObstacle(int row, int col);
+
+        // clear a given cell
+        void SetSimpleFreeSpace(int row, int col);
+
         // occupy a given cell
         void OccupyCell(int row, int col);
 
         // clear a given cell
         void ClearCell(int row, int col);
-
-        // update the internal grid map
-        void UpdateGridMap();
 
         // get the current grid map
         astar::GVDLau* GetGVD();
@@ -113,6 +136,9 @@ class InternalGridMap {
         // get the current obstacle distance map
         unsigned char* GetObstacleDistanceMap();
 
+        // get the corridor map
+        unsigned char* GetCorridorMap();
+
         // get the current map width
         unsigned int GetWidth() { return width; }
 
@@ -125,7 +151,8 @@ class InternalGridMap {
         // get the inverse resolution
         double GetInverseResolution() { return inverse_resolution; }
 
-
+        // get the map origin
+        astar::Vector2D<double> GetOrigin() { return origin; }
 
 };
 

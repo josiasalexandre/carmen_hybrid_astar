@@ -13,6 +13,7 @@ InternalGridMap::InternalGridMap() :
     origin(),
     grid_map(nullptr),
     has_changed(false),
+    corridor(0),
     voronoi(), resolution(0.0), inverse_resolution(0.0)
 {}
 
@@ -34,10 +35,10 @@ bool InternalGridMap::HasChanged() const {
 // get the grid cell index from any position
 astar::GridCellIndex InternalGridMap::PoseToIndex(const astar::Vector2D<double> &position) const {
 
-    //
     GridCellIndex index(
         std::floor((position.y - origin.y) * inverse_resolution + 0.5),
-        std::floor((position.x - origin.x) * inverse_resolution) + 0.5);
+        std::floor((position.x - origin.x) * inverse_resolution + 0.5)
+    );
 
     return index;
 
@@ -46,7 +47,7 @@ astar::GridCellIndex InternalGridMap::PoseToIndex(const astar::Vector2D<double> 
 // remove the current grid map
 void InternalGridMap::RemoveGridMap() {
 
-    // the complex GridMapCell map
+    // the GridMapCell map
     if (nullptr != grid_map) {
 
         for (unsigned int i = 0; i < height; ++i) {
@@ -59,20 +60,31 @@ void InternalGridMap::RemoveGridMap() {
 
 }
 
-// get the map parameters and allocate the grid map in the memmory
-void InternalGridMap::InitializeGridMap(unsigned int h, unsigned int w, double res, const astar::Vector2D<double> &_origin) {
+// process the voronoi diagram
+void InternalGridMap::ProcessVoronoiDiagram() {
 
-    if (w != width || h != height || res != resolution ||  origin != _origin) {
+    has_changed = voronoi.Update();
+
+}
+
+// get the map parameters and allocate the grid map in the memmory
+void InternalGridMap::UpdateGridMap(unsigned int h, unsigned int w, double res, const astar::Vector2D<double> &_origin, double *map) {
+
+    has_changed = false;
+
+    if (w != width || h != height || res != resolution) {
+
+        has_changed = true;
 
         // Remove the current grid map
         RemoveGridMap();
 
         // copy the new parameters
         height = h;
-        height_2 = h*0.5;
+        height_2 = h * 0.5;
         width = w;
-        width_2 = w*0.5;
-        size = h*w;
+        width_2 = w * 0.5;
+        size = h * w;
         resolution = res;
         inverse_resolution = 1.0/res;
         diagonal_resolution = res * std::sqrt(2.0);
@@ -87,10 +99,219 @@ void InternalGridMap::InitializeGridMap(unsigned int h, unsigned int w, double r
         // restart the voronoi diagram
         voronoi.InitializeEmpty(height, width);
 
-        // set the has changed flag
+        return;
+
+    } else if (origin != _origin) {
+
         has_changed = true;
 
+        // update the origin
+        origin = _origin;
+
     }
+
+    unsigned int k = 0;
+
+    for (unsigned int col = 0; col < width; ++col) {
+
+        for (unsigned int row = 0; row < height; ++row) {
+
+            if (0.4 < map[k]) {
+
+                grid_map[row][col].occupancy = 1.0;
+
+            } else if (0 > map[k]) {
+
+                grid_map[row][col].occupancy = -1.0;
+
+            } else {
+
+                grid_map[row][col].occupancy = 0.0;
+
+            }
+
+            grid_map[row][col].is_corridor = false;
+
+            ++k;
+
+        }
+
+    }
+
+    // restart the voronoi diagram
+    voronoi.RestartVoronoiDiagram();
+
+}
+
+// expand a circular region around the RDDF point
+void InternalGridMap::ExpandRegion(GridCellIndex &index, unsigned int distance) {
+
+    // the initial vector
+    std::vector<GridCellIndex> indexes;
+    indexes.push_back(index);
+
+    unsigned int row, nrow, ncol, col, drow2, dcol2;
+
+    int drow, dcol;
+
+    int index_row = (int) index.row;
+    int index_col = (int) index.col;
+
+    // helper
+    GridCellIndex tmp;
+
+    for (unsigned int i = 0; i < indexes.size(); ++i) {
+
+        col = indexes[i].col;
+        row = indexes[i].row;
+
+        // top
+        nrow = row + 1;
+        if (height > nrow) {
+
+            drow = ((int) nrow) - index_row;
+            drow2 = (unsigned int) (drow * drow);
+            dcol = ((int) col) - index_col;
+            dcol2 = (unsigned int) (dcol*dcol);
+
+            // top
+            if (distance > (drow2 + dcol2) && !grid_map[nrow][col].is_corridor) {
+
+                tmp.row = nrow;
+                tmp.col = col;
+
+                grid_map[nrow][col].is_corridor = true;
+
+                indexes.push_back(tmp);
+
+                // update the corridor indexes counter
+                corridor += 1;
+
+            }
+
+        }
+
+        // bottom
+        nrow = row - 1;
+        if (height > nrow) {
+
+            drow = ((int) nrow) - index_row;
+            drow2 = (unsigned int) (drow * drow);
+            dcol = ((int) col) - index_col;
+            dcol2 = (unsigned int) (dcol*dcol);
+
+            // top
+            if (distance > (drow2 + dcol2) && !grid_map[nrow][col].is_corridor) {
+
+                tmp.row = nrow;
+                tmp.col = col;
+
+                grid_map[nrow][col].is_corridor = true;
+
+                indexes.push_back(tmp);
+
+                // update the corridor indexes counter
+                corridor += 1;
+
+            }
+
+        }
+
+        // left
+        ncol = col - 1;
+        if (width > ncol) {
+
+            drow = ((int) row) - index_row;
+            drow2 = (unsigned int) (drow * drow);
+            dcol = ((int) ncol) - index_col;
+            dcol2 = (unsigned int) (dcol*dcol);
+
+            if (distance > (drow2 + dcol2) && !grid_map[row][ncol].is_corridor) {
+
+                tmp.row = row;
+                tmp.col = ncol;
+
+                grid_map[row][ncol].is_corridor = true;
+
+                indexes.push_back(tmp);
+
+                // update the corridor indexes counter
+                corridor += 1;
+
+            }
+
+        }
+
+        // right
+        ncol = col + 1;
+        if (width > ncol) {
+
+            drow = ((int) row) - index_row;
+            drow2 = (unsigned int) (drow * drow);
+            dcol = ((int) ncol) - index_col;
+            dcol2 = (unsigned int) (dcol*dcol);
+
+            if (distance > (drow2 + dcol2)  && !grid_map[row][ncol].is_corridor) {
+
+                tmp.row = row;
+                tmp.col = ncol;
+
+                grid_map[row][ncol].is_corridor = true;
+
+                indexes.push_back(tmp);
+
+                // update the corridor indexes counter
+                corridor += 1;
+
+            }
+
+        }
+
+    }
+
+}
+
+// update the corridor map given a new rddf
+void InternalGridMap::UpdateCorridor(const std::vector<astar::Vector2D<double>> &rddf, unsigned int distance) {
+
+    // update the current corridor
+    // get the rddf size
+    int r_size = rddf.size();
+
+    corridor = 0;
+
+    if (0 < r_size) {
+
+        GridCellIndex index;
+
+        for (int i = r_size - 1; i >= 0; --i) {
+
+            // the index
+            index = PoseToIndex(rddf[i]);
+
+            // get the cell reference
+            GridMapCellPtr c(IndexToCell(index));
+
+            if (nullptr != c) {
+
+                // set as a corridor cell
+                c->is_corridor = true;
+
+                // expand!
+                ExpandRegion(index, distance);
+
+            }
+
+        }
+
+    }
+
+}
+
+// get the current corridor
+unsigned int InternalGridMap::GetCorridorIndexes() {
+
+    return corridor;
 
 }
 
@@ -156,16 +377,49 @@ GridMapCellPtr InternalGridMap::PoseToCell(const astar::Pose2D &p) {
 
 }
 
+// get the cell given a cell index
+GridMapCellPtr InternalGridMap::IndexToCell(const astar::GridCellIndex &index) {
+
+    if (height > index.row && width > index.col)
+        return &grid_map[index.row][index.col];
+    else
+        return nullptr;
+
+}
+
+// occupy a given cell
+void InternalGridMap::SetSimpleObstacle(int row, int col) {
+
+    // occupy the given cell
+    // grid_map[row][col].occupancy = 1.0;
+
+    // set the obstacle in the voronoi diagram
+    voronoi.SetSimpleObstacle(row, col);
+
+}
+
+// occupy a given cell
+void InternalGridMap::SetSimpleFreeSpace(int row, int col) {
+
+    // occupy the given cell
+    // grid_map[row][col].occupancy = 0.0;
+
+    // set the obstacle in the voronoi diagram
+    voronoi.SetSimpleFreeSpace(row, col);
+
+}
+
 // occupy a given cell
 void InternalGridMap::OccupyCell(int row, int col) {
+
+    // set the obstacle in the voronoi diagram
+    voronoi.SetObstacle(row, col);
 
     if (1.0 != grid_map[row][col].occupancy) {
 
         // occupy the given cell
         grid_map[row][col].occupancy = 1.0;
 
-        // set the obstacle in the voronoi diagram
-        voronoi.SetObstacle(row, col);
 
     }
 
@@ -174,23 +428,16 @@ void InternalGridMap::OccupyCell(int row, int col) {
 // clear a given cell
 void InternalGridMap::ClearCell(int row, int col) {
 
+    // remove the obstacle in the voronoi diagram
+    voronoi.RemoveObstacle(row, col);
+
     if (0.0 != grid_map[row][col].occupancy) {
 
         // clear the given cell
         grid_map[row][col].occupancy = 0.0;
 
-        // remove the obstacle in the voronoi diagram
-        voronoi.RemoveObstacle(row, col);
 
     }
-
-}
-
-// update the internal grid map
-void InternalGridMap::UpdateGridMap() {
-
-    // update the GVD
-    has_changed = voronoi.Update();
 
 }
 
@@ -306,7 +553,23 @@ unsigned char* InternalGridMap::GetGridMap() {
 
     unsigned int k = 0;
 
-    for (int i = ((int) width) - 1; i > -1; --i) {
+    for (int row = height - 1; row >= 0; --row) {
+
+        for (unsigned int col = 0; col < width; ++col) {
+
+            unsigned char c = (unsigned char) (grid_map[(unsigned int) row][col].occupancy == 0 ? 255 : 0);
+
+            map[k] = c;
+
+            ++k;
+
+        }
+
+    }
+
+    return map;
+
+    for (int i = 0; i < width; ++i) {
 
         for (unsigned int j = 0; j < height; ++j) {
 
@@ -322,6 +585,7 @@ unsigned char* InternalGridMap::GetGridMap() {
 
     return map;
 }
+
 // get the current path cost map
 unsigned char* InternalGridMap::GetPathCostMap() {
 
@@ -329,10 +593,36 @@ unsigned char* InternalGridMap::GetPathCostMap() {
     return voronoi.GetPathCostMap();
 
 }
+
 // get the current path cost map
 unsigned char* InternalGridMap::GetObstacleDistanceMap() {
 
     // build a new array of chars
     return voronoi.GetObstacleDistanceMap();
 
+}
+
+// get the current map
+unsigned char* InternalGridMap::GetCorridorMap() {
+
+    // build a new array of chars
+    unsigned char *map = new unsigned char[height*width];
+
+    unsigned int k = 0;
+
+    for (int i = ((int) width) - 1; i > -1; --i) {
+
+        for (unsigned int j = 0; j < height; ++j) {
+
+            unsigned char c = (unsigned char) (grid_map[(unsigned int) i][j].is_corridor ? 255 : 0);
+
+            map[k] = c;
+
+            ++k;
+
+        }
+
+    }
+
+    return map;
 }

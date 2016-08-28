@@ -6,6 +6,7 @@
 
 #include <carmen/carmen.h>
 #include <carmen/map_server_messages.h>
+#include <carmen/rddf_interface.h>
 
 #include "../Entities/State2D.hpp"
 #include "../GridMap/InternalGridMap.hpp"
@@ -69,6 +70,12 @@ class HybridAstarPathFinder {
         // flag to set obstacle avoider usage
         bool use_obstacle_avoider;
 
+        // the rddf timestamp
+        double rddf_timestamp;
+
+        // the RDDF vector
+        std::vector<astar::Vector2D<double>> rddf;
+
         // PRIVATE METHODS
 
         // get all the necessary parameters
@@ -129,6 +136,9 @@ class HybridAstarPathFinder {
 
         // update the map
         void update_map(carmen_grid_mapping_message *msg);
+
+        // update the rddf
+        void update_rddf(carmen_rddf_road_profile_message *msg);
 
         // PUBLIC ATTRIBUTES
         // flag to activate the motion planner
