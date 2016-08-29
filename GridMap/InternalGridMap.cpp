@@ -99,8 +99,6 @@ void InternalGridMap::UpdateGridMap(unsigned int h, unsigned int w, double res, 
         // restart the voronoi diagram
         voronoi.InitializeEmpty(height, width);
 
-        return;
-
     } else if (origin != _origin) {
 
         has_changed = true;
@@ -139,7 +137,7 @@ void InternalGridMap::UpdateGridMap(unsigned int h, unsigned int w, double res, 
     }
 
     // restart the voronoi diagram
-    voronoi.RestartVoronoiDiagram();
+    // voronoi.RestartVoronoiDiagram();
 
 }
 

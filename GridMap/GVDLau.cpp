@@ -176,13 +176,13 @@ void GVDLau::CheckVoro(GridCellIndexRef indexS, GridCellIndexRef indexN) {
             {
                 s.voro = true;
 
-                // SetVoro(indexS);
+                SetVoro(indexS);
             }
             if (nStability <= sStability)
             {
                 n.voro = true;
 
-                // SetVoro(indexN);
+                SetVoro(indexN);
             }
         }
     }
@@ -378,23 +378,27 @@ void GVDLau::UpdateVoronoiMap() {
                         // get the actual cell
                         GVDLau::DataCellRef nc(next_data[nrow][ncol]);
 
-                        if (UINT_MAX != nc.nearest_voro.col && !nc.voro_to_raise) {
+                        if (-1.0 < nc.dist) {
 
-                            if (!isVoroOccupied(nc.nearest_voro, next_data[nc.nearest_voro.row][nc.nearest_voro.col])) {
+                            if (UINT_MAX != nc.nearest_voro.col && !nc.voro_to_raise) {
 
-                                // update the neighbor values
-                                nc.dist = max_double;
-                                nc.sqdist = INT_MAX;
-                                nc.nearest_voro.row = nc.nearest_voro.col = -1;
-                                nc.voro_to_raise = true;
+                                if (!isVoroOccupied(nc.nearest_voro, next_data[nc.nearest_voro.row][nc.nearest_voro.col])) {
+
+                                    // update the neighbor values
+                                    nc.dist = max_double;
+                                    nc.sqdist = INT_MAX;
+                                    nc.nearest_voro.row = nc.nearest_voro.col = -1;
+                                    nc.voro_to_raise = true;
+
+                                }
+
+                                // set the voro to process flag
+                                nc.voro_to_process = true;
+
+                                // add the current neighbor index to the voro open queue
+                                voro_open.Push(nc.voro_sqdist, GridCellIndex(nrow, ncol));
 
                             }
-
-                            // set the voro to process flag
-                            nc.voro_to_process = true;
-
-                            // add the current neighbor index to the voro open queue
-                            voro_open.Push(nc.voro_sqdist, GridCellIndex(nrow, ncol));
 
                         }
 
@@ -437,7 +441,7 @@ void GVDLau::UpdateVoronoiMap() {
                         // get the actual neighbor cell
                         GVDLau::DataCellRef nc(next_data[nrow][ncol]);
 
-                        if (!nc.voro_to_raise) {
+                        if (-1.0 < nc.dist && !nc.voro_to_raise) {
 
                             GridCellIndex ngc(nrow, ncol);
 
@@ -450,14 +454,22 @@ void GVDLau::UpdateVoronoiMap() {
                                 nc.voro_dist = std::sqrt(d);
                                 nc.nearest_voro = s.nearest_voro;
                                 nc.voro_to_process = true;
+
                                 // add the current cell to the voro open queue
                                 voro_open.Push(d, ngc);
+
                             }
+
                         }
+
                     }
+
                 }
+
             }
+
         }
+
     }
 
 }
@@ -534,6 +546,9 @@ void GVDLau::InitializeEmpty(unsigned int h, unsigned int w) {
         }
 
     }
+
+    // restart all the voronoi cells
+    RestartVoronoiDiagram();
 
 }
 
@@ -634,7 +649,6 @@ void GVDLau::InitializeMap(unsigned int h, unsigned int w, bool **map) {
     }
 }
 
-
 // restart the GVD
 void GVDLau::RestartVoronoiDiagram() {
 
@@ -687,13 +701,10 @@ void GVDLau::SetSimpleFreeSpace(unsigned int row, unsigned int col) {
     GVDLau::DataCellRef c(next_data[row][col]);
 
     // update the current cell values
-    c.dist = max_double;
     c.sqdist = INT_MAX;
+    c.dist = max_double;
     c.nearest_obstacle.row = c.nearest_obstacle.col = UINT_MAX;
-    // c.nearest_voro.row = c.nearest_voro.col = UINT_MAX;
-    c.to_raise = false;
-    c.to_process = false;
-    c.nearest_voro.row = 9999999;
+    c.to_raise = c.to_process = false;
 
 }
 
@@ -703,7 +714,7 @@ void GVDLau::SetObstacle(unsigned int row, unsigned int col) {
     // get the current DataCell
     GVDLau::DataCellRef c(next_data[row][col]);
 
-    if (c.nearest_obstacle.row == row && c.nearest_obstacle.col == col && 0.0 == c.dist) {
+    if (c.nearest_obstacle.row == row && c.nearest_obstacle.col == col && 0.0 == c.dist && c.to_process) {
         return;
     }
 
@@ -753,10 +764,16 @@ bool GVDLau::Update() {
         // swap the pointers
         //std::swap(this->data, this->next_data);
 
+        // slow voronoi map, let's use the KDTree instead
+        // UpdateVoronoiMap();
+
         DataCell **tmp = next_data;
         next_data = data;
         data = tmp;
 
+        return true;
+
+        /*
         return true;
 
         for (unsigned int row = 0; row < height; ++row) {
@@ -768,28 +785,23 @@ bool GVDLau::Update() {
             }
 
         }
+        */
 
         // save the current map to the external file
-        Visualize("voronoi_map.pgm");
-
-        // slow voronoi map, let's use the KDTree instead
-        //UpdateVoronoiMap();
+        // Visualize("voronoi_map.pgm");
 
         // clear the old add list vector
         add_list.clear();
 
-        unsigned int u_height = (unsigned int) height;
-        unsigned int u_width = (unsigned int) width;
-
         // update the kdtree
-        for (unsigned int r = 0; r < u_height; ++r) {
-            for (unsigned int c = 0; c < u_width; ++c) {
+        for (unsigned int row = 0; row < height; ++row) {
+            for (unsigned int col = 0; col < width; ++col) {
 
                 // get the current data
-                if (next_data[r][c].voro) {
+                if (next_data[row][col].voro) {
 
                     // build the point
-                    PointT<unsigned int, 2> point({r, c});
+                    PointT<unsigned int, 2> point({row, col});
 
                     // add to the kdtree
                     //edges.Insert(point);
@@ -803,7 +815,6 @@ bool GVDLau::Update() {
 
         // update the entire path cost map
         UpdatePathCostMap();
-
 
         // the current map has changed
         return true;
