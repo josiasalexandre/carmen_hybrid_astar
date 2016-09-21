@@ -406,7 +406,7 @@ bool HolonomicHeuristic::ProcessNode(CircleNodeRef goal, CircleNodePtr cn) {
         RebuildCirclePath(&goal);
 
         // Show Circle Path
-        // ShowCirclePath();
+        ShowCirclePath();
 
         // clear the open and closed sets
         RemoveAllCircleNodes();
@@ -419,6 +419,7 @@ bool HolonomicHeuristic::ProcessNode(CircleNodeRef goal, CircleNodePtr cn) {
 
 }
 
+// show the entire circle path t
 void HolonomicHeuristic::ShowCirclePath() {
 
     //

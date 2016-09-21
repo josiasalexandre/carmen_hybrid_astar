@@ -7,7 +7,7 @@
 #include <carmen/robot_ackerman_interface.h>
 #include <carmen/fused_odometry_interface.h>
 #include <carmen/map_server_interface.h>
-#include <carmen/grid_mapping_interface.h>
+#include <carmen/mapper_interface.h>
 #include <carmen/rddf_interface.h>
 
 #include "Entities/State2D.hpp"
@@ -40,7 +40,6 @@ void save_to_file(astar::StateArrayPtr states) {
         fclose(F);
     }
 
-    std::cout << "\nDone!\n";
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -163,26 +162,13 @@ behavior_selector_state_message_handler(carmen_behavior_selector_state_message *
 }
 
 static void
-map_server_compact_cost_map_message_handler(carmen_map_server_compact_cost_map_message *msg)
-{
-    static bool first = false;
-
-    if (first) {
-
-        g_hybrid_astar->update_map(msg);
-
-        first = false;
-    }
-}
-
-static void
-grid_mapping_map_handler(carmen_grid_mapping_message *online_map_message)
+grid_mapping_map_handler(carmen_mapper_map_message *online_map_message)
 {
     g_hybrid_astar->update_map(online_map_message);
 }
 
 static void
-map_server_compact_lane_map_message_handler(carmen_map_server_compact_lane_map_message *message)
+map_server_compact_lane_map_message_handler(carmen_behavior_selector_road_profile_message *message)
 {
     (void) message;
     return;
@@ -217,7 +203,7 @@ signal_handler(int sig)
 }
 
 void
-rddf_message_handler(carmen_rddf_road_profile_message *message)
+rddf_message_handler(carmen_behavior_selector_road_profile_message *message)
 {
     g_hybrid_astar->update_rddf(message);
 }
@@ -240,18 +226,12 @@ register_handlers_specific()
             (carmen_handler_t)navigator_astar_stop_message_handler,
             CARMEN_SUBSCRIBE_LATEST);
 
-    /*
-    carmen_map_server_subscribe_compact_cost_map(
-            NULL,
-            (carmen_handler_t) map_server_compact_cost_map_message_handler,
+    carmen_subscribe_message(
+            (char *)CARMEN_NAVIGATOR_ACKERMAN_SET_GOAL_NAME,
+            (char *)CARMEN_NAVIGATOR_ACKERMAN_SET_GOAL_FMT,
+            NULL, sizeof(carmen_navigator_ackerman_set_goal_message),
+            (carmen_handler_t) map_server_compact_lane_map_message_handler,
             CARMEN_SUBSCRIBE_LATEST);
-
-    /*
-    carmen_map_server_subscribe_compact_lane_map(
-            NULL, (carmen_handler_t) map_server_compact_lane_map_message_handler,
-            CARMEN_SUBSCRIBE_LATEST);
-
-    */
 
     carmen_subscribe_message(
             (char *)CARMEN_NAVIGATOR_ACKERMAN_SET_GOAL_NAME,
@@ -260,6 +240,11 @@ register_handlers_specific()
             (carmen_handler_t)navigator_ackerman_set_goal_message_handler,
             CARMEN_SUBSCRIBE_LATEST);
 
+    carmen_subscribe_message(
+            (char *)CARMEN_BEHAVIOR_SELECTOR_ROAD_PROFILE_MESSAGE_NAME,
+            (char *)CARMEN_BEHAVIOR_SELECTOR_ROAD_PROFILE_MESSAGE_FMT,
+            NULL, sizeof (carmen_behavior_selector_road_profile_message),
+            (carmen_handler_t) rddf_message_handler, CARMEN_SUBSCRIBE_LATEST);
 }
 
 void
@@ -267,8 +252,7 @@ register_handlers()
 {
     signal(SIGINT, signal_handler);
 
-
-    carmen_grid_mapping_subscribe_message(NULL, (carmen_handler_t) grid_mapping_map_handler, CARMEN_SUBSCRIBE_LATEST);
+    carmen_mapper_subscribe_message(NULL, (carmen_handler_t) grid_mapping_map_handler, CARMEN_SUBSCRIBE_LATEST);
 
     if (g_hybrid_astar->simulation_mode)
         carmen_simulator_ackerman_subscribe_truepos_message(NULL, (carmen_handler_t) simulator_ackerman_truepos_message_handler, CARMEN_SUBSCRIBE_LATEST);
@@ -277,13 +261,9 @@ register_handlers()
 
     carmen_base_ackerman_subscribe_odometry_message(NULL, (carmen_handler_t) base_ackerman_odometry_message_handler, CARMEN_SUBSCRIBE_LATEST);
 
-    /*
     carmen_behavior_selector_subscribe_current_state_message(NULL, (carmen_handler_t) behavior_selector_state_message_handler, CARMEN_SUBSCRIBE_LATEST);
 
-    */
     carmen_behavior_selector_subscribe_goal_list_message(NULL, (carmen_handler_t) behaviour_selector_goal_list_message_handler, CARMEN_SUBSCRIBE_LATEST);
-
-    carmen_rddf_subscribe_road_profile_message(NULL, (carmen_handler_t) rddf_message_handler, CARMEN_SUBSCRIBE_LATEST);
 
     register_handlers_specific();
 }

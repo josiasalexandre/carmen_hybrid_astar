@@ -491,7 +491,6 @@ State2D StanleyController::ForwardDrive(const State2D &s) {
     fake_front_axle = vehicle_model.GetFakeFrontAxleState(s);
     front_axle = reverse_mode ? fake_front_axle : vehicle_model.GetFrontAxleState(s);
 
-    // TODO verificar se está retornando o valor certo
     closest_point = FindClosestPoint(front_axle, prev, next);
 
     // verificar se está funcionando

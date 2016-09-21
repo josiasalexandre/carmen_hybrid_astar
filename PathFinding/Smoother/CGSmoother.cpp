@@ -1881,13 +1881,13 @@ astar::StateArrayPtr astar::CGSmoother::Smooth(astar::InternalGridMapRef grid_, 
     vehicle = vehicle_;
 
     // show the map
-    // ShowPath(raw_path);
+    ShowPath(raw_path);
 
     // conjugate gradient based on the Polak-Ribiere formula
     ConjugateGradientPR(raw_path);
 
     // show the map
-    // ShowPath(raw_path);
+    ShowPath(raw_path);
 
     // now, interpolate the entire path
     // astar::StateArrayPtr interpolated_path = new astar::StateArray();
@@ -1896,14 +1896,14 @@ astar::StateArrayPtr astar::CGSmoother::Smooth(astar::InternalGridMapRef grid_, 
     astar::StateArrayPtr interpolated_path = Interpolate(raw_path);
 
     // show the map
-    // ShowPath(interpolated_path);
+    ShowPath(interpolated_path);
 
     // minimize again the interpolated path
     // conjugate gradient based on the Polak-Ribiere formula
     ConjugateGradientPR(interpolated_path);
 
     // show the map
-    // ShowPath(interpolated_path, false);
+    ShowPath(interpolated_path, false);
 
     // return the new interpolated path
     return interpolated_path;

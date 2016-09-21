@@ -45,7 +45,7 @@ HybridAstarPathFinder::get_parameters(int argc, char **argv)
             {(char *)"robot",   (char *)"max_steering_angle",                           CARMEN_PARAM_DOUBLE, &vehicle_model.max_wheel_deflection,                           1, NULL},
             {(char *)"robot",   (char *)"desired_steering_command_rate",                CARMEN_PARAM_DOUBLE, &vehicle_model.steering_command_rate,                          1, NULL},
             {(char *)"robot",   (char *)"understeer_coeficient",                        CARMEN_PARAM_DOUBLE, &vehicle_model.understeer,                                     1, NULL},
-            {(char *)"robot",   (char *)"maximum_capable_curvature",              		CARMEN_PARAM_DOUBLE, &vehicle_model.max_curvature, 	                                1, NULL},
+            // {(char *)"robot",   (char *)"maximum_capable_curvature",              		CARMEN_PARAM_DOUBLE, &vehicle_model.max_curvature, 	                                1, NULL},
             {(char *)"robot",   (char *)"max_velocity",                                	CARMEN_PARAM_DOUBLE, &vehicle_model.max_velocity,                                   1, NULL},
             {(char *)"robot",   (char *)"maximum_speed_forward",                        CARMEN_PARAM_DOUBLE, &vehicle_model.max_forward_speed,                              1, NULL},
             {(char *)"robot",   (char *)"maximum_speed_reverse",                        CARMEN_PARAM_DOUBLE, &vehicle_model.max_backward_speed,                             1, NULL},
@@ -71,6 +71,9 @@ HybridAstarPathFinder::get_parameters(int argc, char **argv)
     carmen_param_allow_unfound_variables(1);
     carmen_param_install_params(argc, argv, planner_params_list, sizeof(planner_params_list) / sizeof(planner_params_list[0]));
 
+    // set the default capable curvature
+    vehicle_model.max_curvature = 0.22;
+
     // do some pre-computations and update some indirect parameters
     vehicle_model.Configure();
 
@@ -91,47 +94,30 @@ HybridAstarPathFinder::replan() {
         // lock the current map
         gm_mutex.lock();
 
-        if (path.states.empty()) {
+        // find the path to the goal
+        StateArrayPtr raw_path = path_finder.FindPath(grid, robot, goal);
 
-            // find the path to the goal
-            StateArrayPtr raw_path = path_finder.FindPath(grid, robot, goal);
+        if (0 < raw_path->states.size()) {
 
-            if (0 < raw_path->states.size()) {
-
-                // smoooth the current path
-                StateArrayPtr smooth_path = path_smoother.Smooth(grid, vehicle_model, raw_path);
-
-                // the final command list
-                StateArrayPtr commands = stanley_method.RebuildCommandList(robot, smooth_path);
-
-                //path.states = smooth_path->states;
-                path.states = commands->states;
-
-                delete smooth_path;
-                delete commands;
-
-                // set the returning flag
-                ret = true;
-
-            }
-
-            // delete the raw path
-            delete raw_path;
-
-        } else {
+            // smoooth the current path
+            StateArrayPtr smooth_path = path_smoother.Smooth(grid, vehicle_model, raw_path);
 
             // the final command list
-            StateArrayPtr commands = stanley_method.GetCommandList(robot);
+            StateArrayPtr commands = stanley_method.RebuildCommandList(robot, smooth_path);
 
-            // copy to the internal path
+            //path.states = smooth_path->states;
             path.states = commands->states;
 
+            delete smooth_path;
             delete commands;
 
             // set the returning flag
             ret = true;
 
         }
+
+        // delete the raw path
+        delete raw_path;
 
         // unlock the map
         gm_mutex.unlock();
@@ -312,7 +298,7 @@ HybridAstarPathFinder::voronoi_update(carmen_map_server_compact_cost_map_message
 
 // voronoi thread update
 void
-HybridAstarPathFinder::voronoi_update_2(carmen_grid_mapping_message *msg) {
+HybridAstarPathFinder::voronoi_update_2(carmen_mapper_map_message *msg) {
 
     unsigned int row, col, index;
     double x_origin = msg->config.x_origin;
@@ -329,9 +315,9 @@ HybridAstarPathFinder::voronoi_update_2(carmen_grid_mapping_message *msg) {
 
     grid.UpdateCorridor(rddf, 400*inverse_resolution);
 
-    unsigned int c_size = grid.GetCorridorIndexes();
+    //unsigned int c_size = grid.GetCorridorIndexes();
 
-    if (0 < c_size) {
+    if (false) {
 
         astar::GridMap grid_map(grid.grid_map);
 
@@ -369,41 +355,20 @@ HybridAstarPathFinder::voronoi_update_2(carmen_grid_mapping_message *msg) {
 
         astar::GridMap grid_map(grid.grid_map);
 
-        // get the robot position
-        GridCellIndex robot_position(grid.PoseToIndex(robot.position));
-
-        int rrow = (int) robot_position.row;
-        int rcol = (int) robot_position.col;
-
-        int drow, dcol, drow2, dcol2;
-
         for (unsigned int row = 0; row < height; ++row) {
 
             for (unsigned int col = 0; col < width; ++col) {
 
-                drow = rrow - (int) row;
-                dcol = rcol - (int) col;
+                GridMapCellRef c(grid_map[row][col]);
 
-                drow2 = drow * drow;
-                dcol2 = dcol * dcol;
+                if (0.4 < c.occupancy) {
 
-                if (1600 > (drow2 + dcol2)) {
-                    GridMapCellRef c(grid_map[row][col]);
+                    grid.OccupyCell(row, col);
 
-                    if (0.4 < c.occupancy) {
+                } else {
 
-                        grid.OccupyCell(row, col);
+                    grid.ClearCell(row, col);
 
-                    } else if (0 > c.occupancy) {
-
-                        grid.SetSimpleObstacle(row, col);
-                        // grid.ClearCell(row, col);
-
-                    } else {
-
-                        grid.SetSimpleFreeSpace(row, col);
-
-                    }
                 }
 
             }
@@ -412,20 +377,11 @@ HybridAstarPathFinder::voronoi_update_2(carmen_grid_mapping_message *msg) {
 
     }
 
-    double t1 = carmen_get_time();
-
     // process the voronoi diagram
     grid.ProcessVoronoiDiagram();
 
-    double t2 = carmen_get_time();
-
-    std::cout << "Time: " << (t2 - t1) << " and frequency: " << 1.0/(t2 - t1) << "\n";
-
     // set the initialized flag
     initialized_grid_map = true;
-
-    // destroy
-    // cv::destroyWindow("Smooth");
 
     // unlock the given mutex
     gm_mutex.unlock();
@@ -452,7 +408,7 @@ HybridAstarPathFinder::update_map(carmen_map_server_compact_cost_map_message *ms
 
 // get the general map and save it
 void
-HybridAstarPathFinder::update_map(carmen_grid_mapping_message *msg) {
+HybridAstarPathFinder::update_map(carmen_mapper_map_message *msg) {
 
     if (nullptr != msg) {
 
@@ -519,7 +475,7 @@ HybridAstarPathFinder::get_robot_state() {
 
 // update the rddf
 void
-HybridAstarPathFinder::update_rddf(carmen_rddf_road_profile_message *msg) {
+HybridAstarPathFinder::update_rddf(carmen_behavior_selector_road_profile_message *msg) {
 
     if (rddf_timestamp != msg->timestamp && 0 < msg->number_of_poses) {
 

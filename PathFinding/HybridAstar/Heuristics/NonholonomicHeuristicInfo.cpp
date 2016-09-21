@@ -113,8 +113,6 @@ void NonholonomicHeuristicInfo::Save(const NonholonomicHeuristicInfo &info, std:
 // load the external heuristic file
 void NonholonomicHeuristicInfo::Load(NonholonomicHeuristicInfo &info, std::string filename) {
 
-    return;
-
     if (0 < filename.size()) {
 
         std::string line;

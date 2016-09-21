@@ -418,7 +418,6 @@ void InternalGridMap::OccupyCell(int row, int col) {
         // occupy the given cell
         grid_map[row][col].occupancy = 1.0;
 
-
     }
 
 }

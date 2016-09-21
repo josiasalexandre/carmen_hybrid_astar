@@ -667,7 +667,7 @@ void GVDLau::RestartVoronoiDiagram() {
     c.nearest_voro.row = c.nearest_voro.col = UINT_MAX;
     c.voro_to_raise = c.voro_to_process = false;
     c.path_cost = 0;
-    c.is_corridor = false;
+    c.is_corridor = true;
 
     for (unsigned int i = 0; i < height; ++i) {
 
@@ -769,17 +769,8 @@ bool GVDLau::Update() {
         // the main distance map
         UpdateDistanceMap();
 
-        // swap the pointers
-        //std::swap(this->data, this->next_data);
-
         // slow voronoi map, let's use the KDTree instead
-        //UpdateVoronoiMap();
-
-        DataCell **tmp = next_data;
-        next_data = data;
-        data = tmp;
-
-        return true;
+        // UpdateVoronoiMap();
 
         // save the current map to the external file
         // Visualize("voronoi_map.pgm");
@@ -809,6 +800,11 @@ bool GVDLau::Update() {
 
         // update the entire path cost map
         UpdatePathCostMap();
+
+        // swap the pointers
+        DataCell **tmp = next_data;
+        next_data = data;
+        data = tmp;
 
         // the current map has changed
         return true;

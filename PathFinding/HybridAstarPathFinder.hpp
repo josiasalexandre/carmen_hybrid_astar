@@ -5,7 +5,7 @@
 #include <mutex>
 
 #include <carmen/carmen.h>
-#include <carmen/map_server_messages.h>
+#include <carmen/mapper_interface.h>
 #include <carmen/rddf_interface.h>
 
 #include "../Entities/State2D.hpp"
@@ -82,10 +82,10 @@ class HybridAstarPathFinder {
         void get_parameters(int argc, char **argv);
 
         // voronoi thread update
-        void voronoi_update(carmen_map_server_compact_cost_map_message *msg);
+        void voronoi_update(carmen_mapper_compact_map_message *msg);
 
         // voronoi thread update
-        void voronoi_update_2(carmen_grid_mapping_message *msg);
+        void voronoi_update_2(carmen_mapper_map_message *msg);
 
         // verify if the robot is closer enough to the path
         bool RobotIsLost();
@@ -132,13 +132,13 @@ class HybridAstarPathFinder {
         void set_goal_list(carmen_behavior_selector_goal_list_message *msg);
 
         // update the map
-        void update_map(carmen_map_server_compact_cost_map_message *msg);
+        void update_map(carmen_mapper_compact_map_message *msg);
 
         // update the map
-        void update_map(carmen_grid_mapping_message *msg);
+        void update_map(carmen_mapper_map_message *msg);
 
         // update the rddf
-        void update_rddf(carmen_rddf_road_profile_message *msg);
+        void update_rddf(carmen_behavior_selector_road_profile_message *msg);
 
         // PUBLIC ATTRIBUTES
         // flag to activate the motion planner
