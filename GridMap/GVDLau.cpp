@@ -122,6 +122,7 @@ void GVDLau::SetVoro(const GridCellIndexRef index) {
     s.voro_dist = 0.0;
     s.voro_sqdist = 0;
     s.voro_to_process = true;
+    s.is_corridor = true;
 
     // add the current cell to the voro open queue
     voro_open.Push(0, GridCellIndex(index));
@@ -140,6 +141,7 @@ void GVDLau::UnsetVoro(const GridCellIndexRef index) {
     s.nearest_voro.row = s.nearest_voro.col = UINT_MAX;
     s.voro_to_raise = true;
     s.voro_to_process = true;
+    s.is_corridor = true;
 
     // add the current cell to the voro open queue
     voro_open.Push(INT_MAX, GridCellIndex(index));
@@ -233,7 +235,7 @@ void GVDLau::UpdateDistanceMap() {
                     // get the current neighbor
                     GVDLau::DataCellRef nc(next_data[nrow][ncol]);
 
-                    if (nc.dist > -1) {
+                    if (nc.is_corridor) {
 
                         if (UINT_MAX != nc.nearest_obstacle.col && UINT_MAX != nc.nearest_obstacle.row && !nc.to_raise) {
 
@@ -296,7 +298,7 @@ void GVDLau::UpdateDistanceMap() {
                     // get the neighbor cell
                     GVDLau::DataCellRef nc(next_data[nrow][ncol]);
 
-                    if (nc.dist > -1 && !nc.to_raise) {
+                    if (nc.is_corridor && !nc.to_raise) {
 
                         //
                         GridCellIndex nindex(nrow, ncol);
@@ -378,7 +380,7 @@ void GVDLau::UpdateVoronoiMap() {
                         // get the actual cell
                         GVDLau::DataCellRef nc(next_data[nrow][ncol]);
 
-                        if (-1.0 < nc.dist) {
+                        if (nc.is_corridor) {
 
                             if (UINT_MAX != nc.nearest_voro.col && !nc.voro_to_raise) {
 
@@ -441,7 +443,7 @@ void GVDLau::UpdateVoronoiMap() {
                         // get the actual neighbor cell
                         GVDLau::DataCellRef nc(next_data[nrow][ncol]);
 
-                        if (-1.0 < nc.dist && !nc.voro_to_raise) {
+                        if (nc.is_corridor && !nc.voro_to_raise) {
 
                             GridCellIndex ngc(nrow, ncol);
 
@@ -638,6 +640,7 @@ void GVDLau::InitializeMap(unsigned int h, unsigned int w, bool **map) {
                             s.voro_to_raise = false;
                             s.voro_to_process = false;
                             s.nearest_obstacle = index;
+                            s.is_corridor = false;
 
                         } else {
                             SetObstacle(r, c);
@@ -664,6 +667,7 @@ void GVDLau::RestartVoronoiDiagram() {
     c.nearest_voro.row = c.nearest_voro.col = UINT_MAX;
     c.voro_to_raise = c.voro_to_process = false;
     c.path_cost = 0;
+    c.is_corridor = false;
 
     for (unsigned int i = 0; i < height; ++i) {
 
@@ -683,14 +687,15 @@ void GVDLau::SetSimpleObstacle(unsigned int row, unsigned int col) {
     GVDLau::DataCellRef c(next_data[row][col]);
 
     // update the current cell values
-    c.dist = -max_double;
-    c.sqdist = -INT_MAX;
+    c.dist = 0.0;
+    c.sqdist = 0;
     c.nearest_obstacle.row = row;
     c.nearest_obstacle.col = col;
     c.nearest_voro.row = UINT_MAX;
     c.nearest_voro.col = UINT_MAX;
     c.to_process = false;
     c.voro = false;
+    c.is_corridor = false;
 
 }
 
@@ -705,6 +710,7 @@ void GVDLau::SetSimpleFreeSpace(unsigned int row, unsigned int col) {
     c.dist = max_double;
     c.nearest_obstacle.row = c.nearest_obstacle.col = UINT_MAX;
     c.to_raise = c.to_process = false;
+    c.is_corridor = true;
 
 }
 
@@ -714,7 +720,7 @@ void GVDLau::SetObstacle(unsigned int row, unsigned int col) {
     // get the current DataCell
     GVDLau::DataCellRef c(next_data[row][col]);
 
-    if (c.nearest_obstacle.row == row && c.nearest_obstacle.col == col && 0.0 == c.dist && c.to_process) {
+    if (c.nearest_obstacle.row == row && c.nearest_obstacle.col == col && c.to_process) {
         return;
     }
 
@@ -725,6 +731,7 @@ void GVDLau::SetObstacle(unsigned int row, unsigned int col) {
     c.nearest_obstacle.col = col;
     c.to_raise = false;
     c.to_process = true;
+    c.is_corridor = true;
 
     // add to the open prio queue
     open.Push(0, GridCellIndex (row, col));
@@ -747,6 +754,7 @@ void GVDLau::RemoveObstacle(unsigned int row, unsigned int col) {
     c.nearest_obstacle.row = c.nearest_obstacle.col = UINT_MAX;
     c.to_raise = true;
     c.to_process = true;
+    c.is_corridor = true;
 
     // add to the open prio queue
     open.Push(INT_MAX, GridCellIndex (row, col));
@@ -765,27 +773,13 @@ bool GVDLau::Update() {
         //std::swap(this->data, this->next_data);
 
         // slow voronoi map, let's use the KDTree instead
-        // UpdateVoronoiMap();
+        //UpdateVoronoiMap();
 
         DataCell **tmp = next_data;
         next_data = data;
         data = tmp;
 
         return true;
-
-        /*
-        return true;
-
-        for (unsigned int row = 0; row < height; ++row) {
-
-            for (unsigned int col = 0; col < width; ++col) {
-
-                data[row][col] = next_data[row][col];
-
-            }
-
-        }
-        */
 
         // save the current map to the external file
         // Visualize("voronoi_map.pgm");

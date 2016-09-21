@@ -1,4 +1,5 @@
 /*
+ *  Author: Boris Lau
  * Based on http://www.first-mm.eu/files/lau10iros.pdf
  */
 
@@ -20,8 +21,6 @@ class BucketPrioQueue {
 
     private:
 
-        // PRIVATE ATTRIBUTES
-
         // how many elements
         int count;
 
@@ -35,10 +34,6 @@ class BucketPrioQueue {
         typename BucketType::iterator nextPop;
 
     public:
-
-        // PUBLIC ATTRIBUTES
-
-        // PUBLIC METHODS
 
         // basic constructor
         BucketPrioQueue() {

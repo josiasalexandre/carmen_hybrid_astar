@@ -117,7 +117,6 @@ localize_ackerman_globalpos_message_handler(carmen_localize_ackerman_globalpos_m
     g_hybrid_astar->set_initial_state(
             msg->globalpos.x, msg->globalpos.y, msg->globalpos.theta, carmen_get_time() - msg->timestamp);
 
-    return;
     // se replan() method returns true if there's a path to the goal
     if (g_hybrid_astar->activated && g_hybrid_astar->replan())
         publish_hybrid_astar_path();
@@ -130,7 +129,6 @@ simulator_ackerman_truepos_message_handler(carmen_simulator_ackerman_truepos_mes
     g_hybrid_astar->set_initial_state(
             msg->truepose.x, msg->truepose.y, msg->truepose.theta, carmen_get_time() - msg->timestamp);
 
-    return;
     // se replan() method returns true if there's a path to the goal
     if (g_hybrid_astar->activated && g_hybrid_astar->replan())
         publish_hybrid_astar_path();

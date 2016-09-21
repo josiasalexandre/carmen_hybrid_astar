@@ -391,7 +391,7 @@ bool HolonomicHeuristic::ProcessNode(CircleNodeRef goal, CircleNodePtr cn) {
     // append to the closed set
     closed.push_back(cn);
 
-    // mark as explored, so the nearest can avoid duplicated explorations
+    // mark as explored, so the we can avoid duplicated explorations
     cn->explored = true;
 
     // get the adjacent circles

@@ -565,26 +565,6 @@ HybridAstarPathFinder::update_rddf(carmen_rddf_road_profile_message *msg) {
         // unlock the gm mutex
         gm_mutex.unlock();
 
-        if (initialized_grid_map) {
-
-            // show the image
-            unsigned char *map = grid.GetObstacleDistanceMap();
-
-            cv::namedWindow("Obstacles", cv::WINDOW_AUTOSIZE);
-
-            unsigned int width = grid.GetWidth();
-            unsigned int height = grid.GetHeight();
-
-            // the image
-            cv::Mat image(width, height, CV_8UC1, map);
-
-            // show the image
-            cv::imshow("Obstacles", image);
-
-            cv::waitKey(30);
-
-        }
-
     }
 
 }
