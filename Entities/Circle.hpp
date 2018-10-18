@@ -7,44 +7,44 @@
 
 namespace astar {
 
-class Circle {
+    class Circle {
 
-    public:
+        public:
 
-        // the circle position
-        astar::Vector2D<double> position;
+            // the circle position
+            astar::Vector2D<double> position;
 
-        // the circle radius
-        double r;
+            // the circle radius
+            double r;
 
-        // simplest constructor
-        Circle();
+            // simplest constructor
+            Circle();
 
-        // basic constructor
-        Circle(const astar::Vector2D<double>&, double);
+            // basic constructor
+            Circle(const astar::Vector2D<double>&, double);
 
-        // most explicit constructor
-        Circle(double x, double y, double radius);
+            // most explicit constructor
+            Circle(double x, double y, double radius);
 
-        // copy constructor
-        Circle(const Circle&);
+            // copy constructor
+            Circle(const Circle&);
 
-};
+    };
 
-// define the general circle references and pointers
-typedef Circle* CirclePtr;
-typedef Circle& CircleRef;
+    // define the general circle references and pointers
+    typedef Circle* CirclePtr;
+    typedef Circle& CircleRef;
 
-class CircleArray {
+    class CircleArray {
 
-    public:
+        public:
 
-        // the circle list
-        std::vector<Circle> circles;
+            // the circle list
+            std::vector<Circle> circles;
 
-};
+    };
 
-typedef CircleArray* CircleArrayPtr;
+    typedef CircleArray* CircleArrayPtr;
 
 }
 

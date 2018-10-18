@@ -7,13 +7,13 @@
 #include "GVDLau.hpp"
 
 // load the PGM file
-void loadPGM(std::istream &is, int *sizeX, int *sizeY, bool ***map) {
-
+void loadPGM(std::istream &is, int *sizeX, int *sizeY, bool ***map)
+{
 	std::string tag;
 
 	is >> tag;
-	if (tag!="P5") {
-		std::cerr << "Awaiting 'P5' in pgm header, found " << tag << std::endl;
+	if (tag!="P5")
+		{		std::cerr << "Awaiting 'P5' in pgm header, found " << tag << std::endl;
 		exit(-1);
 	}
 
@@ -24,28 +24,30 @@ void loadPGM(std::istream &is, int *sizeX, int *sizeY, bool ***map) {
 	is >> *sizeY;
 	while (is.peek()=='#') is.ignore(255, '\n');
 	is >> tag;
-	if (tag!="255") {
-		std::cerr << "Awaiting '255' in pgm header, found " << tag << std::endl;
+	if (tag!="255")
+		{		std::cerr << "Awaiting '255' in pgm header, found " << tag << std::endl;
 		exit(-1);
 	}
 	is.ignore(255, '\n');
 
 	*map = new bool*[*sizeY];
 
-	for (int y = 0; y < *sizeY; ++y) {
+	for (int y = 0; y < *sizeY; ++y)
+	{
 		(*map)[y] = new bool[*sizeX];
 	}
 
-	for (int y = *sizeY-1; y >= 0; --y) {
-
-		for (int x = 0; x < *sizeX; ++x) {
-
+	for (int y = *sizeY-1; y >= 0; --y)
+	{
+		for (int x = 0; x < *sizeX; ++x)
+		{
 			int c = is.get();
 
 			if ((double) c < 255-255*0.2) (*map)[y][x] = true; // cell is occupied
 			else (*map)[y][x] = false; // cell is free
 
-			if (!is.good()) {
+			if (!is.good())
+			{
 				std::cerr << "Error reading pgm map.\n";
 				exit(-1);
 			}
@@ -53,10 +55,11 @@ void loadPGM(std::istream &is, int *sizeX, int *sizeY, bool ***map) {
 	}
 }
 
-int main (int argc, char **argv) {
-
-	if(argc < 2 || argc > 3) {
-	    std::cerr<<"usage: "<< argv[0] << " <pgm map> \n";
+int main (int argc, char **argv)
+{
+	if(argc < 2 || argc > 3)
+	{
+		std::cerr<<"usage: "<< argv[0] << " <pgm map> \n";
 	    exit(-1);
 	}
 
@@ -67,7 +70,8 @@ int main (int argc, char **argv) {
 
 	// LOAD PGM MAP AND INITIALIZE THE VORONOI
 	std::ifstream is(argv[1]);
-	if (!is) {
+	if (!is)
+	{
 		std::cerr << "Could not open map file for reading.\n";
 		exit(-1);
 	}
@@ -94,11 +98,12 @@ int main (int argc, char **argv) {
 
 
 	// hard update
-	for (int h = 0; h < height; ++h) {
-
-		for (int c = 0; c < width; ++c) {
-
-			if (map[h][c]) {
+	for (int h = 0; h < height; ++h)
+	{
+		for (int c = 0; c < width; ++c)
+		{
+			if (map[h][c])
+			{
 				gvd.SetObstacle(h, c);
 			}
 		}
@@ -163,19 +168,16 @@ int main (int argc, char **argv) {
 	std::cout << "Done\n";
 
 	// delete the allocated map
-	if (nullptr != map) {
-
-		for (int r = 0; r < height; ++r) {
-
+	if (nullptr != map)
+	{
+		for (int r = 0; r < height; ++r)
+		{
 			// remove the current row
 			delete [] map[r];
-
 		}
 
 		// remove the map pointer
 		delete [] map;
-
 	}
-
 	return 0;
 }

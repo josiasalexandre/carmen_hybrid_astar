@@ -1,8 +1,8 @@
 #ifndef REEDS_SHEPP_DEFINITIONS_HPP
 #define REEDS_SHEPP_DEFINITIONS_HPP
 
-namespace astar {
-
+namespace astar
+{
     // define the steering values
     enum Steer {RSTurnLeft, RSStraight, RSTurnRight};
 
@@ -13,7 +13,6 @@ namespace astar {
 
     // define the sizes
     const static unsigned int NumGears = 2;
-
 }
 
 #endif

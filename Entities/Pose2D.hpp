@@ -9,60 +9,60 @@
 
 namespace astar {
 
-class Pose2D {
+    class Pose2D {
 
-    public:
+        public:
 
-        // the position
-        Vector2D<double> position;
+            // the position
+            Vector2D<double> position;
 
-        // the current orientation
-        double orientation;
+            // the current orientation
+            double orientation;
 
-        // most basic constructor
-        Pose2D();
+            // most basic constructor
+            Pose2D();
 
-        // copy constructor
-        Pose2D(const Pose2D&);
+            // copy constructor
+            Pose2D(const Pose2D&);
 
-        // explicit constructor
-        Pose2D(const Vector2D<double>&, double);
+            // explicit constructor
+            Pose2D(const Vector2D<double>&, double);
 
-        // explicit constructor
-        Pose2D(double, double, double);
+            // explicit constructor
+            Pose2D(double, double, double);
 
-        // assignment operator overloading
-        void operator=(const Pose2D&);
+            // assignment operator overloading
+            void operator=(const Pose2D&);
 
-        // equals to operator overloading
-        bool operator==(const Pose2D&);
+            // equals to operator overloading
+            bool operator==(const Pose2D&);
 
-        // different operator overloading
-        bool operator!=(const Pose2D&);
+            // different operator overloading
+            bool operator!=(const Pose2D&);
 
-};
+    };
 
-class PoseArray {
+    class PoseArray {
 
-    public:
+        public:
 
-        // the pose array
-        std::vector<Pose2D> poses;
+            // the pose array
+            std::vector<Pose2D> poses;
 
-};
+    };
 
-typedef PoseArray* PoseArrayPtr;
+    typedef PoseArray* PoseArrayPtr;
 
-class PoseList {
+    class PoseList {
 
-    public:
+        public:
 
-        // the pose list
-        std::list<Pose2D> poses;
+            // the pose list
+            std::list<Pose2D> poses;
 
-};
+    };
 
-typedef PoseList* PoseListPtr;
+    typedef PoseList* PoseListPtr;
 
 }
 #endif

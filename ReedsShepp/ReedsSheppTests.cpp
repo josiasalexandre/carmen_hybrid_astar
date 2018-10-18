@@ -5,8 +5,8 @@
 #include "ReedsSheppModel.hpp"
 
 
-int main () {
-
+int main ()
+{
     std::cout << "RS MODEL TESTS" << std::endl;
 
     astar::ReedsSheppModel rs;
@@ -35,33 +35,36 @@ int main () {
 
     set = rs.Solve(start, goal, inverse_unit);
 
-    if (nullptr != set) {
-
+    if (nullptr != set)
+    {
         std::cout << std::endl << "OK, set pronto" << std::endl;
         unsigned int s_size = set->actions.size();
 
-        for (unsigned int i = 0; i < s_size; i++) {
-
+        for (unsigned int i = 0; i < s_size; i++)
+        {
             std::cout << "Gear: ";
-            if (astar::BackwardGear == set->actions[i].gear) {
+            if (astar::BackwardGear == set->actions[i].gear)
+            {
                 std::cout << "Backward\n";
-            } else {
+            }
+            else
+            {
                 std::cout << "Forward\n";
             }
+            
             std::cout << "Steer: " << set->actions[i].steer << "\n";
             std::cout << "Length: " << set->actions[i].length*inverse_unit << "\n";
-
         }
 
         std::cout << std::endl << "Total length: " << set->length*inverse_unit << std::endl;
 
-    }else {
-
+    }
+    else
+    {
         throw "Invalid Action Set\n";
     }
 
     delete(set);
 
 	return 0;
-
 }

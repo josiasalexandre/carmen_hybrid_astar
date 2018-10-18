@@ -5,8 +5,8 @@
 using namespace astar;
 
 // configure the current vehicle model
-void VehicleModel::Configure() {
-
+void VehicleModel::Configure()
+{
     // set the max lateral acceleration
     max_lateral_acceleration = 1.2;
 
@@ -21,11 +21,7 @@ void VehicleModel::Configure() {
     else
         min_turn_radius = 5;
 
-    if (0 == max_curvature) {
-
-        max_curvature = 0.22;
-
-    }
+    if (0 == max_curvature) { max_curvature = 0.22; }
 
     // set the phi command limits
     max_phi_acceleration = 6.0;
@@ -40,23 +36,20 @@ void VehicleModel::Configure() {
 }
 
 // get the next pose with Pose, Steer, Gear, length and custom turn radius
-astar::Pose2D VehicleModel::NextPose(
-    const astar::Pose2D &current_pose, Steer steer, Gear gear, double length) const {
-
+astar::Pose2D VehicleModel::NextPose(const astar::Pose2D &current_pose, Steer steer, Gear gear, double length) const
+{
     return NextPose(current_pose, steer, gear, length, min_turn_radius);
-
 }
 
 // get the next pose with Pose, Steer, Gear, length and turn radius
-astar::Pose2D VehicleModel::NextPose(
-    const astar::Pose2D &current_pose, Steer steer, Gear gear, double length, double t_radius) const
+astar::Pose2D VehicleModel::NextPose(const astar::Pose2D &current_pose, Steer steer, Gear gear, double length, double t_radius) const
 {
     // auxiliary variables
     double x, y, angle;
 
     // no turning radius?
-    if (astar::RSStraight != steer) {
-
+    if (astar::RSStraight != steer)
+    {
         angle = length/t_radius;
 
         double angle2 = angle/2;
@@ -71,29 +64,26 @@ astar::Pose2D VehicleModel::NextPose(
         // get the y coordinate
         y = L*sin_angle_2;
 
-        if (astar::RSTurnRight == steer) {
-
+        if (astar::RSTurnRight == steer)
+        {
             // change direction
             y = -y;
             angle = -angle;
-
         }
-
-    } else {
-
+    }
+    else
+    {
         // just a straight movement, no turning radius
         x = length;
         y = 0.0;
         angle = 0.0;
-
     }
 
-    if (astar::BackwardGear == gear) {
-
+    if (astar::BackwardGear == gear)
+    {
         // change direction
         x = -x;
         angle = -angle;
-
     }
 
     // build a position vector at the relative position
@@ -104,7 +94,6 @@ astar::Pose2D VehicleModel::NextPose(
 
     // move the point to the appropriated result
     return Pose2D(position + current_pose.position, mrpt::math::wrapToPi<double>(current_pose.orientation + angle));
-
 }
 
 // get the next pose
@@ -116,8 +105,8 @@ Pose2D VehicleModel::NextPose(const astar::Pose2D &current, double vel, double p
     // get the absolute length
     double length = vel*time;
 
-    if (0.0 != phi) {
-
+    if (0.0 != phi)
+    {
         // get the turn radius
         double turn_radius = axledist / std::tan(phi/(1.0 + vel*vel*understeer));
 
@@ -134,13 +123,12 @@ Pose2D VehicleModel::NextPose(const astar::Pose2D &current, double vel, double p
 
         // get the y coordinate
         y = L*sin_angle_2;
-
-    } else {
-
+    }
+    else
+    {
         x = length;
         y = 0.0;
         angle = 0.0;
-
     }
 
     // build a position vector at the relative position
@@ -199,8 +187,8 @@ Pose2D VehicleModel::GetCenterPosition(const astar::Pose2D &pose) const {
 }
 
 // get the list of circles that represents the safe area
-std::vector<Circle> VehicleModel::GetVehicleBodyCircles(const astar::Vector2D<double> &p, double orientation) {
-
+std::vector<Circle> VehicleModel::GetVehicleBodyCircles(const astar::Vector2D<double> &p, double orientation)
+{
     // the output array
     std::vector<Circle> body;
 
@@ -208,8 +196,8 @@ std::vector<Circle> VehicleModel::GetVehicleBodyCircles(const astar::Vector2D<do
     // the circle radius = 1.25 m / resolution
     double x_position[4] = {-0.36, 0.760, 1.880, 3.00};
 
-    for (unsigned int i = 0; i < 4; ++i) {
-
+    for (unsigned int i = 0; i < 4; ++i)
+    {
         // set the current position
         astar::Vector2D<double> position(x_position[i], 0);
 
@@ -221,23 +209,22 @@ std::vector<Circle> VehicleModel::GetVehicleBodyCircles(const astar::Vector2D<do
 
         // append the the circle to the body vector
         body.push_back(astar::Circle(position, circle_radius));
-
     }
 
     return body;
 }
 
 // get the list of circles that represents the safe area
-std::vector<Circle> VehicleModel::GetVehicleBodyCircles(const astar::Pose2D &p) {
-
+std::vector<Circle> VehicleModel::GetVehicleBodyCircles(const astar::Pose2D &p)
+{
     // the output array
     std::vector<Circle> body;
 
     // TODO move to the class and get the values in a dynamic manner
     double x_position[4] = {-0.36, 0.760, 1.880, 3.00};
 
-    for (unsigned int i = 0; i < 4; ++i) {
-
+    for (unsigned int i = 0; i < 4; ++i)
+    {
         // set the current position
         astar::Vector2D<double> position(x_position[i], 0);
 
@@ -249,7 +236,6 @@ std::vector<Circle> VehicleModel::GetVehicleBodyCircles(const astar::Pose2D &p) 
 
         // append the the circle to the body vector
         body.push_back(astar::Circle(position, circle_radius));
-
     }
 
     return body;
@@ -307,14 +293,13 @@ double VehicleModel::GetBackwardSpeed(const Pose2D &prev, const Pose2D &current,
 // get the acceleration constraint
 double VehicleModel::GetAccelerationConstraint(double initial_speed, double displacement, astar::Gear g) const {
 
-    if (astar::ForwardGear == g) {
-
+    if (astar::ForwardGear == g)
+    {
         return std::sqrt(initial_speed * initial_speed + 2 * max_forward_acceleration * displacement);
-
-    } else {
-
+    }
+    else
+    {
         return std::sqrt(initial_speed * initial_speed + 2 * max_backward_acceleration * displacement);
-
     }
 
 }
@@ -322,14 +307,13 @@ double VehicleModel::GetAccelerationConstraint(double initial_speed, double disp
 // get the acceleration constraint
 double VehicleModel::GetDecelerationConstraint(double final_speed, double displacement, astar::Gear g) const {
 
-    if (astar::ForwardGear == g) {
-
+    if (astar::ForwardGear == g)
+    {
         return std::sqrt(final_speed * final_speed + 2 * max_forward_deceleration * displacement);
-
-    } else {
-
+    }
+    else
+    {
         return std::sqrt(final_speed * final_speed + 2 * max_backward_deceleration * displacement);
-
     }
 
 }

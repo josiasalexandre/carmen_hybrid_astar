@@ -30,57 +30,55 @@
 
 namespace astar {
 
-class ReedsSheppAction {
+    class ReedsSheppAction {
 
-    private:
+        private:
 
-        // PRIVATE ATTRIBUTES
+            // PRIVATE ATTRIBUTES
 
-        // PRIVATE METHODS
+            // PRIVATE METHODS
 
-    public:
+        public:
 
-        // PUBLIC ATTRIBUTES
+            // PUBLIC ATTRIBUTES
 
-        // steering
-        astar::Steer steer;
+            // steering
+            astar::Steer steer;
 
-        // direction
-        astar::Gear gear;
+            // direction
+            astar::Gear gear;
 
-        // the path length
-        double length;
+            // the path length
+            double length;
 
-        // PUBLIC METHODS
+            // PUBLIC METHODS
 
-        // basic constructor
-        ReedsSheppAction() : steer(RSStraight), gear(ForwardGear), length(0.0) {}
+            // basic constructor
+            ReedsSheppAction() : steer(RSStraight), gear(ForwardGear), length(0.0) {}
 
-        // basic constructor
-        ReedsSheppAction(const astar::Steer &s, const astar::Gear &g, const double &len) : steer(s), gear(g), length(len) {}
+            // basic constructor
+            ReedsSheppAction(const astar::Steer &s, const astar::Gear &g, const double &len) : steer(s), gear(g), length(len) {}
 
-        // copy constructor
-        ReedsSheppAction(const ReedsSheppAction &action) : steer(action.steer), gear(action.gear), length(action.length) {}
+            // copy constructor
+            ReedsSheppAction(const ReedsSheppAction &action) : steer(action.steer), gear(action.gear), length(action.length)
+            {}
 
-        // = operator overloading
-        void operator=(const ReedsSheppAction &action) {
+            // = operator overloading
+            void operator=(const ReedsSheppAction &action)
+            {
+                // get the steering
+                steer = action.steer;
 
-            // get the steering
-            steer = action.steer;
+                // get the gear action
+                gear = action.gear;
 
-            // get the gear action
-            gear = action.gear;
+                // get the path length
+                length = action.length;
+            }
+    };
 
-            // get the path length
-            length = action.length;
-
-        }
-
-};
-
-// define a pointer handler
-typedef ReedsSheppAction* ReedsSheppActionPtr;
-
+    // define a pointer handler
+    typedef ReedsSheppAction* ReedsSheppActionPtr;
 }
 
 #endif

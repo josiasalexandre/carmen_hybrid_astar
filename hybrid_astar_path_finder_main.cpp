@@ -18,21 +18,21 @@
 // ugly global pointers
 astar::HybridAstarPathFinder *g_hybrid_astar;
 
-void save_to_file(astar::StateArrayPtr states) {
-
+void save_to_file(astar::StateArrayPtr states)
+{
     std::vector<astar::State2D> &msg(states->states);
 
-    if (0 < msg.size()) {
-
+    if (0 < msg.size())
+    {
         // open the external file
         FILE* F = fopen("path.m", "w");
-        if (!F) {
-            std::cout << "could not open 'path_file.m' for writing!\n";
+        if (!F)
+            {            std::cout << "could not open 'path_file.m' for writing!\n";
             return;
         }
 
-        for (unsigned int i = 0; i < msg.size(); ++i) {
-
+        for (unsigned int i = 0; i < msg.size(); ++i)
+        {
             // fprintf(F, "%lf %lf\n", msg[i].position.x, msg[i].position.y);
             fprintf(F, "%lf ", msg[i].phi);
         }
@@ -82,8 +82,8 @@ publish_hybrid_astar_path()
     carmen_ackerman_motion_command_p motion_commands = ackerman_msg.motion_command;
 
     // copy the commands
-    for (unsigned int i = 0; i < s_size; ++i) {
-
+    for (unsigned int i = 0; i < s_size; ++i)
+    {
         motion_commands[i].v = states[i].v;
         motion_commands[i].phi = states[i].phi;
         motion_commands[i].time = states[i].t;

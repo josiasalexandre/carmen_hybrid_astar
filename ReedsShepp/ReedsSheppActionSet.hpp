@@ -31,62 +31,63 @@
 
 namespace astar {
 
-class ReedsSheppActionSet {
+    class ReedsSheppActionSet
+    {
 
-    private:
+        private:
 
-        // PRIVATE ATTRIBUTES
+            // PRIVATE ATTRIBUTES
 
-        // PRIVATE METHODS
+            // PRIVATE METHODS
 
-    public:
+        public:
 
-        // basic constructor
-        ReedsSheppActionSet();
+            // basic constructor
+            ReedsSheppActionSet();
 
-        // copy constructor
-        ReedsSheppActionSet(const ReedsSheppActionSet&);
+            // copy constructor
+            ReedsSheppActionSet(const ReedsSheppActionSet&);
 
-        // the null set
-        ReedsSheppActionSet(double);
+            // the null set
+            ReedsSheppActionSet(double);
 
-        // PUBLIC ATTRIBUTES
+            // PUBLIC ATTRIBUTES
 
-        // the list of actions
-        std::vector<ReedsSheppAction> actions;
+            // the list of actions
+            std::vector<ReedsSheppAction> actions;
 
-        // the path length
-        double length;
+            // the path length
+            double length;
 
-        // PUBLIC METHODS
+            // PUBLIC METHODS
 
-        // add a new ReedsSheppAction
-        void AddAction(astar::Steer, astar::Gear, double);
+            // add a new ReedsSheppAction
+            void AddAction(astar::Steer, astar::Gear, double);
 
-        // get the actions vector size
-        unsigned int Size();
+            // get the actions vector size
+            unsigned int Size();
 
-        // the entire set cost
-        double CalculateCost(double, double, double);
+            // the entire set cost
+            double CalculateCost(double, double, double);
 
-        // PUBLIC STATIC CLASS METHODS
+            // PUBLIC STATIC CLASS METHODS
 
-        // flip the actions in time
-        static ReedsSheppActionSet* TimeFlip(ReedsSheppActionSet*);
+            // flip the actions in time
+            static ReedsSheppActionSet* TimeFlip(ReedsSheppActionSet*);
 
-        // reflect the path
-        static ReedsSheppActionSet* Reflect(ReedsSheppActionSet*);
+            // reflect the path
+            static ReedsSheppActionSet* Reflect(ReedsSheppActionSet*);
 
-        // time flip and reflect in sequence
-        static ReedsSheppActionSet* TimeFlipAndReflect(ReedsSheppActionSet*);
+            // time flip and reflect in sequence
+            static ReedsSheppActionSet* TimeFlipAndReflect(ReedsSheppActionSet*);
 
-        // the assignement operator overloading
-        void operator=(const ReedsSheppActionSet&);
+            // the assignement operator overloading
+            void operator=(const ReedsSheppActionSet&);
 
-};
+    };
 
-// easy handling
-typedef ReedsSheppActionSet* ReedsSheppActionSetPtr;
+    // easy handling
+    typedef ReedsSheppActionSet* ReedsSheppActionSetPtr;
 
 }
 

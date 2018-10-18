@@ -45,15 +45,6 @@ class PriorityQueueNode {
 
         // copy constructor
         PriorityQueueNode(const PriorityQueueNode<T>& n) : parent(n.parent), child(n.child), left(n.left), right(n.right), degree(n.degree), mark(n.mark), element(n.element), Key(n.Key) {}
-
-        // basic destructor
-/*        ~PriorityQueueNode() {
-
-            // set all pointers to nullptr
-            parent = child = left = right = nullptr;
-
-        }*/
-
 };
 
 // syntatic sugar

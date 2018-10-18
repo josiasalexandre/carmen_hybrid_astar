@@ -26,41 +26,40 @@
 
 namespace astar {
 
-// define the enumeration status
-enum CellStatus {UnknownNode, OpenedNode, ExploredNode};
+    // define the enumeration status
+    enum CellStatus {UnknownNode, OpenedNode, ExploredNode};
 
-class GridMapCell {
+    class GridMapCell
+    {
+        public:
 
-    public:
+            // PUBLIC ATTRIBUTES
 
-        // PUBLIC ATTRIBUTES
+            // the occupancy
+            int occupancy;
 
-        // the occupancy
-        int occupancy;
+            // the cell status
+            CellStatus status;
 
-        // the cell status
-        CellStatus status;
+            // the robot state
+            astar::HybridAstarNodePtr node;
 
-        // the robot state
-        astar::HybridAstarNodePtr node;
+            // the corridor flag
+            bool is_corridor;
 
-        // the corridor flag
-        bool is_corridor;
+            // PUBLIC METHODS
+            GridMapCell() : occupancy(0), status(astar::UnknownNode), node(nullptr), is_corridor(false) {}
 
-        // PUBLIC METHODS
-        GridMapCell() : occupancy(0), status(astar::UnknownNode), node(nullptr), is_corridor(false) {}
+            // the overloading operator
+            void operator=(const GridMapCell &c)
+            {
+                occupancy = c.occupancy;
+                status = c.status;
+                node = nullptr;
+                is_corridor = c.is_corridor;
+            }
 
-        // the overloading operator
-        void operator=(const GridMapCell &c) {
-
-            occupancy = c.occupancy;
-            status = c.status;
-            node = nullptr;
-            is_corridor = c.is_corridor;
-
-        }
-
-};
+    };
 
 }
 

@@ -34,8 +34,8 @@ namespace astar {
 
 // defining the steering values
 
-class VehicleModel {
-
+class VehicleModel
+{
     private:
 
         // PRIVATE ATTRIBUTES
