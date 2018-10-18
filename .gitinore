@@ -1,5 +1,7 @@
 main
 *.kate-swp
+.kdev4
+.kdev4/
 *.kdev4
 *.kdev4/
 kdev4/
@@ -12,3 +14,6 @@ heuristic_loader
 vehicle
 vector
 *.txt
+.settings/
+.project
+.cproject
